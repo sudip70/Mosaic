@@ -2,6 +2,7 @@ import {
   View, Text, ScrollView, Switch, Pressable, StyleSheet, Share,
 } from 'react-native';
 import { useEffect, useState } from 'react';
+import { router } from 'expo-router';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { AppScreen } from '@/components/ui/AppScreen';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
@@ -235,6 +236,7 @@ export default function SettingsScreen() {
           <GroupLabel label="About" />
           <SettingsCard>
             <Row icon="✦" iconBg="#F5F0E8" label="What is Mosaic?" sub="The story behind the app" right={<Chevron />} onPress={() => {}} />
+            <Row icon="🔒" iconBg="#EDF4FF" label="Privacy Policy" sub="How your data is handled" right={<Chevron />} onPress={() => router.push('/privacy')} />
             <Row icon="⭐" iconBg="#FFF8EC" label="Rate Mosaic" sub="Enjoying it? Let us know" right={<Chevron />} onPress={() => {}} />
             <Row icon="🌱" iconBg="#EDF7ED" label="Share with a friend" sub="Help someone find their colour" right={<Chevron />} onPress={shareApp} />
             <Row icon="ℹ" iconBg="#F5F0E8" label="Version" sub="Up to date" right={<ValChip label="1.0.0" />} last />
