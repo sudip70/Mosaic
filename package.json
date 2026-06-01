@@ -11,9 +11,9 @@
   "dependencies": {
     "@expo-google-fonts/dm-sans": "^0.4.2",
     "@expo-google-fonts/fraunces": "^0.4.1",
-    "@react-native-async-storage/async-storage": "^2.0.0",
-    "@react-native-community/netinfo": "^11.0.0",
-    "@sentry/react-native": "^6.0.0",
+    "@react-native-async-storage/async-storage": "1.23.1",
+    "@react-native-community/netinfo": "11.4.1",
+    "@sentry/react-native": "~6.10.0",
     "@supabase/supabase-js": "^2.47.0",
     "base64-arraybuffer": "^1.0.2",
     "date-fns": "^4.1.0",
@@ -28,7 +28,7 @@
     "nativewind": "^4.0.36",
     "posthog-react-native": "^3.0.0",
     "react": "18.3.1",
-    "react-native": "0.76.3",
+    "react-native": "0.76.9",
     "tailwindcss": "^3.4.0",
     "zustand": "^5.0.0"
   },
