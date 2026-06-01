@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import NetInfo from '@react-native-community/netinfo';
 import * as FileSystem from 'expo-file-system';
+import { randomUUID } from 'expo-crypto';
 import { decode } from 'base64-arraybuffer';
 import { supabase } from '@/lib/supabase';
 import { syncQueue } from '@/lib/syncQueue';
@@ -36,7 +37,7 @@ export function useUpload() {
         throw new Error('Photo is too large. Please choose a smaller image.');
       }
 
-      const photoId = crypto.randomUUID();
+      const photoId = randomUUID();
       const localDir = `${PHOTOS_DIR}${userId}/${date}/`;
       const localUri = `${localDir}${photoId}.jpg`;
 

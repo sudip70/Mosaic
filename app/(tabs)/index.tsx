@@ -118,8 +118,10 @@ export default function TodayScreen() {
             </Pressable>
           </ScrollView>
         </View>
+      </ScrollView>
 
-        {/* CTA */}
+      {/* Fixed CTA — pinned just above the tab bar */}
+      <View style={st.footer}>
         <PrimaryButton
           label="Capture now"
           sublabel={color ? `Find ${color.name} around you →` : undefined}
@@ -127,14 +129,21 @@ export default function TodayScreen() {
           onPress={() => router.push('/camera')}
           disabled={!color || loading}
         />
-      </ScrollView>
+      </View>
     </AppScreen>
   );
 }
 
 const st = StyleSheet.create({
   scroll: { flex: 1 },
-  content: { paddingHorizontal: spacing.xl, paddingBottom: spacing.x3, gap: spacing.lg },
+  content: { paddingHorizontal: spacing.xl, paddingBottom: spacing.lg, gap: spacing.lg },
+
+  footer: {
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.md,
+    backgroundColor: colors.surface0,
+  },
 
   heroFallback: {
     height: 240, alignItems: 'center', justifyContent: 'center',

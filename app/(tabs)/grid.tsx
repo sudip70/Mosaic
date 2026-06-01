@@ -1,6 +1,6 @@
 import { View, ScrollView, Pressable, StyleSheet } from 'react-native';
-import { useEffect, useMemo } from 'react';
-import { router } from 'expo-router';
+import { useCallback, useMemo } from 'react';
+import { router, useFocusEffect } from 'expo-router';
 import { format, parseISO, getMonth } from 'date-fns';
 import Svg, { Circle } from 'react-native-svg';
 import { AppScreen } from '@/components/ui/AppScreen';
@@ -69,9 +69,15 @@ export default function GridScreen() {
   const { color: todayColor } = useToday();
 
   const startDate = user?.created_at?.slice(0, 10) ?? new Date().toISOString().slice(0, 10);
-  const { days } = useGrid(user?.id ?? '', startDate);
+  const { days, reload } = useGrid(user?.id ?? '', startDate);
 
-  useEffect(() => { trackScreen('grid'); }, []);
+  // Re-read photo presence each time the tab regains focus — picks up new captures.
+  useFocusEffect(
+    useCallback(() => {
+      trackScreen('grid');
+      reload();
+    }, [reload])
+  );
 
   const visibleMonths = useMemo(() => getVisibleMonths(days), [days]);
   const currentMonth = MONTHS[getMonth(new Date())];
