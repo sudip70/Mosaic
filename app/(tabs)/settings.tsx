@@ -2,6 +2,7 @@ import {
   View, Text, ScrollView, Switch, Pressable, StyleSheet, Share,
 } from 'react-native';
 import { useEffect, useState } from 'react';
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { AppScreen } from '@/components/ui/AppScreen';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { colors, fonts, shadows, radius, spacing } from '@/lib/theme';
@@ -112,6 +113,7 @@ function DisabledRow({ icon, iconBg, label, sub, last }: Omit<RowProps, 'onPress
 
 export default function SettingsScreen() {
   const { trackScreen } = useAnalytics();
+  const tabBarHeight = useBottomTabBarHeight();
   const [notifEnabled, setNotifEnabled] = useState(true);
   const [theme, setTheme] = useState<'System' | 'Light' | 'Dark'>('System');
   const [gridDensity, setGridDensity] = useState<'Comfortable' | 'Compact'>('Comfortable');
@@ -138,7 +140,7 @@ export default function SettingsScreen() {
 
       <ScrollView
         style={s.scroll}
-        contentContainerStyle={s.scrollContent}
+        contentContainerStyle={[s.scrollContent, { paddingBottom: tabBarHeight + spacing.xl }]}
         showsVerticalScrollIndicator={false}
       >
         {/* Phase 1 badge */}
@@ -280,7 +282,6 @@ const s = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.md,
-    paddingBottom: spacing.x4,
     gap: spacing.xxl,
   },
 

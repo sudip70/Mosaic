@@ -7,6 +7,7 @@ import { AppScreen } from '@/components/ui/AppScreen';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { AppText } from '@/components/ui/AppText';
 import { Card } from '@/components/ui/Card';
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { useGrid } from '@/hooks/useGrid';
 import { useAuth } from '@/hooks/useAuth';
 import { useStreak } from '@/hooks/useStreak';
@@ -65,6 +66,7 @@ function StreakRing({ current, longest }: { current: number; longest: number }) 
 export default function GridScreen() {
   const { user } = useAuth();
   const { trackScreen } = useAnalytics();
+  const tabBarHeight = useBottomTabBarHeight();
   const { current: streakCurrent, longest: streakLongest } = useStreak();
   const { color: todayColor } = useToday();
 
@@ -89,7 +91,11 @@ export default function GridScreen() {
         right={{ icon: '↓', accessibilityLabel: 'Export grid' }}
       />
 
-      <ScrollView style={st.scroll} contentContainerStyle={st.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={st.scroll}
+        contentContainerStyle={[st.content, { paddingBottom: tabBarHeight + spacing.lg }]}
+        showsVerticalScrollIndicator={false}
+      >
         <StreakRing current={streakCurrent} longest={streakLongest} />
 
         <View>
