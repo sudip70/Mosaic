@@ -85,10 +85,6 @@ export default function CameraScreen() {
     <View style={s.dark}>
       <CameraView ref={cameraRef} style={StyleSheet.absoluteFill} facing={facing} flash={flash} />
 
-      {/* Preview overlays — sit over the camera, under the controls */}
-      {grid && <GridOverlay />}
-      {leveling && <LevelIndicator />}
-
       <SafeAreaView style={s.overlay} edges={['top', 'bottom']}>
         {/* Tap-away backdrop for the settings popup */}
         {showSettings && (
@@ -127,18 +123,10 @@ export default function CameraScreen() {
           </View>
         </View>
 
-        {/* Camera settings popup */}
-        {showSettings && (
-          <CameraSettingsPanel
-            timestamp={timestamp}
-            grid={grid}
-            leveling={leveling}
-            onToggle={toggle}
-          />
-        )}
-
-        {/* Focus box */}
+        {/* Finder — grid/level/focus aids are confined to this region only */}
         <View style={s.finderMid}>
+          {grid && <GridOverlay />}
+          {leveling && <LevelIndicator />}
           <View style={s.focusBox}>
             <View style={[s.fc, s.fcTL]} />
             <View style={[s.fc, s.fcTR]} />
@@ -199,6 +187,16 @@ export default function CameraScreen() {
           </View>
 
         </View>
+
+        {/* Settings popup — rendered last so it sits above the finder aids */}
+        {showSettings && (
+          <CameraSettingsPanel
+            timestamp={timestamp}
+            grid={grid}
+            leveling={leveling}
+            onToggle={toggle}
+          />
+        )}
       </SafeAreaView>
     </View>
   );
@@ -342,7 +340,7 @@ const s = StyleSheet.create({
 
   // Settings popup
   panel: {
-    position: 'absolute', top: 76, right: 16, zIndex: 50,
+    position: 'absolute', top: 104, right: 16, zIndex: 50,
     width: 196, borderRadius: 16,
     backgroundColor: 'rgba(22,20,19,0.92)',
     borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)',
