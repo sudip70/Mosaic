@@ -73,19 +73,18 @@ export default function OnboardingScreen() {
         </View>
 
         {/* CTA */}
-        <Pressable
-          style={({ pressed }) => [s.cta, pressed && s.ctaPressed]}
-          onPress={begin}
-          accessibilityRole="button"
-          accessibilityLabel="Begin today"
-        >
-          <View>
-            <AppText style={s.ctaMain}>Begin today</AppText>
-            <AppText style={s.ctaNote}>No account needed · 10 seconds to start</AppText>
-          </View>
-          <View style={s.ctaArrow}>
-            <AppText style={s.ctaArrowIcon}>→</AppText>
-          </View>
+        <Pressable onPress={begin} accessibilityRole="button" accessibilityLabel="Begin today">
+          {({ pressed }) => (
+            <View style={[s.cta, pressed && s.ctaPressed]}>
+              <View>
+                <AppText style={s.ctaMain}>Begin today</AppText>
+                <AppText style={s.ctaNote}>No account needed · 10 seconds to start</AppText>
+              </View>
+              <View style={s.ctaArrow}>
+                <AppText style={s.ctaArrowIcon}>→</AppText>
+              </View>
+            </View>
+          )}
         </Pressable>
       </ScrollView>
     </AppScreen>

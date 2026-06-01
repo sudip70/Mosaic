@@ -136,19 +136,20 @@ export default function GridScreen() {
 
         {todayColor && (
           <Pressable
-            style={st.nudge}
             onPress={() => router.push('/')}
             accessibilityRole="button"
             accessibilityLabel={`${todayColor.name} today`}
           >
-            <View style={[st.nudgeIcon, { backgroundColor: todayColor.hex }]}>
-              <AppText style={{ fontSize: 18 }}>🎯</AppText>
-            </View>
-            <View>
-              <AppText style={st.nudgeTitle}>{todayColor.name} today</AppText>
-              <AppText style={st.nudgeSub}>
-                {streakCurrent > 0 ? 'keep the streak going' : 'capture your first photo'}
-              </AppText>
+            <View style={st.nudge}>
+              <View style={[st.nudgeIcon, { backgroundColor: todayColor.hex }]}>
+                <AppText style={{ fontSize: 18 }}>🎯</AppText>
+              </View>
+              <View>
+                <AppText style={st.nudgeTitle}>{todayColor.name} today</AppText>
+                <AppText style={st.nudgeSub}>
+                  {streakCurrent > 0 ? 'keep the streak going' : 'capture your first photo'}
+                </AppText>
+              </View>
             </View>
           </Pressable>
         )}

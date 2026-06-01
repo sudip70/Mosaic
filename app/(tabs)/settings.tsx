@@ -32,22 +32,28 @@ interface RowProps {
 function Row({ icon, iconBg, label, sub, right, onPress, danger, last }: RowProps) {
   return (
     <Pressable
-      style={({ pressed }) => [s.row, !last && s.rowBorder, pressed && onPress && s.rowPressed]}
       onPress={onPress}
       disabled={!onPress}
       accessibilityRole={onPress ? 'button' : 'none'}
       accessibilityLabel={label}
     >
-      <View style={s.rowLeft}>
-        <View style={[s.rowIcon, { backgroundColor: iconBg }]}>
-          <Text style={s.rowIconText}>{icon}</Text>
+      {({ pressed }) => (
+        // Row layout lives on a child View — a Pressable carrying
+        // flexDirection:'row' gets dropped on the New Architecture, which
+        // collapses the row to a column and stacks the right control below.
+        <View style={[s.row, !last && s.rowBorder, pressed && onPress && s.rowPressed]}>
+          <View style={s.rowLeft}>
+            <View style={[s.rowIcon, { backgroundColor: iconBg }]}>
+              <Text style={s.rowIconText}>{icon}</Text>
+            </View>
+            <View style={s.rowCopy}>
+              <Text style={[s.rowLabel, danger && s.rowLabelDanger]}>{label}</Text>
+              {sub && <Text style={s.rowSub}>{sub}</Text>}
+            </View>
+          </View>
+          {right && <View style={s.rowRight}>{right}</View>}
         </View>
-        <View style={s.rowCopy}>
-          <Text style={[s.rowLabel, danger && s.rowLabelDanger]}>{label}</Text>
-          {sub && <Text style={s.rowSub}>{sub}</Text>}
-        </View>
-      </View>
-      {right && <View style={s.rowRight}>{right}</View>}
+      )}
     </Pressable>
   );
 }
