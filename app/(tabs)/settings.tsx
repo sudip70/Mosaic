@@ -207,19 +207,19 @@ export default function SettingsScreen() {
         <View style={s.group}>
           <GroupLabel label="Storage" />
           <SettingsCard>
-            <Row
-              icon="📦" iconBg="#F5F0E8"
-              label="Photos on device"
-              sub={undefined}
-              right={
-                <View style={s.storageBar}>
-                  <View style={s.storageTrack}>
-                    <View style={s.storageFill} />
-                  </View>
-                  <Text style={s.storageLabel}>142 MB of 420 MB used</Text>
+            {/* Photos on device — progress bar lives under the label, full width */}
+            <View style={[s.storageRow, s.rowBorder]}>
+              <View style={[s.rowIcon, { backgroundColor: '#F5F0E8' }]}>
+                <Text style={s.rowIconText}>📦</Text>
+              </View>
+              <View style={s.storageCopy}>
+                <Text style={s.rowLabel}>Photos on device</Text>
+                <View style={s.storageTrack}>
+                  <View style={s.storageFill} />
                 </View>
-              }
-            />
+                <Text style={s.storageLabel}>142 MB of 420 MB used</Text>
+              </View>
+            </View>
             <Row
               icon="🗑" iconBg="#FFF0EC"
               label="Clear cache"
@@ -331,10 +331,14 @@ const s = StyleSheet.create({
   valChipText: { fontFamily: fonts.sansMd, fontSize: 12, color: colors.ink60 },
   chevron: { fontFamily: fonts.sans, fontSize: 17, color: colors.ink30 },
 
-  storageBar: { flex: 1 },
-  storageTrack: { height: 4, backgroundColor: colors.surface2, borderRadius: 2, overflow: 'hidden', marginBottom: 3 },
-  storageFill: { height: '100%', width: '34%', backgroundColor: colors.accent, borderRadius: 2 },
-  storageLabel: { fontFamily: fonts.sans, fontSize: 10, color: colors.ink30 },
+  storageRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 13,
+    paddingHorizontal: 16, paddingVertical: 15,
+  },
+  storageCopy: { flex: 1, gap: 8 },
+  storageTrack: { height: 5, backgroundColor: colors.surface2, borderRadius: 3, overflow: 'hidden' },
+  storageFill: { height: '100%', width: '34%', backgroundColor: colors.accent, borderRadius: 3 },
+  storageLabel: { fontFamily: fonts.sans, fontSize: 11, color: colors.ink30 },
 
   phaseBadgeRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   phaseBadge: {
