@@ -240,7 +240,7 @@ function CameraSettingsPanel({ timestamp, grid, leveling, onToggle }: PanelProps
 function GridOverlay() {
   const stroke = 'rgba(255,255,255,0.5)';
   return (
-    <Svg style={StyleSheet.absoluteFill} pointerEvents="none">
+    <Svg style={s.gridOverlay} pointerEvents="none">
       <Line x1="33.33%" y1="0" x2="33.33%" y2="100%" stroke={stroke} strokeWidth={1} strokeDasharray="2 7" />
       <Line x1="66.66%" y1="0" x2="66.66%" y2="100%" stroke={stroke} strokeWidth={1} strokeDasharray="2 7" />
       <Line x1="0" y1="33.33%" x2="100%" y2="33.33%" stroke={stroke} strokeWidth={1} strokeDasharray="2 7" />
@@ -353,6 +353,9 @@ const s = StyleSheet.create({
   },
   panelRowBorder: { borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.08)' },
   panelLabel: { fontFamily: fonts.sansMd, fontSize: 14, color: '#fff' },
+
+  // Grid — inset from the top so it doesn't crowd the colour hint / top bar
+  gridOverlay: { position: 'absolute', top: 28, left: 0, right: 0, bottom: 0 },
 
   // Level indicator
   levelWrap: {
