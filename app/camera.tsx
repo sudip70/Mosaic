@@ -123,16 +123,10 @@ export default function CameraScreen() {
           </View>
         </View>
 
-        {/* Finder — grid/level/focus aids are confined to this region only */}
+        {/* Finder — grid/level aids are confined to this region only */}
         <View style={s.finderMid}>
           {grid && <GridOverlay />}
           {leveling && <LevelIndicator />}
-          <View style={s.focusBox}>
-            <View style={[s.fc, s.fcTL]} />
-            <View style={[s.fc, s.fcTR]} />
-            <View style={[s.fc, s.fcBL]} />
-            <View style={[s.fc, s.fcBR]} />
-          </View>
           {timestamp && <TimestampOverlay />}
         </View>
 
@@ -374,14 +368,8 @@ const s = StyleSheet.create({
     textShadowColor: 'rgba(0,0,0,0.5)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 3,
   },
 
-  // Focus box
+  // Finder
   finderMid: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  focusBox: { width: 90, height: 90 },
-  fc: { position: 'absolute', width: 18, height: 18, borderColor: 'rgba(255,255,255,0.9)' },
-  fcTL: { top: 0, left: 0, borderTopWidth: 2, borderLeftWidth: 2 },
-  fcTR: { top: 0, right: 0, borderTopWidth: 2, borderRightWidth: 2 },
-  fcBL: { bottom: 0, left: 0, borderBottomWidth: 2, borderLeftWidth: 2 },
-  fcBR: { bottom: 0, right: 0, borderBottomWidth: 2, borderRightWidth: 2 },
 
   // Controls
   controls: {
