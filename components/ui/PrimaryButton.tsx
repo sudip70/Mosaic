@@ -22,15 +22,20 @@ export function PrimaryButton({ label, sublabel, icon, onPress, disabled }: Prim
       accessibilityRole="button"
       accessibilityLabel={label}
       accessibilityState={{ disabled: !!disabled }}
-      style={({ pressed }) => [s.btn, pressed && s.pressed, disabled && s.disabled]}
     >
-      <View style={s.copy}>
-        <AppText style={s.label}>{label}</AppText>
-        {sublabel && <AppText style={s.sub}>{sublabel}</AppText>}
-      </View>
-      {icon && (
-        <View style={s.icon}>
-          <AppText style={s.iconText}>{icon}</AppText>
+      {({ pressed }) => (
+        // Visual container is a plain View — keeps the dark fill + row layout
+        // from being dropped by Pressable style resolution on the New Architecture.
+        <View style={[s.btn, pressed && s.pressed, disabled && s.disabled]}>
+          <View style={s.copy}>
+            <AppText style={s.label}>{label}</AppText>
+            {sublabel && <AppText style={s.sub}>{sublabel}</AppText>}
+          </View>
+          {icon && (
+            <View style={s.icon}>
+              <AppText style={s.iconText}>{icon}</AppText>
+            </View>
+          )}
         </View>
       )}
     </Pressable>

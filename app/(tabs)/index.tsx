@@ -1,6 +1,7 @@
-import { View, ScrollView, Pressable, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, ScrollView, Pressable, ActivityIndicator, Image, StyleSheet } from 'react-native';
 import { useEffect } from 'react';
 import { router } from 'expo-router';
+import { format, parseISO } from 'date-fns';
 import { AppScreen } from '@/components/ui/AppScreen';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { ColorHero } from '@/components/ui/ColorHero';
@@ -14,6 +15,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { useAnalytics } from '@/hooks/useAnalytics';
 import { colors, fonts, radius, shadows, spacing } from '@/lib/theme';
 import { formatShort } from '@/lib/dates';
+
+const formatTime = (iso: string) => format(parseISO(iso), 'HH:mm');
 
 function Stat({ value, label, accent }: { value: number; label: string; accent?: boolean }) {
   return (
@@ -91,7 +94,16 @@ export default function TodayScreen() {
                 accessibilityRole="imagebutton"
                 accessibilityLabel="View capture"
               >
-                <View style={[st.thumbInner, { backgroundColor: color?.hex ?? colors.surface2 }]} />
+                {p.url ? (
+                  <Image source={{ uri: p.url }} style={st.thumbInner} resizeMode="cover" />
+                ) : (
+                  <View style={[st.thumbInner, { backgroundColor: color?.hex ?? colors.surface2 }]} />
+                )}
+                {!!p.created_at && (
+                  <View style={st.thumbTime}>
+                    <AppText style={st.thumbTimeText}>{formatTime(p.created_at)}</AppText>
+                  </View>
+                )}
               </Pressable>
             ))}
             <Pressable
@@ -141,7 +153,13 @@ const st = StyleSheet.create({
     width: 80, height: 80, borderRadius: radius.r16, overflow: 'hidden',
     borderWidth: 1, borderColor: 'rgba(255,255,255,0.6)', ...shadows.elev1,
   },
-  thumbInner: { flex: 1 },
+  thumbInner: { width: '100%', height: '100%' },
+  thumbTime: {
+    position: 'absolute', bottom: 5, left: 6,
+    backgroundColor: 'rgba(0,0,0,0.22)', borderRadius: 4,
+    paddingHorizontal: 5, paddingVertical: 1,
+  },
+  thumbTimeText: { fontFamily: fonts.sansSb, fontSize: 8, color: 'rgba(255,255,255,0.85)' },
   thumbAdd: {
     width: 80, height: 80, borderRadius: radius.r16,
     borderWidth: 1.5, borderColor: colors.ink15, borderStyle: 'dashed',
