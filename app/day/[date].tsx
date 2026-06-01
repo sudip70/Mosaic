@@ -78,11 +78,11 @@ export default function DayScreen() {
         ) : (
           <View style={st.grid}>
             {/* Hero photo — full width */}
-            <PhotoCell photo={heroPhoto} hero />
+            <PhotoCell photo={heroPhoto} hero onPress={() => openPhoto(heroPhoto.id, safeDate)} />
             {/* Remaining — 2 columns */}
             <View style={st.gridRow}>
               {restPhotos.map((p) => (
-                <PhotoCell key={p.id} photo={p} />
+                <PhotoCell key={p.id} photo={p} onPress={() => openPhoto(p.id, safeDate)} />
               ))}
             </View>
           </View>
@@ -92,12 +92,17 @@ export default function DayScreen() {
   );
 }
 
-function PhotoCell({ photo, hero }: { photo: { id: string; url?: string; created_at: string; timestamp?: boolean }; hero?: boolean }) {
+function openPhoto(id: string, date: string) {
+  router.push({ pathname: '/photo/[id]', params: { id, date } });
+}
+
+function PhotoCell({ photo, hero, onPress }: { photo: { id: string; url?: string; created_at: string; timestamp?: boolean }; hero?: boolean; onPress?: () => void }) {
   const time = photo.created_at ? format(parseISO(photo.created_at), 'HH:mm') : '';
   // Only show the time stamp when it was enabled at capture.
   const showStamp = !!photo.timestamp && !!time;
   return (
     <Pressable
+      onPress={onPress}
       style={[st.cell, hero ? st.cellHero : st.cellHalf]}
       accessibilityRole="imagebutton"
       accessibilityLabel={showStamp ? `Photo at ${time}` : 'Photo'}

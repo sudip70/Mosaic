@@ -5,6 +5,7 @@ interface PhotoStore {
   photosByDate: Record<string, Photo[]>;
   addPhoto: (date: string, photo: Photo) => void;
   setPhotos: (date: string, photos: Photo[]) => void;
+  removePhoto: (date: string, id: string) => void;
 }
 
 export const usePhotoStore = create<PhotoStore>((set) => ({
@@ -21,5 +22,13 @@ export const usePhotoStore = create<PhotoStore>((set) => ({
   setPhotos: (date, photos) =>
     set((state) => ({
       photosByDate: { ...state.photosByDate, [date]: photos },
+    })),
+
+  removePhoto: (date, id) =>
+    set((state) => ({
+      photosByDate: {
+        ...state.photosByDate,
+        [date]: (state.photosByDate[date] ?? []).filter((p) => p.id !== id),
+      },
     })),
 }));

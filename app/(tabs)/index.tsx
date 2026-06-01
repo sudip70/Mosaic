@@ -90,7 +90,7 @@ export default function TodayScreen() {
               <Pressable
                 key={p.id}
                 style={st.thumb}
-                onPress={() => router.push(`/day/${date}`)}
+                onPress={() => router.push({ pathname: '/photo/[id]', params: { id: p.id, date } })}
                 accessibilityRole="imagebutton"
                 accessibilityLabel="View capture"
               >

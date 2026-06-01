@@ -39,6 +39,11 @@ async function hasPhotos(date: string): Promise<boolean> {
   return photos.length > 0;
 }
 
+async function deletePhoto(date: string, id: string): Promise<void> {
+  const photos = await getPhotos(date);
+  await AsyncStorage.setItem(photoKey(date), JSON.stringify(photos.filter((p) => p.id !== id)));
+}
+
 // ─── Color cache ──────────────────────────────────────────────────────────────
 // Colors never change once assigned, so we cache them indefinitely.
 
@@ -80,6 +85,7 @@ export const localStore = {
   getPhotos,
   savePhoto,
   updatePhoto,
+  deletePhoto,
   hasPhotos,
   getPhotosPresenceForDates,
   getColorCache,
