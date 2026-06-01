@@ -91,8 +91,18 @@ export default function CameraScreen() {
             </View>
           )}
 
-          <View style={s.counter}>
-            <AppText style={s.counterText}>{sessionShots.length} / ∞</AppText>
+          <View style={s.topRight}>
+            <View style={s.counter}>
+              <AppText style={s.counterText}>{sessionShots.length} / ∞</AppText>
+            </View>
+            <Pressable
+              style={s.settingsBtn}
+              onPress={() => router.push('/settings')}
+              accessibilityRole="button"
+              accessibilityLabel="Settings"
+            >
+              <AppText style={s.settingsIcon}>⚙</AppText>
+            </Pressable>
           </View>
         </View>
 
@@ -194,11 +204,18 @@ const s = StyleSheet.create({
   },
   hintDot: { width: 10, height: 10, borderRadius: 5 },
   hintText: { fontFamily: fonts.sansSb, fontSize: 11, color: 'rgba(255,255,255,0.85)', letterSpacing: 0.4 },
+  topRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   counter: {
     backgroundColor: DARK_GLASS, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)',
     borderRadius: radius.full, paddingHorizontal: 10, paddingVertical: 5,
   },
   counterText: { fontFamily: fonts.sansSb, fontSize: 11, color: 'rgba(255,255,255,0.7)', letterSpacing: 0.4 },
+  settingsBtn: {
+    width: 36, height: 36, borderRadius: 18, backgroundColor: DARK_GLASS,
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  settingsIcon: { fontSize: 15, color: 'rgba(255,255,255,0.8)' },
 
   // Focus box
   finderMid: { flex: 1, alignItems: 'center', justifyContent: 'center' },
