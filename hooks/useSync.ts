@@ -1,0 +1,73 @@
+import { useEffect } from 'react';
+import NetInfo from '@react-native-community/netinfo';
+import * as FileSystem from 'expo-file-system';
+import { decode } from 'base64-arraybuffer';
+import { supabase } from '@/lib/supabase';
+import { syncQueue } from '@/lib/syncQueue';
+import { localStore } from '@/lib/localStore';
+
+// Module-level lock — prevents concurrent runs if network events fire rapidly.
+let isProcessing = false;
+
+export function useSync() {
+  useEffect(() => {
+    const unsubscribe = NetInfo.addEventListener((state) => {
+      if (state.isConnected) processQueue();
+    });
+
+    processQueue();
+
+    return () => unsubscribe();
+  }, []);
+}
+
+async function processQueue() {
+  if (isProcessing) return;
+  isProcessing = true;
+
+  try {
+    const queue = await syncQueue.getQueue();
+    if (queue.length === 0) return;
+
+    for (const item of queue) {
+      try {
+        const fileInfo = await FileSystem.getInfoAsync(item.localUri, { size: true });
+
+        if (!fileInfo.exists || (fileInfo.size !== undefined && fileInfo.size < 100)) {
+          // File missing or corrupt — remove from queue rather than retrying forever.
+          await syncQueue.remove(item.id);
+          continue;
+        }
+
+        const base64 = await FileSystem.readAsStringAsync(item.localUri, {
+          encoding: FileSystem.EncodingType.Base64,
+        });
+        const storagePath = `${item.userId}/${item.date}/${item.id}.jpg`;
+
+        await supabase.storage
+          .from('photos')
+          .upload(storagePath, decode(base64), { contentType: 'image/jpeg' });
+
+        await supabase.from('photos').insert({
+          id: item.id,
+          user_id: item.userId,
+          date: item.date,
+          color_id: item.colorId,
+          storage_path: storagePath,
+          created_at: item.createdAt,
+        });
+
+        await localStore.updatePhoto(item.date, item.id, {
+          sync_status: 'synced',
+          storage_path: storagePath,
+        });
+
+        await syncQueue.remove(item.id);
+      } catch {
+        // Network or server error — leave in queue, retry on next connection.
+      }
+    }
+  } finally {
+    isProcessing = false;
+  }
+}
