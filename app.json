@@ -29,8 +29,18 @@
     },
     "plugins": [
       "expo-router",
-      "expo-camera",
-      "expo-image-picker",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Mosaic uses your camera to capture today's colour. Your photos stay private to you."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Mosaic needs access to your photos so you can add captures of today's colour from your library."
+        }
+      ],
       [
         "expo-notifications",
         {

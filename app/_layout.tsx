@@ -1,6 +1,7 @@
-import { Stack } from 'expo-router';
+import { Stack, useRouter, useSegments } from 'expo-router';
 import { useEffect } from 'react';
 import { View } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFonts } from 'expo-font';
 import {
   Fraunces_300Light_Italic,
@@ -14,6 +15,9 @@ import {
 import { useAuth } from '@/hooks/useAuth';
 import { useSync } from '@/hooks/useSync';
 import { initAnalytics } from '@/lib/analytics';
+import { ONBOARDING_KEY } from '@/lib/constants';
+import { colors } from '@/lib/theme';
+import { useAppStore } from '@/store/useAppStore';
 import '../global.css';
 
 initAnalytics();
@@ -30,9 +34,28 @@ export default function RootLayout() {
   const { loading } = useAuth();
   useSync();
 
-  // Block render until fonts are ready — prevents font flash on first frame
-  if (!fontsLoaded || loading) {
-    return <View style={{ flex: 1, backgroundColor: '#F4EFE6' }} />;
+  const router = useRouter();
+  const segments = useSegments();
+  const onboarded = useAppStore((s) => s.onboarded);
+  const setOnboarded = useAppStore((s) => s.setOnboarded);
+
+  // Read the first-launch flag once into the shared store.
+  useEffect(() => {
+    AsyncStorage.getItem(ONBOARDING_KEY).then((v) => setOnboarded(v === 'true'));
+  }, []);
+
+  // Redirect to onboarding on first launch, once everything is ready.
+  useEffect(() => {
+    if (onboarded === null || !fontsLoaded || loading) return;
+    const onOnboarding = segments[0] === 'onboarding';
+    if (!onboarded && !onOnboarding) {
+      router.replace('/onboarding');
+    }
+  }, [onboarded, fontsLoaded, loading, segments]);
+
+  // Block render until fonts, auth, and the onboarding flag are all ready.
+  if (!fontsLoaded || loading || onboarded === null) {
+    return <View style={{ flex: 1, backgroundColor: colors.canvas }} />;
   }
 
   return <Stack screenOptions={{ headerShown: false }} />;
