@@ -13,7 +13,6 @@ import { useStreak } from '@/hooks/useStreak';
 import { usePhotos } from '@/hooks/usePhotos';
 import { useAuth } from '@/hooks/useAuth';
 import { useAnalytics } from '@/hooks/useAnalytics';
-import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { colors, fonts, radius, shadows, spacing } from '@/lib/theme';
 import { formatShort } from '@/lib/dates';
 
@@ -34,7 +33,6 @@ export default function TodayScreen() {
   const { photos } = usePhotos(date, user?.id ?? '');
   const { current, longest } = useStreak();
   const { trackScreen } = useAnalytics();
-  const tabBarHeight = useBottomTabBarHeight();
 
   useEffect(() => { trackScreen('today'); }, []);
 
@@ -123,7 +121,7 @@ export default function TodayScreen() {
       </ScrollView>
 
       {/* Fixed CTA — pinned just above the tab bar */}
-      <View style={[st.footer, { paddingBottom: tabBarHeight + spacing.sm }]}>
+      <View style={st.footer}>
         <PrimaryButton
           label="Capture now"
           sublabel={color ? `Find ${color.name} around you →` : undefined}
