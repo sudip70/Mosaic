@@ -25,7 +25,8 @@ export function useUpload() {
     uri: string,
     userId: string,
     date: string,
-    colorId: string
+    colorId: string,
+    stamped = false
   ) {
     setUploading(true);
     setError(null);
@@ -58,6 +59,7 @@ export function useUpload() {
         sync_status: 'pending',
         is_private: true,
         created_at: new Date().toISOString(),
+        timestamp: stamped,
         url: localUri,
       };
 

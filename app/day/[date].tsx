@@ -92,20 +92,22 @@ export default function DayScreen() {
   );
 }
 
-function PhotoCell({ photo, hero }: { photo: { id: string; url?: string; created_at: string }; hero?: boolean }) {
+function PhotoCell({ photo, hero }: { photo: { id: string; url?: string; created_at: string; timestamp?: boolean }; hero?: boolean }) {
   const time = photo.created_at ? format(parseISO(photo.created_at), 'HH:mm') : '';
+  // Only show the time stamp when it was enabled at capture.
+  const showStamp = !!photo.timestamp && !!time;
   return (
     <Pressable
       style={[st.cell, hero ? st.cellHero : st.cellHalf]}
       accessibilityRole="imagebutton"
-      accessibilityLabel={`Photo at ${time}`}
+      accessibilityLabel={showStamp ? `Photo at ${time}` : 'Photo'}
     >
       {photo.url ? (
         <Image source={{ uri: photo.url }} style={st.cellImg} resizeMode="cover" />
       ) : (
         <View style={[st.cellImg, st.cellEmpty]} />
       )}
-      {!!time && (
+      {showStamp && (
         <View style={st.timeBadge}>
           <AppText style={st.timeText}>{time}</AppText>
         </View>

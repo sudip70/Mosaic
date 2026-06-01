@@ -38,8 +38,8 @@ export default function CameraScreen() {
     const photo = await cameraRef.current.takePictureAsync({ quality: 0.8 });
     if (!photo?.uri) return;
     setSessionShots((prev) => [photo.uri, ...prev]);
-    await uploadPhoto(photo.uri, user!.id, today(), todayColor!.id);
-  }, [canCapture, user, todayColor, uploadPhoto]);
+    await uploadPhoto(photo.uri, user!.id, today(), todayColor!.id, timestamp);
+  }, [canCapture, user, todayColor, uploadPhoto, timestamp]);
 
   const handleLibrary = useCallback(async () => {
     if (!canCapture) return;
@@ -50,9 +50,9 @@ export default function CameraScreen() {
     if (!result.canceled) {
       const uri = result.assets[0].uri;
       setSessionShots((prev) => [uri, ...prev]);
-      await uploadPhoto(uri, user!.id, today(), todayColor!.id);
+      await uploadPhoto(uri, user!.id, today(), todayColor!.id, timestamp);
     }
-  }, [canCapture, user, todayColor, uploadPhoto]);
+  }, [canCapture, user, todayColor, uploadPhoto, timestamp]);
 
   // ── Permission gates ────────────────────────────────────────────────────────
   if (!permission) {

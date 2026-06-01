@@ -99,7 +99,7 @@ export default function TodayScreen() {
                 ) : (
                   <View style={[st.thumbInner, { backgroundColor: color?.hex ?? colors.surface2 }]} />
                 )}
-                {!!p.created_at && (
+                {!!p.timestamp && !!p.created_at && (
                   <View style={st.thumbTime}>
                     <AppText style={st.thumbTimeText}>{formatTime(p.created_at)}</AppText>
                   </View>

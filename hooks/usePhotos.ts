@@ -49,6 +49,8 @@ export function usePhotos(date: string, userId: string) {
             return {
               ...p,
               local_uri: cached?.local_uri,
+              // timestamp is local-only metadata (no DB column) — carry it from cache
+              timestamp: cached?.timestamp ?? p.timestamp,
               sync_status: 'synced' as const,
               // Prefer local file — avoids network round-trip for display
               url: cached?.local_uri ?? (await getPhotoUrl(p.storage_path)),
