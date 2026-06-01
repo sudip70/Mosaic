@@ -1,13 +1,17 @@
-import { useRef, useState, useCallback } from 'react';
-import { View, Pressable, ActivityIndicator, StyleSheet, Image } from 'react-native';
+import { useRef, useState, useEffect, useCallback } from 'react';
+import { View, Pressable, ActivityIndicator, StyleSheet, Image, Switch } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CameraView, CameraType, FlashMode, useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
+import { Accelerometer } from 'expo-sensors';
+import Svg, { Line } from 'react-native-svg';
+import { format } from 'date-fns';
 import { router } from 'expo-router';
 import { AppText } from '@/components/ui/AppText';
 import { useUpload } from '@/hooks/useUpload';
 import { useAuth } from '@/hooks/useAuth';
 import { useColorStore } from '@/store/useColorStore';
+import { useCameraSettings } from '@/store/useCameraSettings';
 import { today } from '@/lib/dates';
 import { colors, fonts, radius } from '@/lib/theme';
 
@@ -22,6 +26,10 @@ export default function CameraScreen() {
   const [flash, setFlash] = useState<FlashMode>('off');
   // Thumbnails captured in this session — drives the strip + counter.
   const [sessionShots, setSessionShots] = useState<string[]>([]);
+
+  // Camera-only preferences (persisted) + the settings popup visibility.
+  const { timestamp, grid, leveling, toggle } = useCameraSettings();
+  const [showSettings, setShowSettings] = useState(false);
 
   const canCapture = !!user && !!todayColor && !uploading;
 
@@ -77,7 +85,20 @@ export default function CameraScreen() {
     <View style={s.dark}>
       <CameraView ref={cameraRef} style={StyleSheet.absoluteFill} facing={facing} flash={flash} />
 
+      {/* Preview overlays — sit over the camera, under the controls */}
+      {grid && <GridOverlay />}
+      {leveling && <LevelIndicator />}
+
       <SafeAreaView style={s.overlay} edges={['top', 'bottom']}>
+        {/* Tap-away backdrop for the settings popup */}
+        {showSettings && (
+          <Pressable
+            style={StyleSheet.absoluteFill}
+            onPress={() => setShowSettings(false)}
+            accessibilityLabel="Close settings"
+          />
+        )}
+
         {/* Top bar */}
         <View style={s.topBar}>
           <Pressable style={s.closeBtn} onPress={() => router.back()} accessibilityLabel="Close camera">
@@ -96,15 +117,25 @@ export default function CameraScreen() {
               <AppText style={s.counterText}>{sessionShots.length} / ∞</AppText>
             </View>
             <Pressable
-              style={s.settingsBtn}
-              onPress={() => router.push('/settings')}
+              style={[s.settingsBtn, showSettings && s.settingsBtnActive]}
+              onPress={() => setShowSettings((v) => !v)}
               accessibilityRole="button"
-              accessibilityLabel="Settings"
+              accessibilityLabel="Camera settings"
             >
               <AppText style={s.settingsIcon}>⚙</AppText>
             </Pressable>
           </View>
         </View>
+
+        {/* Camera settings popup */}
+        {showSettings && (
+          <CameraSettingsPanel
+            timestamp={timestamp}
+            grid={grid}
+            leveling={leveling}
+            onToggle={toggle}
+          />
+        )}
 
         {/* Focus box */}
         <View style={s.finderMid}>
@@ -114,6 +145,7 @@ export default function CameraScreen() {
             <View style={[s.fc, s.fcBL]} />
             <View style={[s.fc, s.fcBR]} />
           </View>
+          {timestamp && <TimestampOverlay />}
         </View>
 
         {/* Controls */}
@@ -172,6 +204,96 @@ export default function CameraScreen() {
   );
 }
 
+// ─── Camera settings popup ────────────────────────────────────────────────────
+
+interface PanelProps {
+  timestamp: boolean;
+  grid: boolean;
+  leveling: boolean;
+  onToggle: (key: 'timestamp' | 'grid' | 'leveling') => void;
+}
+
+function CameraSettingsPanel({ timestamp, grid, leveling, onToggle }: PanelProps) {
+  const rows: { key: 'timestamp' | 'grid' | 'leveling'; label: string; value: boolean }[] = [
+    { key: 'timestamp', label: 'Timestamp', value: timestamp },
+    { key: 'grid', label: 'Grid', value: grid },
+    { key: 'leveling', label: 'Leveling', value: leveling },
+  ];
+  return (
+    <View style={s.panel}>
+      {rows.map((r, i) => (
+        <View key={r.key} style={[s.panelRow, i < rows.length - 1 && s.panelRowBorder]}>
+          <AppText style={s.panelLabel}>{r.label}</AppText>
+          <Switch
+            value={r.value}
+            onValueChange={() => onToggle(r.key)}
+            trackColor={{ false: 'rgba(255,255,255,0.18)', true: colors.accent }}
+            thumbColor="#fff"
+            ios_backgroundColor="rgba(255,255,255,0.18)"
+          />
+        </View>
+      ))}
+    </View>
+  );
+}
+
+// ─── Dotted rule-of-thirds grid ───────────────────────────────────────────────
+
+function GridOverlay() {
+  const stroke = 'rgba(255,255,255,0.5)';
+  return (
+    <Svg style={StyleSheet.absoluteFill} pointerEvents="none">
+      <Line x1="33.33%" y1="0" x2="33.33%" y2="100%" stroke={stroke} strokeWidth={1} strokeDasharray="2 7" />
+      <Line x1="66.66%" y1="0" x2="66.66%" y2="100%" stroke={stroke} strokeWidth={1} strokeDasharray="2 7" />
+      <Line x1="0" y1="33.33%" x2="100%" y2="33.33%" stroke={stroke} strokeWidth={1} strokeDasharray="2 7" />
+      <Line x1="0" y1="66.66%" x2="100%" y2="66.66%" stroke={stroke} strokeWidth={1} strokeDasharray="2 7" />
+    </Svg>
+  );
+}
+
+// ─── Horizon level indicator ──────────────────────────────────────────────────
+
+function LevelIndicator() {
+  const [roll, setRoll] = useState(0);
+
+  useEffect(() => {
+    Accelerometer.setUpdateInterval(80);
+    const sub = Accelerometer.addListener(({ x, y }) => {
+      // Roll angle in portrait: 0° when upright, ± when tilted left/right.
+      setRoll((Math.atan2(x, -y) * 180) / Math.PI);
+    });
+    return () => sub.remove();
+  }, []);
+
+  const level = Math.abs(roll) < 1.2;
+  const lineColor = level ? colors.accent : 'rgba(255,255,255,0.8)';
+
+  return (
+    <View style={s.levelWrap} pointerEvents="none">
+      {/* Fixed center reference */}
+      <View style={s.levelRef} />
+      {/* Rotating horizon line */}
+      <View style={[s.levelLine, { backgroundColor: lineColor, transform: [{ rotate: `${roll}deg` }] }]} />
+      <View style={[s.levelDot, { backgroundColor: lineColor }]} />
+    </View>
+  );
+}
+
+// ─── Live timestamp overlay ───────────────────────────────────────────────────
+
+function TimestampOverlay() {
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(id);
+  }, []);
+  return (
+    <View style={s.timestamp} pointerEvents="none">
+      <AppText style={s.timestampText}>{format(now, 'yyyy-MM-dd  HH:mm:ss')}</AppText>
+    </View>
+  );
+}
+
 const WHITE_60 = 'rgba(255,255,255,0.6)';
 const DARK_GLASS = 'rgba(15,14,13,0.55)';
 
@@ -215,7 +337,41 @@ const s = StyleSheet.create({
     borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)',
     alignItems: 'center', justifyContent: 'center',
   },
+  settingsBtnActive: { backgroundColor: colors.accent, borderColor: colors.accent },
   settingsIcon: { fontSize: 15, color: 'rgba(255,255,255,0.8)' },
+
+  // Settings popup
+  panel: {
+    position: 'absolute', top: 52, right: 16, zIndex: 50,
+    width: 196, borderRadius: 16,
+    backgroundColor: 'rgba(22,20,19,0.92)',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)',
+    paddingHorizontal: 14,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.4, shadowRadius: 20, elevation: 12,
+  },
+  panelRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingVertical: 9,
+  },
+  panelRowBorder: { borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.08)' },
+  panelLabel: { fontFamily: fonts.sansMd, fontSize: 14, color: '#fff' },
+
+  // Level indicator
+  levelWrap: {
+    position: 'absolute', top: 0, bottom: 0, left: 0, right: 0,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  levelLine: { position: 'absolute', width: 180, height: 2, borderRadius: 1 },
+  levelRef: { position: 'absolute', width: 56, height: 1, backgroundColor: 'rgba(255,255,255,0.35)' },
+  levelDot: { position: 'absolute', width: 8, height: 8, borderRadius: 4 },
+
+  // Timestamp
+  timestamp: { position: 'absolute', bottom: 16, right: 18 },
+  timestampText: {
+    fontFamily: fonts.sansSb, fontSize: 13, letterSpacing: 0.5,
+    color: 'rgba(255,200,90,0.92)',
+    textShadowColor: 'rgba(0,0,0,0.5)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 3,
+  },
 
   // Focus box
   finderMid: { flex: 1, alignItems: 'center', justifyContent: 'center' },
