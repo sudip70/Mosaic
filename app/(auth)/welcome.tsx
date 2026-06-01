@@ -1,24 +1,35 @@
-// Phase 2
-import { View } from 'react-native';
+// Phase 2 — account entry point (not reachable in Phase 1)
+import { View, StyleSheet } from 'react-native';
 import { router } from 'expo-router';
-import { Screen } from '@/components/layout/Screen';
-import { Section } from '@/components/layout/Section';
-import { Typography } from '@/components/ui/Typography';
-import { Button } from '@/components/ui/Button';
+import { AppScreen } from '@/components/ui/AppScreen';
+import { AppText } from '@/components/ui/AppText';
+import { PrimaryButton } from '@/components/ui/PrimaryButton';
+import { colors, spacing } from '@/lib/theme';
 
 export default function WelcomeScreen() {
   return (
-    <Screen>
-      <View className="flex-1 items-center justify-center gap-6 px-8">
-        <Typography variant="display">Mosaic</Typography>
-        <Typography variant="body" className="text-center">
-          One color. Every day. A mosaic of your life.
-        </Typography>
+    <AppScreen>
+      <View style={s.body}>
+        <AppText variant="hero" style={s.title}>Mosaic</AppText>
+        <AppText variant="body" style={s.sub}>
+          One colour. Every day. A mosaic of your life.
+        </AppText>
       </View>
-      <Section className="gap-3">
-        <Button label="Get Started" onPress={() => router.push('/(auth)/signup')} fullWidth />
-        <Button label="I have an account" onPress={() => router.push('/(auth)/login')} variant="ghost" fullWidth />
-      </Section>
-    </Screen>
+      <View style={s.actions}>
+        <PrimaryButton
+          label="Create account"
+          sublabel="Save your grid across devices →"
+          icon="→"
+          onPress={() => router.push('/(auth)/signup')}
+        />
+      </View>
+    </AppScreen>
   );
 }
+
+const s = StyleSheet.create({
+  body: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.md, paddingHorizontal: spacing.x3 },
+  title: { textAlign: 'center' },
+  sub: { textAlign: 'center', color: colors.ink60 },
+  actions: { paddingHorizontal: spacing.xl, paddingBottom: spacing.xl, gap: spacing.md },
+});

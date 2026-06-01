@@ -55,3 +55,49 @@ export const fonts = {
   sansMd: 'DMSans_500Medium',
   sansSb: 'DMSans_600SemiBold',
 } as const;
+
+// ─── Spacing scale ───────────────────────────────────────────────────────────
+// Every margin, padding, and gap in the app pulls from this 4px-based scale.
+// Never hard-code a spacing number in a screen — use spacing.* instead.
+export const spacing = {
+  xs:  4,
+  sm:  8,
+  md:  12,
+  lg:  16,
+  xl:  20,
+  xxl: 24,
+  x3:  32,
+  x4:  40,
+} as const;
+
+// ─── Layout constants ────────────────────────────────────────────────────────
+// Shared structural measurements so every screen lines up edge-to-edge.
+export const layout = {
+  screenPadH:   20,   // left/right padding for scrollable content
+  navPadH:      24,   // left/right padding for the top nav bar
+  navPadTop:    8,
+  navPadBottom: 12,
+  cardGap:      14,   // vertical gap between stacked cards on a screen
+  cardPad:      16,   // internal padding inside a card
+  iconBtn:      36,   // diameter of circular header icon buttons
+} as const;
+
+// ─── Typography scale ────────────────────────────────────────────────────────
+// Named text styles. Use the <AppText variant="..."> component rather than
+// re-declaring fontFamily/fontSize on every Text node.
+export const type = {
+  // Serif (Fraunces) — display + numerals + colour names
+  hero:      { fontFamily: fonts.serif,  fontSize: 54, lineHeight: 52, letterSpacing: -1,   color: colors.ink100 },
+  display:   { fontFamily: fonts.serifR, fontSize: 38, lineHeight: 38, letterSpacing: -1.2, color: colors.ink100 },
+  serifLg:   { fontFamily: fonts.serifR, fontSize: 30, lineHeight: 30, letterSpacing: -0.6, color: colors.ink100 },
+  wordmark:  { fontFamily: fonts.serifR, fontSize: 24, lineHeight: 24, letterSpacing: -0.3, color: colors.ink100 },
+  // Sans (DM Sans) — UI text
+  title:     { fontFamily: fonts.sansSb, fontSize: 16, color: colors.ink100 },
+  body:      { fontFamily: fonts.sans,   fontSize: 14, color: colors.ink60 },
+  bodyMd:    { fontFamily: fonts.sansMd, fontSize: 13, color: colors.ink100 },
+  label:     { fontFamily: fonts.sansSb, fontSize: 14, color: colors.ink100 },
+  caption:   { fontFamily: fonts.sans,   fontSize: 12, color: colors.ink30 },
+  sub:       { fontFamily: fonts.sans,   fontSize: 11, color: colors.ink30 },
+  // All-caps overline (group labels, kickers)
+  overline:  { fontFamily: fonts.sansSb, fontSize: 10, letterSpacing: 1.2, textTransform: 'uppercase' as const, color: colors.ink30 },
+} as const;

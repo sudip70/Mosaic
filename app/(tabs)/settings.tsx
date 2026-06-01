@@ -2,7 +2,9 @@ import {
   View, Text, ScrollView, Switch, Pressable, StyleSheet, Share,
 } from 'react-native';
 import { useEffect, useState } from 'react';
-import { colors, fonts, shadows, radius } from '@/lib/theme';
+import { AppScreen } from '@/components/ui/AppScreen';
+import { ScreenHeader } from '@/components/ui/ScreenHeader';
+import { colors, fonts, shadows, radius, spacing } from '@/lib/theme';
 import { useAnalytics } from '@/hooks/useAnalytics';
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
@@ -131,11 +133,8 @@ export default function SettingsScreen() {
   }
 
   return (
-    <View style={s.root}>
-      {/* Header */}
-      <View style={s.header}>
-        <Text style={s.title}>Settings</Text>
-      </View>
+    <AppScreen>
+      <ScreenHeader title="Settings" />
 
       <ScrollView
         style={s.scroll}
@@ -272,19 +271,15 @@ export default function SettingsScreen() {
           <Text style={s.footerVer}>Version 1.0.0 · Made with care</Text>
         </View>
       </ScrollView>
-    </View>
+    </AppScreen>
   );
 }
 
 const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.surface0 },
-  header: { alignItems: 'center', paddingTop: 8, paddingBottom: 6 },
-  title: { fontFamily: fonts.serifR, fontSize: 26, color: colors.ink100, letterSpacing: -0.3 },
-
   scroll: { flex: 1 },
-  scrollContent: { paddingHorizontal: 20, paddingBottom: 40, gap: 20 },
+  scrollContent: { paddingHorizontal: spacing.xl, paddingBottom: spacing.x4, gap: spacing.xl },
 
-  group: { gap: 8 },
+  group: { gap: spacing.sm },
   groupLabel: {
     fontFamily: fonts.sansSb, fontSize: 10, letterSpacing: 1.2,
     textTransform: 'uppercase', color: colors.ink30, paddingHorizontal: 4,

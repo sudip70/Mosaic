@@ -1,42 +1,70 @@
-// Phase 2
+// Phase 2 — magic-link sign in (not reachable in Phase 1)
 import { useState } from 'react';
-import { View, TextInput } from 'react-native';
-import { Screen } from '@/components/layout/Screen';
-import { Section } from '@/components/layout/Section';
-import { Typography } from '@/components/ui/Typography';
-import { Button } from '@/components/ui/Button';
+import { View, TextInput, StyleSheet } from 'react-native';
+import { AppScreen } from '@/components/ui/AppScreen';
+import { ScreenHeader } from '@/components/ui/ScreenHeader';
+import { AppText } from '@/components/ui/AppText';
+import { PrimaryButton } from '@/components/ui/PrimaryButton';
 import { useAuth } from '@/hooks/useAuth';
+import { router } from 'expo-router';
+import { colors, fonts, radius, spacing } from '@/lib/theme';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [sent, setSent] = useState(false);
   const { signInWithMagicLink } = useAuth();
 
+  const valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
   async function handleSend() {
+    if (!valid) return;
     await signInWithMagicLink(email);
     setSent(true);
   }
 
   return (
-    <Screen>
-      <Section className="flex-1 justify-center gap-6">
-        <Typography variant="title">Sign in</Typography>
+    <AppScreen>
+      <ScreenHeader
+        title="Sign in"
+        left={{ icon: '←', accessibilityLabel: 'Back', onPress: () => router.back() }}
+      />
+      <View style={s.body}>
         {sent ? (
-          <Typography variant="body">Check your email for a magic link.</Typography>
+          <View style={s.sentWrap}>
+            <AppText variant="serifLg" style={s.sentTitle}>Check your email</AppText>
+            <AppText variant="body" style={s.sentSub}>
+              We sent a magic link to {email}. Tap it to finish signing in.
+            </AppText>
+          </View>
         ) : (
           <>
+            <AppText variant="overline">Email address</AppText>
             <TextInput
               value={email}
               onChangeText={setEmail}
               placeholder="you@example.com"
+              placeholderTextColor={colors.ink30}
               keyboardType="email-address"
               autoCapitalize="none"
-              className="border border-gray-200 rounded-xl px-4 py-3 text-base"
+              autoComplete="email"
+              style={s.input}
             />
-            <Button label="Send magic link" onPress={handleSend} fullWidth />
+            <PrimaryButton label="Send magic link" icon="✦" onPress={handleSend} disabled={!valid} />
           </>
         )}
-      </Section>
-    </Screen>
+      </View>
+    </AppScreen>
   );
 }
+
+const s = StyleSheet.create({
+  body: { flex: 1, paddingHorizontal: spacing.xl, paddingTop: spacing.x3, gap: spacing.md },
+  input: {
+    backgroundColor: colors.surface0, borderWidth: 1, borderColor: colors.ink15,
+    borderRadius: radius.r16, paddingHorizontal: spacing.lg, paddingVertical: 14,
+    fontFamily: fonts.sans, fontSize: 15, color: colors.ink100,
+  },
+  sentWrap: { gap: spacing.sm, paddingTop: spacing.x3 },
+  sentTitle: {},
+  sentSub: { color: colors.ink60, lineHeight: 21 },
+});

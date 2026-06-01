@@ -1,18 +1,54 @@
-import { View, Text, StyleSheet } from 'react-native';
-import { colors, fonts } from '@/lib/theme';
+import { View, StyleSheet } from 'react-native';
+import { AppScreen } from '@/components/ui/AppScreen';
+import { ScreenHeader } from '@/components/ui/ScreenHeader';
+import { AppText } from '@/components/ui/AppText';
+import { colors, fonts, radius, spacing } from '@/lib/theme';
 
-// Phase 2 — placeholder only
+// Phase 2 — intentional "coming soon" state, not an empty screen.
+const PREVIEW_COLORS = ['#C4604A', '#5B8DB8', '#6BAF6B', '#D4A843', '#A0668A'];
+
 export default function FriendsScreen() {
   return (
-    <View style={s.root}>
-      <Text style={s.label}>Friends</Text>
-      <Text style={s.sub}>Coming in Phase 2</Text>
-    </View>
+    <AppScreen>
+      <ScreenHeader wordmark="Friends" />
+
+      <View style={s.body}>
+        {/* Overlapping avatar preview */}
+        <View style={s.avatars}>
+          {PREVIEW_COLORS.map((c, i) => (
+            <View
+              key={c}
+              style={[s.avatar, { backgroundColor: c, marginLeft: i === 0 ? 0 : -14, zIndex: PREVIEW_COLORS.length - i }]}
+            />
+          ))}
+        </View>
+
+        <View style={s.lockPill}>
+          <AppText style={s.lockText}>🔒  Phase 2</AppText>
+        </View>
+
+        <AppText variant="display" style={s.title}>Share your colour</AppText>
+        <AppText variant="body" style={s.sub}>
+          Soon you'll be able to add a small circle of friends and see how everyone
+          captured the same colour on the same day. Quiet, private, no follower counts.
+        </AppText>
+      </View>
+    </AppScreen>
   );
 }
 
 const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.surface0, alignItems: 'center', justifyContent: 'center', gap: 8 },
-  label: { fontFamily: fonts.serifR, fontSize: 28, color: colors.ink100 },
-  sub: { fontFamily: fonts.sans, fontSize: 14, color: colors.ink30 },
+  body: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing.x3, gap: spacing.lg },
+  avatars: { flexDirection: 'row', marginBottom: spacing.xs },
+  avatar: {
+    width: 44, height: 44, borderRadius: 22,
+    borderWidth: 2, borderColor: colors.surface0,
+  },
+  lockPill: {
+    backgroundColor: colors.surface1, borderWidth: 1, borderColor: colors.ink15,
+    borderRadius: radius.full, paddingHorizontal: 12, paddingVertical: 5,
+  },
+  lockText: { fontFamily: fonts.sansSb, fontSize: 11, color: colors.ink30, letterSpacing: 0.4 },
+  title: { textAlign: 'center' },
+  sub: { textAlign: 'center', lineHeight: 21, color: colors.ink60 },
 });

@@ -5,9 +5,14 @@ import { getPhotoUrl } from '@/lib/storage';
 import { usePhotoStore } from '@/store/usePhotoStore';
 import type { Photo } from '@/types';
 
+// Stable empty array — returned by the Zustand selector when a date has no photos.
+// Must live outside the hook so its reference never changes between renders,
+// otherwise useSyncExternalStore sees a new object every call and loops infinitely.
+const EMPTY_PHOTOS: Photo[] = [];
+
 export function usePhotos(date: string, userId: string) {
   const [loading, setLoading] = useState(true);
-  const photos = usePhotoStore((s) => s.photosByDate[date] ?? []);
+  const photos = usePhotoStore((s) => s.photosByDate[date] ?? EMPTY_PHOTOS);
   const setPhotos = usePhotoStore((s) => s.setPhotos);
 
   useEffect(() => {
