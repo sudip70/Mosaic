@@ -108,13 +108,25 @@ export default function CameraScreen() {
 
         {/* Controls */}
         <View style={s.controls}>
-          {sessionShots.length > 0 && (
-            <View style={s.thumbs}>
-              {sessionShots.slice(0, 4).map((uri, i) => (
-                <Image key={`${uri}-${i}`} source={{ uri }} style={s.thumb} />
-              ))}
-            </View>
-          )}
+          {/* Captured-this-session strip + add-from-gallery tile */}
+          <View style={s.thumbs}>
+            {sessionShots.slice(0, 3).map((uri, i) => (
+              <Image
+                key={`${uri}-${i}`}
+                source={{ uri }}
+                style={[s.thumb, i === 0 && s.thumbSelected]}
+              />
+            ))}
+            <Pressable
+              style={s.thumbAdd}
+              onPress={handleLibrary}
+              disabled={!canCapture}
+              accessibilityRole="button"
+              accessibilityLabel="Add from gallery"
+            >
+              <AppText style={s.thumbAddIcon}>+</AppText>
+            </Pressable>
+          </View>
 
           <View style={s.row}>
             <Pressable
@@ -144,9 +156,6 @@ export default function CameraScreen() {
             </Pressable>
           </View>
 
-          <Pressable onPress={handleLibrary} hitSlop={8} style={s.libraryLink} disabled={!canCapture}>
-            <AppText style={s.libraryText}>Choose from library</AppText>
-          </Pressable>
         </View>
       </SafeAreaView>
     </View>
@@ -205,8 +214,15 @@ const s = StyleSheet.create({
     backgroundColor: 'rgba(15,14,13,0.92)', paddingHorizontal: 24, paddingTop: 18, paddingBottom: 24,
     borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.06)', gap: 16,
   },
-  thumbs: { flexDirection: 'row', gap: 8, justifyContent: 'center' },
+  thumbs: { flexDirection: 'row', gap: 8, justifyContent: 'center', alignItems: 'center' },
   thumb: { width: 46, height: 46, borderRadius: 8, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.2)' },
+  thumbSelected: { borderColor: '#fff', borderWidth: 2 },
+  thumbAdd: {
+    width: 46, height: 46, borderRadius: 8,
+    borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.25)', borderStyle: 'dashed',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  thumbAddIcon: { fontSize: 22, color: 'rgba(255,255,255,0.55)', fontFamily: fonts.sans, lineHeight: 26 },
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 8 },
   sideBtn: {
     width: 44, height: 44, borderRadius: 22, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.15)',
@@ -221,6 +237,4 @@ const s = StyleSheet.create({
   },
   shutterDisabled: { opacity: 0.5 },
   shutterInner: { width: 60, height: 60, borderRadius: 30, backgroundColor: '#fff', borderWidth: 2, borderColor: 'rgba(0,0,0,0.08)' },
-  libraryLink: { alignItems: 'center' },
-  libraryText: { fontFamily: fonts.sansMd, fontSize: 12, color: WHITE_60 },
 });
