@@ -340,7 +340,7 @@ const s = StyleSheet.create({
 
   // Settings popup
   panel: {
-    position: 'absolute', top: 104, right: 16, zIndex: 50,
+    position: 'absolute', top: 124, right: 16, zIndex: 50,
     width: 196, borderRadius: 16,
     backgroundColor: 'rgba(22,20,19,0.92)',
     borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)',
