@@ -279,14 +279,14 @@ const s = StyleSheet.create({
   scroll: { flex: 1 },
   scrollContent: {
     paddingHorizontal: spacing.xl,
-    paddingTop: spacing.sm,
+    paddingTop: spacing.md,
     paddingBottom: spacing.x4,
-    gap: spacing.xl,
+    gap: spacing.xxl,
   },
 
-  group: { gap: spacing.sm },
+  group: { gap: spacing.md },
   groupLabel: {
-    fontFamily: fonts.sansSb, fontSize: 10, letterSpacing: 1.2,
+    fontFamily: fonts.sansSb, fontSize: 11, letterSpacing: 1.3,
     textTransform: 'uppercase', color: colors.ink30, paddingHorizontal: 4,
   },
 
@@ -298,29 +298,29 @@ const s = StyleSheet.create({
 
   row: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 16, paddingVertical: 13, gap: 12,
+    paddingHorizontal: 16, paddingVertical: 15, gap: 12,
   },
   rowBorder: { borderBottomWidth: 1, borderBottomColor: colors.ink15 },
   rowPressed: { backgroundColor: colors.surface1 },
   rowDisabled: { opacity: 0.38 },
-  rowLeft: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
+  rowLeft: { flexDirection: 'row', alignItems: 'center', gap: 13, flex: 1 },
   rowIcon: {
-    width: 32, height: 32, borderRadius: 9,
+    width: 38, height: 38, borderRadius: 11,
     alignItems: 'center', justifyContent: 'center',
   },
-  rowIconText: { fontSize: 15 },
+  rowIconText: { fontSize: 17 },
   rowCopy: { flex: 1 },
-  rowLabel: { fontFamily: fonts.sansMd, fontSize: 13, color: colors.ink100, letterSpacing: -0.1 },
+  rowLabel: { fontFamily: fonts.sansMd, fontSize: 14, color: colors.ink100, letterSpacing: -0.1 },
   rowLabelDanger: { color: '#C62828' },
-  rowSub: { fontFamily: fonts.sans, fontSize: 11, color: colors.ink30, marginTop: 1 },
+  rowSub: { fontFamily: fonts.sans, fontSize: 12, lineHeight: 16, color: colors.ink30, marginTop: 2 },
   rowRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
 
   valChip: {
     backgroundColor: colors.surface1, borderWidth: 1, borderColor: colors.ink15,
-    borderRadius: radius.full, paddingHorizontal: 9, paddingVertical: 3,
+    borderRadius: radius.full, paddingHorizontal: 11, paddingVertical: 4,
   },
-  valChipText: { fontFamily: fonts.sansMd, fontSize: 11, color: colors.ink60 },
-  chevron: { fontFamily: fonts.sans, fontSize: 16, color: colors.ink30 },
+  valChipText: { fontFamily: fonts.sansMd, fontSize: 12, color: colors.ink60 },
+  chevron: { fontFamily: fonts.sans, fontSize: 17, color: colors.ink30 },
 
   storageBar: { flex: 1 },
   storageTrack: { height: 4, backgroundColor: colors.surface2, borderRadius: 2, overflow: 'hidden', marginBottom: 3 },
@@ -330,7 +330,7 @@ const s = StyleSheet.create({
   phaseBadgeRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   phaseBadge: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
-    borderRadius: radius.full, paddingHorizontal: 10, paddingVertical: 3,
+    borderRadius: radius.full, paddingHorizontal: 11, paddingVertical: 5,
     borderWidth: 1,
   },
   phaseBadgeP1: { backgroundColor: '#EDF7ED', borderColor: 'rgba(46,125,50,0.2)' },
@@ -338,10 +338,10 @@ const s = StyleSheet.create({
   phaseDot: { width: 5, height: 5, borderRadius: 3 },
   phaseDotP1: { backgroundColor: '#2E7D32' },
   phaseDotP2: { backgroundColor: colors.ink30 },
-  phaseBadgeText: { fontFamily: fonts.sansSb, fontSize: 9.5, letterSpacing: 0.6, textTransform: 'uppercase' },
+  phaseBadgeText: { fontFamily: fonts.sansSb, fontSize: 10, letterSpacing: 0.6, textTransform: 'uppercase' },
   phaseBadgeTextP1: { color: '#2E7D32' },
   phaseBadgeTextP2: { color: colors.ink30 },
-  phaseSubLabel: { fontFamily: fonts.sans, fontSize: 11, color: colors.ink30 },
+  phaseSubLabel: { fontFamily: fonts.sans, fontSize: 12, color: colors.ink30 },
 
   phase2Wrap: { borderRadius: radius.r20, overflow: 'hidden', borderWidth: 1.5, borderColor: colors.ink15, opacity: 0.75 },
   phase2Header: {
@@ -355,7 +355,7 @@ const s = StyleSheet.create({
   lockIcon: { fontSize: 12 },
   phase2Card: { borderRadius: 0, borderWidth: 0, shadowOpacity: 0 },
 
-  footer: { alignItems: 'center', gap: 4, paddingVertical: 8 },
-  footerLogo: { fontFamily: fonts.serifR, fontSize: 16, color: colors.ink30, letterSpacing: -0.2 },
+  footer: { alignItems: 'center', gap: 4, paddingTop: spacing.sm, paddingBottom: spacing.lg },
+  footerLogo: { fontFamily: fonts.serifR, fontSize: 18, color: colors.ink30, letterSpacing: -0.2 },
   footerVer: { fontFamily: fonts.sansMd, fontSize: 10, color: colors.ink15, letterSpacing: 0.6 },
 });
