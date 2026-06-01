@@ -12,6 +12,7 @@
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
+    "newArchEnabled": true,
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.mosaic.app"
@@ -37,7 +38,8 @@
           "color": "#ffffff"
         }
       ],
-      "expo-font"
+      "expo-font",
+      "@sentry/react-native"
     ]
   }
 }
