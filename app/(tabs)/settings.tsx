@@ -134,7 +134,7 @@ export default function SettingsScreen() {
 
   return (
     <AppScreen>
-      <ScreenHeader title="Settings" />
+      <ScreenHeader wordmark="Settings" />
 
       <ScrollView
         style={s.scroll}
@@ -277,7 +277,12 @@ export default function SettingsScreen() {
 
 const s = StyleSheet.create({
   scroll: { flex: 1 },
-  scrollContent: { paddingHorizontal: spacing.xl, paddingBottom: spacing.x4, gap: spacing.xl },
+  scrollContent: {
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.x4,
+    gap: spacing.xl,
+  },
 
   group: { gap: spacing.sm },
   groupLabel: {
