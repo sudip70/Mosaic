@@ -90,38 +90,42 @@ export default function TodayScreen() {
               </Pressable>
             )}
           </View>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={st.thumbStrip}>
-            {photos.map((p) => (
-              <Pressable
-                key={p.id}
-                style={st.thumb}
-                onPress={() => router.push({ pathname: '/photo/[id]', params: { id: p.id, date } })}
-                accessibilityRole="imagebutton"
-                accessibilityLabel="View capture"
-              >
-                {p.url ? (
-                  <Image source={{ uri: p.url }} style={st.thumbInner} resizeMode="cover" />
-                ) : (
-                  <View style={[st.thumbInner, { backgroundColor: color?.hex ?? colors.surface2 }]} />
-                )}
-                {!!p.timestamp && !!p.created_at && (
-                  <View style={st.thumbTime}>
-                    <AppText style={st.thumbTimeText}>{formatTime(p.created_at)}</AppText>
-                  </View>
-                )}
-              </Pressable>
-            ))}
-            <Pressable
-              style={st.thumbAdd}
-              onPress={() => color && router.push('/camera')}
-              disabled={!color}
-              accessibilityRole="button"
-              accessibilityLabel="Add a capture"
-            >
-              <AppText style={st.thumbAddPlus}>+</AppText>
-              <AppText variant="overline" style={st.thumbAddLabel}>Add</AppText>
-            </Pressable>
-          </ScrollView>
+          {photos.length > 0 && (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={st.thumbStrip}>
+              {photos.map((p) => (
+                <Pressable
+                  key={p.id}
+                  style={st.thumb}
+                  onPress={() => router.push({ pathname: '/photo/[id]', params: { id: p.id, date } })}
+                  accessibilityRole="imagebutton"
+                  accessibilityLabel="View capture"
+                >
+                  {p.url ? (
+                    <Image source={{ uri: p.url }} style={st.thumbInner} resizeMode="cover" />
+                  ) : (
+                    <View style={[st.thumbInner, { backgroundColor: color?.hex ?? colors.surface2 }]} />
+                  )}
+                  {!!p.timestamp && !!p.created_at && (
+                    <View style={st.thumbTime}>
+                      <AppText style={st.thumbTimeText}>{formatTime(p.created_at)}</AppText>
+                    </View>
+                  )}
+                </Pressable>
+              ))}
+            </ScrollView>
+          )}
+
+          {/* Add tile — own row so it stays visible no matter how many captures */}
+          <Pressable
+            style={[st.thumbAdd, photos.length > 0 && st.thumbAddBelow]}
+            onPress={() => color && router.push('/camera')}
+            disabled={!color}
+            accessibilityRole="button"
+            accessibilityLabel="Add a capture"
+          >
+            <AppText style={st.thumbAddPlus}>+</AppText>
+            <AppText variant="overline" style={st.thumbAddLabel}>Add</AppText>
+          </Pressable>
         </View>
       </ScrollView>
 
@@ -179,6 +183,7 @@ const st = StyleSheet.create({
     borderWidth: 1.5, borderColor: colors.ink15, borderStyle: 'dashed',
     alignItems: 'center', justifyContent: 'center', gap: 3,
   },
+  thumbAddBelow: { marginTop: spacing.sm },
   thumbAddPlus: { fontSize: 22, color: colors.ink15, fontFamily: fonts.sans },
   thumbAddLabel: { fontSize: 8.5 },
 });
