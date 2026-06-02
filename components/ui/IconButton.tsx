@@ -1,4 +1,4 @@
-import { Pressable, Text, StyleSheet } from 'react-native';
+import { Pressable, Text, View, StyleSheet } from 'react-native';
 import { colors, shadows, layout } from '@/lib/theme';
 
 interface IconButtonProps {
@@ -20,13 +20,14 @@ export function IconButton({ icon, onPress, accessibilityLabel, ghost }: IconBut
       disabled={!onPress}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
-      style={({ pressed }) => [
-        s.btn,
-        ghost && s.ghost,
-        pressed && onPress && s.pressed,
-      ]}
     >
-      <Text style={s.icon}>{icon}</Text>
+      {({ pressed }) => (
+        // Visual lives on a child View so the circular fill isn't dropped by
+        // Pressable style resolution on the New Architecture.
+        <View style={[s.btn, ghost && s.ghost, pressed && onPress && s.pressed]}>
+          <Text style={s.icon}>{icon}</Text>
+        </View>
+      )}
     </Pressable>
   );
 }
