@@ -16,6 +16,7 @@ import {
 import { StatusBar } from 'expo-status-bar';
 import { useAuth } from '@/hooks/useAuth';
 import { useSync } from '@/hooks/useSync';
+import { useNotifications } from '@/hooks/useNotifications';
 import { useTheme } from '@/hooks/useTheme';
 import { initAnalytics } from '@/lib/analytics';
 import { ONBOARDING_KEY } from '@/lib/constants';
@@ -35,6 +36,7 @@ export default function RootLayout() {
 
   const { loading } = useAuth();
   useSync();
+  useNotifications();
   const { colors, isDark } = useTheme();
 
   const router = useRouter();
