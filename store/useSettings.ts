@@ -8,9 +8,10 @@ export type GridDensity = 'Comfortable' | 'Compact';
 interface Settings {
   morningReminder: boolean;
   reminderTime: string;        // e.g. "8:30 AM"
-  theme: ThemePref;            // persisted; full dark-mode rendering is a future feature
-  gridDensity: GridDensity;    // applied to the grid tile size
+  theme: ThemePref;
+  gridDensity: GridDensity;
   setMorningReminder: (v: boolean) => void;
+  setReminderTime: (v: string) => void;
   cycleTheme: () => void;
   cycleGridDensity: () => void;
 }
@@ -18,11 +19,12 @@ interface Settings {
 export const useSettings = create<Settings>()(
   persist(
     (set) => ({
-      morningReminder: true,
+      morningReminder: false,
       reminderTime: '8:30 AM',
       theme: 'System',
       gridDensity: 'Comfortable',
       setMorningReminder: (morningReminder) => set({ morningReminder }),
+      setReminderTime: (reminderTime) => set({ reminderTime }),
       cycleTheme: () =>
         set((s) => ({ theme: s.theme === 'System' ? 'Light' : s.theme === 'Light' ? 'Dark' : 'System' })),
       cycleGridDensity: () =>

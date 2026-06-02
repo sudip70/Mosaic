@@ -18,9 +18,36 @@ import { useThemedStyles } from '@/hooks/useThemedStyles';
 import { fonts, shadows, radius, spacing, type Palette } from '@/lib/theme';
 import type { GridDay } from '@/types';
 
-const TILE_SIZE = { Comfortable: 30, Compact: 22 } as const;
+const TILE_SIZE = { Comfortable: 30 } as const;
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const PIP_COUNT = 14;
+
+// ─── Compact grid ─────────────────────────────────────────────────────────────
+
+function CompactGrid({ days }: { days: GridDay[] }) {
+  const { colors } = useTheme();
+  const st = useThemedStyles(makeStyles);
+  return (
+    <View style={st.compactGrid}>
+      {days.map((day) => (
+        <Pressable
+          key={day.date}
+          style={[
+            st.compactTile,
+            { backgroundColor: day.hex },
+            !day.hasPhotos && st.tileEmpty,
+            day.isToday && [st.tileToday, { borderColor: colors.ink100 }],
+          ]}
+          onPress={() => router.push(`/day/${day.date}`)}
+          accessibilityRole="button"
+          accessibilityLabel={`${day.date}${day.hasPhotos ? ', has photos' : ''}`}
+        />
+      ))}
+    </View>
+  );
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function getVisibleMonths(days: GridDay[]): string[] {
   const seen = new Set<string>();
@@ -73,7 +100,6 @@ export default function GridScreen() {
   const { current: streakCurrent, longest: streakLongest } = useStreak();
   const { color: todayColor } = useToday();
   const gridDensity = useSettings((s) => s.gridDensity);
-  const tileSize = TILE_SIZE[gridDensity];
   const st = useThemedStyles(makeStyles);
 
   const startDate = user?.created_at?.slice(0, 10) ?? new Date().toISOString().slice(0, 10);
@@ -107,30 +133,36 @@ export default function GridScreen() {
             )}
           </View>
 
-          <View style={st.grid}>
-            {days.map((day) => (
-              <Pressable
-                key={day.date}
-                style={[
-                  st.tile,
-                  { width: tileSize, height: tileSize, backgroundColor: day.hex },
-                  !day.hasPhotos && st.tileEmpty,
-                  day.isToday && st.tileToday,
-                ]}
-                onPress={() => router.push(`/day/${day.date}`)}
-                accessibilityRole="button"
-                accessibilityLabel={`${day.date}${day.hasPhotos ? ', has photos' : ''}`}
-              />
-            ))}
-          </View>
-
-          <View style={st.monthRow}>
-            {visibleMonths.map((m) => (
-              <View key={m} style={[st.mChip, m === currentMonth && st.mChipCurrent]}>
-                <AppText style={[st.mChipText, m === currentMonth && st.mChipTextCurrent]}>{m}</AppText>
+          {gridDensity === 'Compact' ? (
+            <CompactGrid days={days} />
+          ) : (
+            <>
+              <View style={st.grid}>
+                {days.map((day) => (
+                  <Pressable
+                    key={day.date}
+                    style={[
+                      st.tile,
+                      { width: TILE_SIZE.Comfortable, height: TILE_SIZE.Comfortable, backgroundColor: day.hex },
+                      !day.hasPhotos && st.tileEmpty,
+                      day.isToday && st.tileToday,
+                    ]}
+                    onPress={() => router.push(`/day/${day.date}`)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${day.date}${day.hasPhotos ? ', has photos' : ''}`}
+                  />
+                ))}
               </View>
-            ))}
-          </View>
+
+              <View style={st.monthRow}>
+                {visibleMonths.map((m) => (
+                  <View key={m} style={[st.mChip, m === currentMonth && st.mChipCurrent]}>
+                    <AppText style={[st.mChipText, m === currentMonth && st.mChipTextCurrent]}>{m}</AppText>
+                  </View>
+                ))}
+              </View>
+            </>
+          )}
         </View>
 
         {todayColor && (
@@ -156,6 +188,7 @@ export default function GridScreen() {
     </AppScreen>
   );
 }
+
 
 const makeRingStyles = (c: Palette) => StyleSheet.create({
   card: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg, padding: spacing.xl, borderRadius: radius.r24 },
@@ -183,6 +216,9 @@ const makeStyles = (c: Palette) => StyleSheet.create({
   tile: { borderRadius: 10 },
   tileEmpty: { opacity: 0.25 },
   tileToday: { borderWidth: 2.5, borderColor: c.ink100 },
+
+  compactGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 3 },
+  compactTile: { width: 16, height: 16, borderRadius: 4 },
 
   monthRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: spacing.md, paddingHorizontal: 2 },
   mChip: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: radius.r8 },

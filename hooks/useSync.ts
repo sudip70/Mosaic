@@ -43,12 +43,14 @@ async function processQueue() {
         const base64 = await FileSystem.readAsStringAsync(item.localUri, {
           encoding: FileSystem.EncodingType.Base64,
         });
-        const storagePath = `${item.userId}/${item.date}/${item.id}.jpg`;
+        const ext = item.localUri.endsWith('.webp') ? 'webp' : 'jpg';
+        const contentType = ext === 'webp' ? 'image/webp' : 'image/jpeg';
+        const storagePath = `${item.userId}/${item.date}/${item.id}.${ext}`;
 
         // upsert so a retried partial upload doesn't fail on duplicates
         const { error: storageError } = await supabase.storage
           .from('photos')
-          .upload(storagePath, decode(base64), { contentType: 'image/jpeg', upsert: true });
+          .upload(storagePath, decode(base64), { contentType, upsert: true });
         if (storageError) throw storageError;
 
         const { error: insertError } = await supabase

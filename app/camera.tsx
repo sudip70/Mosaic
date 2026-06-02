@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect, useCallback } from 'react';
+import { useRef, useState, useEffect, useCallback, useMemo } from 'react';
 import { View, Pressable, ActivityIndicator, StyleSheet, Image, Switch } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CameraView, CameraType, FlashMode, useCameraPermissions } from 'expo-camera';
@@ -12,8 +12,9 @@ import { useUpload } from '@/hooks/useUpload';
 import { useAuth } from '@/hooks/useAuth';
 import { useColorStore } from '@/store/useColorStore';
 import { useCameraSettings } from '@/store/useCameraSettings';
+import { useTheme } from '@/hooks/useTheme';
 import { today } from '@/lib/dates';
-import { colors, fonts, radius } from '@/lib/theme';
+import { fonts, radius, type Palette } from '@/lib/theme';
 import { X, Settings, Plus, Zap, RotateCcw, ICON_STROKE } from '@/lib/icons';
 
 export default function CameraScreen() {
@@ -31,6 +32,17 @@ export default function CameraScreen() {
   // Camera-only preferences (persisted) + the settings popup visibility.
   const { timestamp, grid, leveling, toggle } = useCameraSettings();
   const [showSettings, setShowSettings] = useState(false);
+
+  // Themed chrome — the live feed can't be themed, but the surrounding UI follows it.
+  const { colors, isDark } = useTheme();
+  const s = useMemo(() => makeStyles(colors, isDark), [colors, isDark]);
+  // Icon tints over glass chrome, adapted per theme.
+  const glassIcon = isDark ? 'rgba(255,255,255,0.85)' : colors.ink100;
+  const mutedIcon = isDark ? 'rgba(255,255,255,0.7)' : colors.ink60;
+  const faintIcon = isDark ? 'rgba(255,255,255,0.6)' : colors.ink30;
+  // Shutter: neutral ring + a dot tinted with the colour of the day.
+  const shutterSpinner = isDark ? '#fff' : colors.ink100;
+  const shutterColor = todayColor?.hex ?? colors.accent;
 
   const canCapture = !!user && !!todayColor && !uploading;
 
@@ -59,7 +71,7 @@ export default function CameraScreen() {
   if (!permission) {
     return (
       <View style={s.dark}>
-        <ActivityIndicator color="#fff" />
+        <ActivityIndicator color={colors.ink100} />
       </View>
     );
   }
@@ -99,7 +111,7 @@ export default function CameraScreen() {
         {/* Top bar */}
         <View style={s.topBar}>
           <Pressable style={s.closeBtn} onPress={() => router.back()} accessibilityLabel="Close camera">
-            <X size={18} color="rgba(255,255,255,0.85)" strokeWidth={ICON_STROKE} />
+            <X size={18} color={glassIcon} strokeWidth={ICON_STROKE} />
           </Pressable>
 
           {todayColor && (
@@ -109,53 +121,60 @@ export default function CameraScreen() {
             </View>
           )}
 
-          <View style={s.topRight}>
-            <View style={s.counter}>
-              <AppText style={s.counterText}>{sessionShots.length} / ∞</AppText>
-            </View>
-            <Pressable
-              style={[s.settingsBtn, showSettings && s.settingsBtnActive]}
-              onPress={() => setShowSettings((v) => !v)}
-              accessibilityRole="button"
-              accessibilityLabel="Camera settings"
-            >
-              <Settings size={16} color="rgba(255,255,255,0.85)" strokeWidth={ICON_STROKE} />
-            </Pressable>
-          </View>
+          <Pressable
+            style={[s.settingsBtn, showSettings && s.settingsBtnActive]}
+            onPress={() => setShowSettings((v) => !v)}
+            accessibilityRole="button"
+            accessibilityLabel="Camera settings"
+          >
+            <Settings size={16} color={showSettings ? '#fff' : glassIcon} strokeWidth={ICON_STROKE} />
+          </Pressable>
         </View>
 
-        {/* Finder — grid/level aids are confined to this region only */}
+        {/* Spacer above — centres the finder between the top bar and controls */}
+        <View style={s.spacer} />
+
+        {/* Finder — locked to 4:3 so what you see is what gets saved */}
         <View style={s.finderMid}>
           {grid && <GridOverlay />}
           {leveling && <LevelIndicator />}
           {timestamp && <TimestampOverlay />}
           {uploadError && (
-            <View style={s.errorBanner}>
-              <AppText style={s.errorText}>{uploadError}</AppText>
+            <View style={ov.errorBanner}>
+              <AppText style={ov.errorText}>{uploadError}</AppText>
             </View>
           )}
         </View>
 
+        {/* Spacer below */}
+        <View style={s.spacer} />
+
         {/* Controls */}
         <View style={s.controls}>
-          {/* Captured-this-session strip + add-from-gallery tile */}
+          {/* Captured-this-session strip + add-from-gallery tile, counter at right */}
           <View style={s.thumbs}>
-            {sessionShots.slice(0, 3).map((uri, i) => (
-              <Image
-                key={`${uri}-${i}`}
-                source={{ uri }}
-                style={[s.thumb, i === 0 && s.thumbSelected]}
-              />
-            ))}
-            <Pressable
-              style={s.thumbAdd}
-              onPress={handleLibrary}
-              disabled={!canCapture}
-              accessibilityRole="button"
-              accessibilityLabel="Add from gallery"
-            >
-              <Plus size={22} color="rgba(255,255,255,0.6)" strokeWidth={ICON_STROKE} />
-            </Pressable>
+            <View style={s.thumbStrip}>
+              {sessionShots.slice(0, 3).map((uri, i) => (
+                <Image
+                  key={`${uri}-${i}`}
+                  source={{ uri }}
+                  style={[s.thumb, i === 0 && s.thumbSelected]}
+                />
+              ))}
+              <Pressable
+                style={s.thumbAdd}
+                onPress={handleLibrary}
+                disabled={!canCapture}
+                accessibilityRole="button"
+                accessibilityLabel="Add from gallery"
+              >
+                <Plus size={22} color={faintIcon} strokeWidth={ICON_STROKE} />
+              </Pressable>
+            </View>
+
+            <View style={s.counter}>
+              <AppText style={s.counterText}>{sessionShots.length} / ∞</AppText>
+            </View>
           </View>
 
           <View style={s.row}>
@@ -164,7 +183,7 @@ export default function CameraScreen() {
               onPress={() => setFlash((f) => (f === 'off' ? 'on' : 'off'))}
               accessibilityLabel="Toggle flash"
             >
-              <Zap size={19} color={flash === 'on' ? colors.accent : 'rgba(255,255,255,0.7)'} strokeWidth={ICON_STROKE} />
+              <Zap size={19} color={flash === 'on' ? colors.accent : mutedIcon} strokeWidth={ICON_STROKE} />
             </Pressable>
 
             <Pressable
@@ -174,7 +193,7 @@ export default function CameraScreen() {
               accessibilityRole="button"
               accessibilityLabel="Take photo"
             >
-              {uploading ? <ActivityIndicator color={colors.ink100} /> : <View style={s.shutterInner} />}
+              {uploading ? <ActivityIndicator color={shutterSpinner} /> : <View style={[s.shutterInner, { backgroundColor: shutterColor }]} />}
             </Pressable>
 
             <Pressable
@@ -182,7 +201,7 @@ export default function CameraScreen() {
               onPress={() => setFacing((f) => (f === 'back' ? 'front' : 'back'))}
               accessibilityLabel="Flip camera"
             >
-              <RotateCcw size={19} color="rgba(255,255,255,0.7)" strokeWidth={ICON_STROKE} />
+              <RotateCcw size={19} color={mutedIcon} strokeWidth={ICON_STROKE} />
             </Pressable>
           </View>
 
@@ -195,6 +214,9 @@ export default function CameraScreen() {
             grid={grid}
             leveling={leveling}
             onToggle={toggle}
+            s={s}
+            colors={colors}
+            isDark={isDark}
           />
         )}
       </SafeAreaView>
@@ -209,14 +231,18 @@ interface PanelProps {
   grid: boolean;
   leveling: boolean;
   onToggle: (key: 'timestamp' | 'grid' | 'leveling') => void;
+  s: ReturnType<typeof makeStyles>;
+  colors: Palette;
+  isDark: boolean;
 }
 
-function CameraSettingsPanel({ timestamp, grid, leveling, onToggle }: PanelProps) {
+function CameraSettingsPanel({ timestamp, grid, leveling, onToggle, s, colors, isDark }: PanelProps) {
   const rows: { key: 'timestamp' | 'grid' | 'leveling'; label: string; value: boolean }[] = [
     { key: 'timestamp', label: 'Timestamp', value: timestamp },
     { key: 'grid', label: 'Grid', value: grid },
     { key: 'leveling', label: 'Leveling', value: leveling },
   ];
+  const trackOff = isDark ? 'rgba(255,255,255,0.18)' : colors.surface2;
   return (
     <View style={s.panel}>
       {rows.map((r, i) => (
@@ -225,9 +251,9 @@ function CameraSettingsPanel({ timestamp, grid, leveling, onToggle }: PanelProps
           <Switch
             value={r.value}
             onValueChange={() => onToggle(r.key)}
-            trackColor={{ false: 'rgba(255,255,255,0.18)', true: colors.accent }}
-            thumbColor="#fff"
-            ios_backgroundColor="rgba(255,255,255,0.18)"
+            trackColor={{ false: trackOff, true: colors.accent }}
+            thumbColor={isDark ? '#fff' : colors.surface0}
+            ios_backgroundColor={trackOff}
           />
         </View>
       ))}
@@ -238,13 +264,16 @@ function CameraSettingsPanel({ timestamp, grid, leveling, onToggle }: PanelProps
 // ─── Dotted rule-of-thirds grid ───────────────────────────────────────────────
 
 function GridOverlay() {
-  const stroke = 'rgba(255,255,255,0.5)';
+  // Thin solid rule-of-thirds lines, iOS-style.
+  const line = 'rgba(255,255,255,0.6)';
   return (
-    <Svg style={s.gridOverlay} pointerEvents="none">
-      <Line x1="33.33%" y1="0" x2="33.33%" y2="100%" stroke={stroke} strokeWidth={1} strokeDasharray="2 7" />
-      <Line x1="66.66%" y1="0" x2="66.66%" y2="100%" stroke={stroke} strokeWidth={1} strokeDasharray="2 7" />
-      <Line x1="0" y1="33.33%" x2="100%" y2="33.33%" stroke={stroke} strokeWidth={1} strokeDasharray="2 7" />
-      <Line x1="0" y1="66.66%" x2="100%" y2="66.66%" stroke={stroke} strokeWidth={1} strokeDasharray="2 7" />
+    <Svg style={ov.gridOverlay} width="100%" height="100%" pointerEvents="none">
+      {/* Vertical thirds */}
+      <Line x1="33.33%" y1="0" x2="33.33%" y2="100%" stroke={line} strokeWidth={0.75} />
+      <Line x1="66.66%" y1="0" x2="66.66%" y2="100%" stroke={line} strokeWidth={0.75} />
+      {/* Horizontal thirds */}
+      <Line x1="0" y1="33.33%" x2="100%" y2="33.33%" stroke={line} strokeWidth={0.75} />
+      <Line x1="0" y1="66.66%" x2="100%" y2="66.66%" stroke={line} strokeWidth={0.75} />
     </Svg>
   );
 }
@@ -252,6 +281,7 @@ function GridOverlay() {
 // ─── Horizon level indicator ──────────────────────────────────────────────────
 
 function LevelIndicator() {
+  const { colors } = useTheme();
   const [roll, setRoll] = useState(0);
 
   useEffect(() => {
@@ -267,12 +297,12 @@ function LevelIndicator() {
   const lineColor = level ? colors.accent : 'rgba(255,255,255,0.8)';
 
   return (
-    <View style={s.levelWrap} pointerEvents="none">
+    <View style={ov.levelWrap} pointerEvents="none">
       {/* Fixed center reference */}
-      <View style={s.levelRef} />
+      <View style={ov.levelRef} />
       {/* Rotating horizon line */}
-      <View style={[s.levelLine, { backgroundColor: lineColor, transform: [{ rotate: `${roll}deg` }] }]} />
-      <View style={[s.levelDot, { backgroundColor: lineColor }]} />
+      <View style={[ov.levelLine, { backgroundColor: lineColor, transform: [{ rotate: `${roll}deg` }] }]} />
+      <View style={[ov.levelDot, { backgroundColor: lineColor }]} />
     </View>
   );
 }
@@ -286,76 +316,18 @@ function TimestampOverlay() {
     return () => clearInterval(id);
   }, []);
   return (
-    <View style={s.timestamp} pointerEvents="none">
-      <AppText style={s.timestampText}>{format(now, 'yyyy-MM-dd  HH:mm:ss')}</AppText>
+    <View style={ov.timestamp} pointerEvents="none">
+      <AppText style={ov.timestampText}>{format(now, 'yyyy-MM-dd  HH:mm:ss')}</AppText>
     </View>
   );
 }
 
-const WHITE_60 = 'rgba(255,255,255,0.6)';
-const DARK_GLASS = 'rgba(15,14,13,0.55)';
+// ─── Theme-independent overlays ───────────────────────────────────────────────
+// These sit on the live photo (grid, level, timestamp, error). They stay neutral
+// white/amber so they read on any captured scene, in either app theme.
+const ov = StyleSheet.create({
+  gridOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
 
-const s = StyleSheet.create({
-  dark: { flex: 1, backgroundColor: '#0F0E0D' },
-  overlay: { flex: 1, justifyContent: 'space-between' },
-
-  // Permission
-  permCenter: { alignItems: 'center', justifyContent: 'center', padding: 32, gap: 14 },
-  permTitle: { fontFamily: fonts.serifR, fontSize: 26, color: '#fff', textAlign: 'center' },
-  permSub: { fontFamily: fonts.sans, fontSize: 14, color: WHITE_60, textAlign: 'center', lineHeight: 21 },
-  permBtn: {
-    backgroundColor: colors.accent, borderRadius: radius.r16,
-    paddingHorizontal: 28, paddingVertical: 14, marginTop: 8,
-  },
-  permBtnText: { fontFamily: fonts.sansSb, fontSize: 15, color: '#fff' },
-  permCancel: { fontFamily: fonts.sansMd, fontSize: 13, color: WHITE_60, marginTop: 4 },
-
-  // Top bar
-  topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: 8 },
-  closeBtn: {
-    width: 36, height: 36, borderRadius: 18, backgroundColor: DARK_GLASS,
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', alignItems: 'center', justifyContent: 'center',
-  },
-  hint: {
-    flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: DARK_GLASS,
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', borderRadius: radius.full,
-    paddingHorizontal: 14, paddingVertical: 6,
-  },
-  hintDot: { width: 10, height: 10, borderRadius: 5 },
-  hintText: { fontFamily: fonts.sansSb, fontSize: 11, color: 'rgba(255,255,255,0.85)', letterSpacing: 0.4 },
-  topRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  counter: {
-    backgroundColor: DARK_GLASS, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)',
-    borderRadius: radius.full, paddingHorizontal: 10, paddingVertical: 5,
-  },
-  counterText: { fontFamily: fonts.sansSb, fontSize: 11, color: 'rgba(255,255,255,0.7)', letterSpacing: 0.4 },
-  settingsBtn: {
-    width: 36, height: 36, borderRadius: 18, backgroundColor: DARK_GLASS,
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)',
-    alignItems: 'center', justifyContent: 'center',
-  },
-  settingsBtnActive: { backgroundColor: colors.accent, borderColor: colors.accent },
-
-  // Settings popup
-  panel: {
-    position: 'absolute', top: 124, right: 16, zIndex: 50,
-    width: 196, borderRadius: 16,
-    backgroundColor: 'rgba(22,20,19,0.92)',
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)',
-    paddingHorizontal: 14,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.4, shadowRadius: 20, elevation: 12,
-  },
-  panelRow: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingVertical: 9,
-  },
-  panelRowBorder: { borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.08)' },
-  panelLabel: { fontFamily: fonts.sansMd, fontSize: 14, color: '#fff' },
-
-  // Grid — inset from the top so it doesn't crowd the colour hint / top bar
-  gridOverlay: { position: 'absolute', top: 28, left: 0, right: 0, bottom: 0 },
-
-  // Level indicator
   levelWrap: {
     position: 'absolute', top: 0, bottom: 0, left: 0, right: 0,
     alignItems: 'center', justifyContent: 'center',
@@ -364,7 +336,6 @@ const s = StyleSheet.create({
   levelRef: { position: 'absolute', width: 56, height: 1, backgroundColor: 'rgba(255,255,255,0.35)' },
   levelDot: { position: 'absolute', width: 8, height: 8, borderRadius: 4 },
 
-  // Timestamp
   timestamp: { position: 'absolute', bottom: 16, right: 18 },
   timestampText: {
     fontFamily: fonts.sansSb, fontSize: 13, letterSpacing: 0.5,
@@ -372,40 +343,118 @@ const s = StyleSheet.create({
     textShadowColor: 'rgba(0,0,0,0.5)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 3,
   },
 
-  // Finder
-  finderMid: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-
-  // Error banner
   errorBanner: {
     position: 'absolute', bottom: 16, alignSelf: 'center',
     backgroundColor: 'rgba(198,40,40,0.92)', borderRadius: 9999,
     paddingHorizontal: 16, paddingVertical: 8, maxWidth: '90%',
   },
   errorText: { fontFamily: fonts.sansMd, fontSize: 12, color: '#fff', textAlign: 'center' },
-
-  // Controls
-  controls: {
-    backgroundColor: 'rgba(15,14,13,0.92)', paddingHorizontal: 24, paddingTop: 18, paddingBottom: 24,
-    borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.06)', gap: 16,
-  },
-  thumbs: { flexDirection: 'row', gap: 8, justifyContent: 'center', alignItems: 'center' },
-  thumb: { width: 46, height: 46, borderRadius: 8, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.2)' },
-  thumbSelected: { borderColor: '#fff', borderWidth: 2 },
-  thumbAdd: {
-    width: 46, height: 46, borderRadius: 8,
-    borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.25)', borderStyle: 'dashed',
-    alignItems: 'center', justifyContent: 'center',
-  },
-  row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 8 },
-  sideBtn: {
-    width: 44, height: 44, borderRadius: 22, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.15)',
-    alignItems: 'center', justifyContent: 'center',
-  },
-  shutter: {
-    width: 72, height: 72, borderRadius: 36, backgroundColor: '#fff',
-    alignItems: 'center', justifyContent: 'center',
-    borderWidth: 3, borderColor: 'rgba(255,255,255,0.25)',
-  },
-  shutterDisabled: { opacity: 0.5 },
-  shutterInner: { width: 60, height: 60, borderRadius: 30, backgroundColor: '#fff', borderWidth: 2, borderColor: 'rgba(0,0,0,0.08)' },
 });
+
+// ─── Themed chrome ────────────────────────────────────────────────────────────
+const makeStyles = (c: Palette, isDark: boolean) => {
+  // Glass pills/buttons floating over the live feed.
+  const glassBg     = isDark ? 'rgba(15,14,13,0.55)' : 'rgba(254,252,248,0.72)';
+  const glassBorder = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)';
+  // Solid chrome bars / popups. The mask + controls share one solid canvas tone
+  // so everything below the 4:3 finder reads as a single seamless surface.
+  const chromeBg    = c.canvas;
+  const panelBg     = isDark ? 'rgba(22,20,19,0.96)' : 'rgba(254,252,248,0.98)';
+  // Shutter inverts with the theme so it always pops against its bar.
+  const shutterFill = isDark ? '#fff' : c.ink100;
+
+  return StyleSheet.create({
+    dark: { flex: 1, backgroundColor: c.canvas },
+    overlay: { flex: 1 },
+
+    // Permission
+    permCenter: { alignItems: 'center', justifyContent: 'center', padding: 32, gap: 14 },
+    permTitle: { fontFamily: fonts.serifR, fontSize: 26, color: c.ink100, textAlign: 'center' },
+    permSub: { fontFamily: fonts.sans, fontSize: 14, color: c.ink60, textAlign: 'center', lineHeight: 21 },
+    permBtn: {
+      backgroundColor: c.accent, borderRadius: radius.r16,
+      paddingHorizontal: 28, paddingVertical: 14, marginTop: 8,
+    },
+    permBtnText: { fontFamily: fonts.sansSb, fontSize: 15, color: '#fff' },
+    permCancel: { fontFamily: fonts.sansMd, fontSize: 13, color: c.ink60, marginTop: 4 },
+
+    // Top bar
+    topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: 8 },
+    closeBtn: {
+      width: 36, height: 36, borderRadius: 18, backgroundColor: glassBg,
+      borderWidth: 1, borderColor: glassBorder, alignItems: 'center', justifyContent: 'center',
+    },
+    hint: {
+      flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: glassBg,
+      borderWidth: 1, borderColor: glassBorder, borderRadius: radius.full,
+      paddingHorizontal: 14, paddingVertical: 6,
+    },
+    hintDot: { width: 10, height: 10, borderRadius: 5 },
+    hintText: { fontFamily: fonts.sansSb, fontSize: 11, color: isDark ? 'rgba(255,255,255,0.85)' : c.ink100, letterSpacing: 0.4 },
+    counter: {
+      backgroundColor: glassBg, borderWidth: 1, borderColor: glassBorder,
+      borderRadius: radius.full, paddingHorizontal: 10, paddingVertical: 5,
+    },
+    counterText: { fontFamily: fonts.sansSb, fontSize: 11, color: isDark ? 'rgba(255,255,255,0.7)' : c.ink60, letterSpacing: 0.4 },
+    settingsBtn: {
+      width: 36, height: 36, borderRadius: 18, backgroundColor: glassBg,
+      borderWidth: 1, borderColor: glassBorder,
+      alignItems: 'center', justifyContent: 'center',
+    },
+    settingsBtnActive: { backgroundColor: c.accent, borderColor: c.accent },
+
+    // Settings popup
+    panel: {
+      position: 'absolute', top: 124, right: 16, zIndex: 50,
+      width: 196, borderRadius: 16,
+      backgroundColor: panelBg,
+      borderWidth: 1, borderColor: isDark ? 'rgba(255,255,255,0.12)' : c.ink15,
+      paddingHorizontal: 14,
+      shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: isDark ? 0.4 : 0.18, shadowRadius: 20, elevation: 12,
+    },
+    panelRow: {
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+      paddingVertical: 9,
+    },
+    panelRowBorder: { borderBottomWidth: 1, borderBottomColor: isDark ? 'rgba(255,255,255,0.08)' : c.ink15 },
+    panelLabel: { fontFamily: fonts.sansMd, fontSize: 14, color: c.ink100 },
+
+    // Finder — full-width portrait 3:4 capture area. Only top & bottom lines mark
+    // the crop bounds; no side borders, so the preview runs edge to edge like iOS.
+    finderMid: {
+      width: '100%', aspectRatio: 3 / 4,
+      alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
+      borderTopWidth: 1, borderBottomWidth: 1,
+      borderColor: isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.3)',
+    },
+    // Solid canvas fills above & below the finder, hiding the feed outside the 4:3 crop
+    spacer: { flex: 1, backgroundColor: chromeBg },
+
+    // Controls — same solid tone as the mask, joined seamlessly
+    controls: {
+      backgroundColor: chromeBg, paddingHorizontal: 24, paddingTop: 18, paddingBottom: 24, gap: 16,
+    },
+    thumbs: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 8 },
+    thumbStrip: { flexDirection: 'row', gap: 8, alignItems: 'center' },
+    thumb: { width: 46, height: 46, borderRadius: 8, borderWidth: 1.5, borderColor: isDark ? 'rgba(255,255,255,0.2)' : c.ink15 },
+    thumbSelected: { borderColor: isDark ? '#fff' : c.ink100, borderWidth: 2 },
+    thumbAdd: {
+      width: 46, height: 46, borderRadius: 8,
+      borderWidth: 1.5, borderColor: isDark ? 'rgba(255,255,255,0.25)' : c.ink30, borderStyle: 'dashed',
+      alignItems: 'center', justifyContent: 'center',
+    },
+    row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 8 },
+    sideBtn: {
+      width: 44, height: 44, borderRadius: 22, borderWidth: 1.5, borderColor: isDark ? 'rgba(255,255,255,0.15)' : c.ink15,
+      alignItems: 'center', justifyContent: 'center',
+    },
+    shutter: {
+      width: 72, height: 72, borderRadius: 36, backgroundColor: 'transparent',
+      alignItems: 'center', justifyContent: 'center',
+      borderWidth: 4, borderColor: shutterFill,
+    },
+    shutterDisabled: { opacity: 0.5 },
+    // Colour-of-the-day dot; backgroundColor is set inline from todayColor.
+    shutterInner: { width: 54, height: 54, borderRadius: 27 },
+  });
+};

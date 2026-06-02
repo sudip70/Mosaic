@@ -1,9 +1,10 @@
 import {
-  View, Text, ScrollView, Switch, Pressable, StyleSheet, Share,
+  View, Text, ScrollView, Switch, Pressable, StyleSheet, Share, Alert,
 } from 'react-native';
 import { useCallback, useState } from 'react';
 import { router, useFocusEffect } from 'expo-router';
 import * as StoreReview from 'expo-store-review';
+import * as Linking from 'expo-linking';
 import { AppScreen } from '@/components/ui/AppScreen';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
@@ -13,6 +14,8 @@ import { useTheme } from '@/hooks/useTheme';
 import { useThemedStyles } from '@/hooks/useThemedStyles';
 import { useSettings } from '@/store/useSettings';
 import { getStorageInfo, clearCache, formatBytes, StorageInfo } from '@/lib/storageInfo';
+import { requestNotificationPermission } from '@/lib/notifications';
+import { TimePicker } from '@/components/ui/TimePicker';
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
 
@@ -131,16 +134,18 @@ function DisabledRow({ icon, iconBg, label, sub, last }: Omit<RowProps, 'onPress
 
 // ─── Screen ──────────────────────────────────────────────────────────────────
 
+
 export default function SettingsScreen() {
   const { trackScreen } = useAnalytics();
   const { colors } = useTheme();
   const s = useThemedStyles(makeStyles);
   const {
     morningReminder, reminderTime, theme, gridDensity,
-    setMorningReminder, cycleTheme, cycleGridDensity,
+    setMorningReminder, setReminderTime, cycleTheme, cycleGridDensity,
   } = useSettings();
 
   const [storage, setStorage] = useState<StorageInfo | null>(null);
+  const [showTimePicker, setShowTimePicker] = useState(false);
 
   const loadStorage = useCallback(() => { getStorageInfo().then(setStorage); }, []);
 
@@ -151,9 +156,27 @@ export default function SettingsScreen() {
     }, [loadStorage])
   );
 
+  async function handleReminderToggle(value: boolean) {
+    if (value) {
+      const granted = await requestNotificationPermission();
+      if (!granted) {
+        Alert.alert(
+          'Notifications blocked',
+          'Allow notifications for Mosaic in Settings to enable the daily reminder.',
+          [
+            { text: 'Not now', style: 'cancel' },
+            { text: 'Open Settings', onPress: () => Linking.openSettings() },
+          ]
+        );
+        return;
+      }
+    }
+    setMorningReminder(value);
+  }
+
   async function shareApp() {
     await Share.share({
-      message: 'Check out Mosaic — a daily colour photo journal. One colour, one day, a year of your life.',
+      message: 'Check out Mosaic - a daily colour photo journal. One colour, one day, a year of your life.',
     });
   }
 
@@ -194,12 +217,12 @@ export default function SettingsScreen() {
           <SettingsCard>
             <Row
               icon="🔔" iconBg="#FFF8EC"
-              label="Morning reminder"
+              label="Daily reminder"
               sub="One gentle nudge to find today's colour"
               right={
                 <Switch
                   value={morningReminder}
-                  onValueChange={setMorningReminder}
+                  onValueChange={handleReminderToggle}
                   trackColor={{ false: colors.surface2, true: colors.accent }}
                   thumbColor={colors.surface0}
                 />
@@ -210,7 +233,7 @@ export default function SettingsScreen() {
               label="Reminder time"
               sub={morningReminder ? 'When should we nudge you?' : 'Enable reminder first'}
               right={morningReminder ? <><ValChip label={reminderTime} /><Chevron /></> : null}
-              onPress={morningReminder ? () => {} : undefined}
+              onPress={morningReminder ? () => setShowTimePicker(true) : undefined}
               last
             />
           </SettingsCard>
@@ -323,9 +346,19 @@ export default function SettingsScreen() {
         iconBg="#FFF0EC"
         title="Clear cache?"
         body="Frees up space. Your photos stay safe."
+        info="The cache holds temporary data to load the app faster. Your photos are stored separately, on this device and in the cloud, and are never touched by a cache clear."
         confirmLabel="Clear"
+        tone="danger"
         onConfirm={confirmClearCache}
         onCancel={() => setShowClearCache(false)}
+      />
+
+      <TimePicker
+        key={reminderTime}
+        visible={showTimePicker}
+        current={reminderTime}
+        onSelect={setReminderTime}
+        onClose={() => setShowTimePicker(false)}
       />
     </AppScreen>
   );
@@ -418,4 +451,5 @@ const makeStyles = (c: Palette) => StyleSheet.create({
   footer: { alignItems: 'center', gap: 4, paddingTop: spacing.sm, paddingBottom: spacing.lg },
   footerLogo: { fontFamily: fonts.serifR, fontSize: 18, color: c.ink30, letterSpacing: -0.2 },
   footerVer: { fontFamily: fonts.sansMd, fontSize: 10, color: c.ink15, letterSpacing: 0.6 },
+
 });
