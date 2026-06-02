@@ -162,7 +162,7 @@ export default function SettingsScreen() {
       if (!granted) {
         Alert.alert(
           'Notifications blocked',
-          'Allow notifications for Mosaic in Settings to enable the morning reminder.',
+          'Allow notifications for Mosaic in Settings to enable the daily reminder.',
           [
             { text: 'Not now', style: 'cancel' },
             { text: 'Open Settings', onPress: () => Linking.openSettings() },
@@ -217,7 +217,7 @@ export default function SettingsScreen() {
           <SettingsCard>
             <Row
               icon="🔔" iconBg="#FFF8EC"
-              label="Morning reminder"
+              label="Daily reminder"
               sub="One gentle nudge to find today's colour"
               right={
                 <Switch
@@ -346,7 +346,9 @@ export default function SettingsScreen() {
         iconBg="#FFF0EC"
         title="Clear cache?"
         body="Frees up space. Your photos stay safe."
+        info="The cache holds temporary data to load the app faster. Your photos are stored separately, on this device and in the cloud, and are never touched by a cache clear."
         confirmLabel="Clear"
+        tone="danger"
         onConfirm={confirmClearCache}
         onCancel={() => setShowClearCache(false)}
       />
