@@ -6,6 +6,7 @@ import { AppText } from '@/components/ui/AppText';
 import { useTheme } from '@/hooks/useTheme';
 import { useThemedStyles } from '@/hooks/useThemedStyles';
 import { fonts, radius, shadows, spacing, type Palette } from '@/lib/theme';
+import { ArrowRight, ICON_STROKE } from '@/lib/icons';
 import { ONBOARDING_KEY } from '@/lib/constants';
 import { useAppStore } from '@/store/useAppStore';
 
@@ -87,7 +88,7 @@ export default function OnboardingScreen() {
                 <AppText style={s.ctaNote}>No account needed · 10 seconds to start</AppText>
               </View>
               <View style={s.ctaArrow}>
-                <AppText style={s.ctaArrowIcon}>→</AppText>
+                <ArrowRight size={21} color="#fff" strokeWidth={ICON_STROKE} />
               </View>
             </View>
           )}
@@ -137,5 +138,4 @@ const makeStyles = (c: Palette) => StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
     shadowColor: c.accent, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.45, shadowRadius: 16, elevation: 4,
   },
-  ctaArrowIcon: { fontSize: 21, color: '#fff' },
 });

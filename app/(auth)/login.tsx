@@ -10,6 +10,7 @@ import { useTheme } from '@/hooks/useTheme';
 import { useThemedStyles } from '@/hooks/useThemedStyles';
 import { router } from 'expo-router';
 import { fonts, radius, spacing, type Palette } from '@/lib/theme';
+import { ChevronLeft, Sparkles } from '@/lib/icons';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -30,7 +31,7 @@ export default function LoginScreen() {
     <AppScreen>
       <ScreenHeader
         title="Sign in"
-        left={{ icon: '←', accessibilityLabel: 'Back', onPress: () => router.back() }}
+        left={{ icon: ChevronLeft, accessibilityLabel: 'Back', onPress: () => router.back() }}
       />
       <View style={s.body}>
         {sent ? (
@@ -53,7 +54,7 @@ export default function LoginScreen() {
               autoComplete="email"
               style={s.input}
             />
-            <PrimaryButton label="Send magic link" icon="✦" onPress={handleSend} disabled={!valid} />
+            <PrimaryButton label="Send magic link" icon={Sparkles} onPress={handleSend} disabled={!valid} />
           </>
         )}
       </View>

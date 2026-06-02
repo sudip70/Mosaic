@@ -5,6 +5,7 @@ import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { AppText } from '@/components/ui/AppText';
 import { useThemedStyles } from '@/hooks/useThemedStyles';
 import { fonts, radius, spacing, type Palette } from '@/lib/theme';
+import { ChevronLeft } from '@/lib/icons';
 
 const LAST_UPDATED = 'June 1, 2026';
 
@@ -39,7 +40,7 @@ export default function PrivacyScreen() {
     <AppScreen>
       <ScreenHeader
         title="Privacy"
-        left={{ icon: '←', accessibilityLabel: 'Back', onPress: () => router.back() }}
+        left={{ icon: ChevronLeft, accessibilityLabel: 'Back', onPress: () => router.back() }}
       />
 
       <ScrollView

@@ -5,6 +5,7 @@ import { useLocalSearchParams, router } from 'expo-router';
 import { format, parseISO } from 'date-fns';
 import { AppText } from '@/components/ui/AppText';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { X, Download, Share2, Trash2, ICON_STROKE, type LucideIcon } from '@/lib/icons';
 import { usePhotoStore } from '@/store/usePhotoStore';
 import { localStore } from '@/lib/localStore';
 import { usePhotoActions } from '@/hooks/usePhotoActions';
@@ -67,7 +68,7 @@ export default function PhotoViewer() {
         {/* Header */}
         <View style={s.header}>
           <Pressable style={s.iconBtn} onPress={() => router.back()} accessibilityLabel="Close">
-            <AppText style={s.iconBtnText}>✕</AppText>
+            <X size={18} color="#fff" strokeWidth={ICON_STROKE} />
           </Pressable>
           {date && <AppText style={s.headerDate}>{format(parseISO(date), 'MMM d, yyyy')}</AppText>}
           {/* Invisible spacer keeps the date centered opposite the close button */}
@@ -90,9 +91,9 @@ export default function PhotoViewer() {
 
         {/* Actions */}
         <View style={s.actions}>
-          <Action icon="⬇" label="Download" onPress={onDownload} disabled={busy || !photo} />
-          <Action icon="↗" label="Share" onPress={onShare} disabled={busy || !photo} />
-          <Action icon="🗑" label="Delete" onPress={() => setConfirmDelete(true)} disabled={busy || !photo} danger />
+          <Action icon={Download} label="Download" onPress={onDownload} disabled={busy || !photo} />
+          <Action icon={Share2} label="Share" onPress={onShare} disabled={busy || !photo} />
+          <Action icon={Trash2} label="Delete" onPress={() => setConfirmDelete(true)} disabled={busy || !photo} danger />
         </View>
       </SafeAreaView>
 
@@ -127,8 +128,8 @@ export default function PhotoViewer() {
 }
 
 function Action({
-  icon, label, onPress, disabled, danger,
-}: { icon: string; label: string; onPress: () => void; disabled?: boolean; danger?: boolean }) {
+  icon: Icon, label, onPress, disabled, danger,
+}: { icon: LucideIcon; label: string; onPress: () => void; disabled?: boolean; danger?: boolean }) {
   return (
     <Pressable
       onPress={onPress}
@@ -138,7 +139,7 @@ function Action({
       style={({ pressed }) => [s.action, pressed && s.actionPressed, disabled && s.actionDisabled]}
     >
       <View style={[s.actionIcon, danger && s.actionIconDanger]}>
-        <AppText style={s.actionIconText}>{icon}</AppText>
+        <Icon size={22} color={danger ? '#FF6B6B' : '#fff'} strokeWidth={ICON_STROKE} />
       </View>
       <AppText style={[s.actionLabel, danger && s.actionLabelDanger]}>{label}</AppText>
     </Pressable>
@@ -158,7 +159,6 @@ const s = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.1)',
     alignItems: 'center', justifyContent: 'center',
   },
-  iconBtnText: { fontSize: 14, color: '#fff', fontFamily: fonts.sans },
   headerSpacer: { width: 36, height: 36 },
   headerDate: { fontFamily: fonts.sansMd, fontSize: 14, color: 'rgba(255,255,255,0.85)' },
 
@@ -184,9 +184,6 @@ const s = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   actionIconDanger: { backgroundColor: 'rgba(198,40,40,0.22)' },
-  // lineHeight = fontSize + textAlign center keeps the glyph centered in the
-  // circle (auto line-height left the arrow/emoji sitting high).
-  actionIconText: { fontSize: 22, lineHeight: 22, textAlign: 'center', includeFontPadding: false },
   actionLabel: { fontFamily: fonts.sansMd, fontSize: 12, color: 'rgba(255,255,255,0.85)' },
   actionLabelDanger: { color: '#FF6B6B' },
 

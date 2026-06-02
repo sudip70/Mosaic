@@ -16,6 +16,7 @@ import { useAnalytics } from '@/hooks/useAnalytics';
 import { useTheme } from '@/hooks/useTheme';
 import { useThemedStyles } from '@/hooks/useThemedStyles';
 import { fonts, radius, shadows, spacing, type Palette } from '@/lib/theme';
+import { Camera, Plus, Ellipsis, ICON_STROKE } from '@/lib/icons';
 import { formatShort } from '@/lib/dates';
 
 const formatTime = (iso: string) => format(parseISO(iso), 'HH:mm');
@@ -51,7 +52,7 @@ export default function TodayScreen() {
     <AppScreen>
       <ScreenHeader
         wordmark="Mosaic"
-        right={{ icon: '···', accessibilityLabel: 'Settings', onPress: () => router.navigate('/settings') }}
+        right={{ icon: Ellipsis, accessibilityLabel: 'Settings', onPress: () => router.navigate('/settings') }}
       />
 
       <ScrollView
@@ -129,7 +130,7 @@ export default function TodayScreen() {
             accessibilityRole="button"
             accessibilityLabel="Add a capture"
           >
-            <AppText style={st.thumbAddPlus}>+</AppText>
+            <Plus size={22} color={colors.ink30} strokeWidth={ICON_STROKE} />
             <AppText variant="overline" style={st.thumbAddLabel}>Add</AppText>
           </Pressable>
         </View>
@@ -140,7 +141,7 @@ export default function TodayScreen() {
         <PrimaryButton
           label="Capture now"
           sublabel={color ? `Find ${color.name} around you →` : undefined}
-          icon="📷"
+          icon={Camera}
           iconColor={color?.hex}
           onPress={() => router.push('/camera')}
           disabled={!color || loading}
@@ -191,6 +192,5 @@ const makeStyles = (c: Palette) => StyleSheet.create({
     alignItems: 'center', justifyContent: 'center', gap: 3,
   },
   thumbAddBelow: { marginTop: spacing.sm },
-  thumbAddPlus: { fontSize: 22, color: c.ink15, fontFamily: fonts.sans },
   thumbAddLabel: { fontSize: 8.5 },
 });

@@ -14,6 +14,7 @@ import { useColorStore } from '@/store/useColorStore';
 import { useCameraSettings } from '@/store/useCameraSettings';
 import { today } from '@/lib/dates';
 import { colors, fonts, radius } from '@/lib/theme';
+import { X, Settings, Plus, Zap, RotateCcw, ICON_STROKE } from '@/lib/icons';
 
 export default function CameraScreen() {
   const cameraRef = useRef<CameraView>(null);
@@ -98,7 +99,7 @@ export default function CameraScreen() {
         {/* Top bar */}
         <View style={s.topBar}>
           <Pressable style={s.closeBtn} onPress={() => router.back()} accessibilityLabel="Close camera">
-            <AppText style={s.closeIcon}>✕</AppText>
+            <X size={18} color="rgba(255,255,255,0.85)" strokeWidth={ICON_STROKE} />
           </Pressable>
 
           {todayColor && (
@@ -118,7 +119,7 @@ export default function CameraScreen() {
               accessibilityRole="button"
               accessibilityLabel="Camera settings"
             >
-              <AppText style={s.settingsIcon}>⚙</AppText>
+              <Settings size={16} color="rgba(255,255,255,0.85)" strokeWidth={ICON_STROKE} />
             </Pressable>
           </View>
         </View>
@@ -153,7 +154,7 @@ export default function CameraScreen() {
               accessibilityRole="button"
               accessibilityLabel="Add from gallery"
             >
-              <AppText style={s.thumbAddIcon}>+</AppText>
+              <Plus size={22} color="rgba(255,255,255,0.6)" strokeWidth={ICON_STROKE} />
             </Pressable>
           </View>
 
@@ -163,7 +164,7 @@ export default function CameraScreen() {
               onPress={() => setFlash((f) => (f === 'off' ? 'on' : 'off'))}
               accessibilityLabel="Toggle flash"
             >
-              <AppText style={[s.sideIcon, flash === 'on' && s.sideIconActive]}>⚡</AppText>
+              <Zap size={19} color={flash === 'on' ? colors.accent : 'rgba(255,255,255,0.7)'} strokeWidth={ICON_STROKE} />
             </Pressable>
 
             <Pressable
@@ -181,7 +182,7 @@ export default function CameraScreen() {
               onPress={() => setFacing((f) => (f === 'back' ? 'front' : 'back'))}
               accessibilityLabel="Flip camera"
             >
-              <AppText style={s.sideIcon}>↺</AppText>
+              <RotateCcw size={19} color="rgba(255,255,255,0.7)" strokeWidth={ICON_STROKE} />
             </Pressable>
           </View>
 
@@ -315,7 +316,6 @@ const s = StyleSheet.create({
     width: 36, height: 36, borderRadius: 18, backgroundColor: DARK_GLASS,
     borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', alignItems: 'center', justifyContent: 'center',
   },
-  closeIcon: { fontSize: 14, color: 'rgba(255,255,255,0.85)', fontFamily: fonts.sans },
   hint: {
     flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: DARK_GLASS,
     borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', borderRadius: radius.full,
@@ -335,7 +335,6 @@ const s = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   settingsBtnActive: { backgroundColor: colors.accent, borderColor: colors.accent },
-  settingsIcon: { fontSize: 15, color: 'rgba(255,255,255,0.8)' },
 
   // Settings popup
   panel: {
@@ -397,14 +396,11 @@ const s = StyleSheet.create({
     borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.25)', borderStyle: 'dashed',
     alignItems: 'center', justifyContent: 'center',
   },
-  thumbAddIcon: { fontSize: 22, color: 'rgba(255,255,255,0.55)', fontFamily: fonts.sans, lineHeight: 26 },
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 8 },
   sideBtn: {
     width: 44, height: 44, borderRadius: 22, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.15)',
     alignItems: 'center', justifyContent: 'center',
   },
-  sideIcon: { fontSize: 19, color: 'rgba(255,255,255,0.6)' },
-  sideIconActive: { color: colors.accent },
   shutter: {
     width: 72, height: 72, borderRadius: 36, backgroundColor: '#fff',
     alignItems: 'center', justifyContent: 'center',

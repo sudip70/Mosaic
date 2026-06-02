@@ -1,9 +1,11 @@
-import { Pressable, Text, View, StyleSheet } from 'react-native';
-import { shadows, layout, fonts, type Palette } from '@/lib/theme';
+import { Pressable, View, StyleSheet } from 'react-native';
+import { shadows, layout, type Palette } from '@/lib/theme';
+import { ICON_STROKE, type LucideIcon } from '@/lib/icons';
+import { useTheme } from '@/hooks/useTheme';
 import { useThemedStyles } from '@/hooks/useThemedStyles';
 
 interface IconButtonProps {
-  icon: string;
+  icon: LucideIcon;
   onPress?: () => void;
   accessibilityLabel: string;
   /** Render a transparent button (no fill/border) — for placement balance. */
@@ -14,7 +16,8 @@ interface IconButtonProps {
  * Circular header button used in the top nav of every screen.
  * Single source of truth for the 36px round icon affordance.
  */
-export function IconButton({ icon, onPress, accessibilityLabel, ghost }: IconButtonProps) {
+export function IconButton({ icon: Icon, onPress, accessibilityLabel, ghost }: IconButtonProps) {
+  const { colors } = useTheme();
   const s = useThemedStyles(makeStyles);
   return (
     <Pressable
@@ -27,7 +30,7 @@ export function IconButton({ icon, onPress, accessibilityLabel, ghost }: IconBut
         // Visual lives on a child View so the circular fill isn't dropped by
         // Pressable style resolution on the New Architecture.
         <View style={[s.btn, ghost && s.ghost, pressed && onPress && s.pressed]}>
-          <Text style={s.icon}>{icon}</Text>
+          <Icon size={18} color={colors.ink60} strokeWidth={ICON_STROKE} />
         </View>
       )}
     </Pressable>
@@ -53,5 +56,4 @@ const makeStyles = (c: Palette) => StyleSheet.create({
     elevation: 0,
   },
   pressed: { backgroundColor: c.surface2 },
-  icon: { fontFamily: fonts.sansMd, fontSize: 14, color: c.ink60 },
 });

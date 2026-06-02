@@ -5,6 +5,7 @@ import { AppScreen } from '@/components/ui/AppScreen';
 import { AppText } from '@/components/ui/AppText';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
 import { spacing } from '@/lib/theme';
+import { ArrowRight } from '@/lib/icons';
 
 export default function WelcomeScreen() {
   return (
@@ -18,8 +19,8 @@ export default function WelcomeScreen() {
       <View style={s.actions}>
         <PrimaryButton
           label="Create account"
-          sublabel="Save your grid across devices →"
-          icon="→"
+          sublabel="Save your grid across devices"
+          icon={ArrowRight}
           onPress={() => router.push('/(auth)/signup')}
         />
       </View>

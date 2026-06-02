@@ -3,14 +3,15 @@ import { Text, View, Pressable, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { fonts, type Palette } from '@/lib/theme';
+import { Aperture, Grid2x2, Users, Settings, ICON_STROKE, type LucideIcon } from '@/lib/icons';
 import { useTheme } from '@/hooks/useTheme';
 import { useThemedStyles } from '@/hooks/useThemedStyles';
 
-const TABS: Record<string, { icon: string; label: string }> = {
-  index:    { icon: '◉', label: 'Today' },
-  grid:     { icon: '▦', label: 'Grid' },
-  friends:  { icon: '◎', label: 'Friends' },
-  settings: { icon: '⚙', label: 'Settings' },
+const TABS: Record<string, { icon: LucideIcon; label: string }> = {
+  index:    { icon: Aperture, label: 'Today' },
+  grid:     { icon: Grid2x2, label: 'Grid' },
+  friends:  { icon: Users, label: 'Friends' },
+  settings: { icon: Settings, label: 'Settings' },
 };
 
 function MosaicTabBar({ state, navigation }: BottomTabBarProps) {
@@ -25,6 +26,7 @@ function MosaicTabBar({ state, navigation }: BottomTabBarProps) {
         const meta = TABS[route.name];
         if (!meta) return null;
         const focused = state.index === index;
+        const Icon = meta.icon;
 
         const onPress = () => {
           const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
@@ -41,7 +43,7 @@ function MosaicTabBar({ state, navigation }: BottomTabBarProps) {
             accessibilityLabel={meta.label}
           >
             <View style={[s.pill, focused && { backgroundColor: activePillBg }]}>
-              <Text style={[s.icon, focused && s.iconActive]}>{meta.icon}</Text>
+              <Icon size={19} strokeWidth={ICON_STROKE} color={focused ? '#fff' : colors.ink30} />
               <Text style={[s.label, focused && s.labelActive]}>{meta.label}</Text>
               {focused && <View style={s.dot} />}
             </View>
@@ -85,8 +87,6 @@ const makeStyles = (c: Palette) => StyleSheet.create({
     borderRadius: 16,
     minWidth: 64,
   },
-  icon: { fontSize: 17, lineHeight: 20, color: c.ink30 },
-  iconActive: { color: '#fff' },
   label: {
     fontFamily: fonts.sansMd,
     fontSize: 9.5,

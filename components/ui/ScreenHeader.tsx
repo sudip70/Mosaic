@@ -2,10 +2,11 @@ import { View, StyleSheet } from 'react-native';
 import { AppText } from './AppText';
 import { IconButton } from './IconButton';
 import { layout, type Palette } from '@/lib/theme';
+import { type LucideIcon } from '@/lib/icons';
 import { useThemedStyles } from '@/hooks/useThemedStyles';
 
 interface HeaderAction {
-  icon: string;
+  icon: LucideIcon;
   onPress?: () => void;
   accessibilityLabel: string;
 }

@@ -13,6 +13,7 @@ import { useAnalytics } from '@/hooks/useAnalytics';
 import { useTheme } from '@/hooks/useTheme';
 import { useThemedStyles } from '@/hooks/useThemedStyles';
 import { fonts, radius, shadows, spacing, type Palette } from '@/lib/theme';
+import { ChevronLeft } from '@/lib/icons';
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -38,7 +39,7 @@ export default function DayScreen() {
       <AppScreen>
         <ScreenHeader
           title="Day"
-          left={{ icon: '←', accessibilityLabel: 'Back', onPress: () => router.back() }}
+          left={{ icon: ChevronLeft, accessibilityLabel: 'Back', onPress: () => router.back() }}
         />
         <View style={st.emptyWrap}>
           <AppText variant="title" color={colors.ink60}>Invalid date</AppText>
@@ -55,7 +56,7 @@ export default function DayScreen() {
     <AppScreen>
       <ScreenHeader
         title={format(parseISO(safeDate), 'MMM d')}
-        left={{ icon: '←', accessibilityLabel: 'Back', onPress: () => router.back() }}
+        left={{ icon: ChevronLeft, accessibilityLabel: 'Back', onPress: () => router.back() }}
       />
 
       <ScrollView

@@ -1,12 +1,13 @@
 import { Pressable, View, StyleSheet } from 'react-native';
 import { AppText } from './AppText';
 import { radius, fonts } from '@/lib/theme';
+import { ICON_STROKE, type LucideIcon } from '@/lib/icons';
 import { useTheme } from '@/hooks/useTheme';
 
 interface PrimaryButtonProps {
   label: string;
   sublabel?: string;
-  icon?: string;
+  icon?: LucideIcon;
   /** Colour of the icon circle (and its glow). Defaults to the brand accent. */
   iconColor?: string;
   onPress: () => void;
@@ -21,7 +22,7 @@ const DARK_PILL = '#1A1714';
  * The pill call-to-action with a coloured circle icon on the right.
  * Used for the headline action on a screen (Capture now, Begin today…).
  */
-export function PrimaryButton({ label, sublabel, icon, iconColor, onPress, disabled }: PrimaryButtonProps) {
+export function PrimaryButton({ label, sublabel, icon: Icon, iconColor, onPress, disabled }: PrimaryButtonProps) {
   const { colors, isDark } = useTheme();
   const pillBg = isDark ? colors.surface2 : DARK_PILL;
   const borderColor = isDark ? colors.ink15 : 'rgba(255,255,255,0.06)';
@@ -43,9 +44,9 @@ export function PrimaryButton({ label, sublabel, icon, iconColor, onPress, disab
             <AppText style={s.label}>{label}</AppText>
             {sublabel && <AppText style={s.sub}>{sublabel}</AppText>}
           </View>
-          {icon && (
+          {Icon && (
             <View style={[s.icon, { backgroundColor: iconBg, shadowColor: iconBg }]}>
-              <AppText style={s.iconText}>{icon}</AppText>
+              <Icon size={20} color="#fff" strokeWidth={ICON_STROKE} />
             </View>
           )}
         </View>
@@ -78,5 +79,4 @@ const s = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
     shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.45, shadowRadius: 12, elevation: 4,
   },
-  iconText: { fontSize: 19 },
 });
