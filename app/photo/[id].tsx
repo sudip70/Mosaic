@@ -199,7 +199,9 @@ const s = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   actionIconDanger: { backgroundColor: 'rgba(198,40,40,0.22)' },
-  actionIconText: { fontSize: 22 },
+  // lineHeight = fontSize + textAlign center keeps the glyph centered in the
+  // circle (auto line-height left the arrow/emoji sitting high).
+  actionIconText: { fontSize: 22, lineHeight: 22, textAlign: 'center', includeFontPadding: false },
   actionLabel: { fontFamily: fonts.sansMd, fontSize: 12, color: 'rgba(255,255,255,0.85)' },
   actionLabelDanger: { color: '#FF6B6B' },
 
