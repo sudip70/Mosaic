@@ -120,17 +120,19 @@ export default function PhotoViewer() {
               This permanently removes it from your grid. This can't be undone.
             </AppText>
             <View style={s.dialogActions}>
-              <Pressable
-                style={({ pressed }) => [s.dialogBtn, s.dialogCancel, pressed && s.pressed]}
-                onPress={() => setConfirmDelete(false)}
-              >
-                <AppText style={s.dialogCancelText}>Cancel</AppText>
+              <Pressable style={s.dialogBtnWrap} onPress={() => setConfirmDelete(false)}>
+                {({ pressed }) => (
+                  <View style={[s.dialogBtn, s.dialogCancel, pressed && s.pressed]}>
+                    <AppText style={s.dialogCancelText}>Cancel</AppText>
+                  </View>
+                )}
               </Pressable>
-              <Pressable
-                style={({ pressed }) => [s.dialogBtn, s.dialogDelete, pressed && s.pressed]}
-                onPress={onConfirmDelete}
-              >
-                <AppText style={s.dialogDeleteText}>Delete</AppText>
+              <Pressable style={s.dialogBtnWrap} onPress={onConfirmDelete}>
+                {({ pressed }) => (
+                  <View style={[s.dialogBtn, s.dialogDelete, pressed && s.pressed]}>
+                    <AppText style={s.dialogDeleteText}>Delete</AppText>
+                  </View>
+                )}
               </Pressable>
             </View>
           </Pressable>
@@ -233,7 +235,8 @@ const s = StyleSheet.create({
   dialogTitle: { fontFamily: fonts.serifR, fontSize: 22, color: colors.ink100, letterSpacing: -0.4, textAlign: 'center' },
   dialogBody: { fontFamily: fonts.sans, fontSize: 13, lineHeight: 20, color: colors.ink60, textAlign: 'center' },
   dialogActions: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.md, alignSelf: 'stretch' },
-  dialogBtn: { flex: 1, paddingVertical: 13, borderRadius: radius.r16, alignItems: 'center' },
+  dialogBtnWrap: { flex: 1 },
+  dialogBtn: { paddingVertical: 13, borderRadius: radius.r16, alignItems: 'center' },
   pressed: { opacity: 0.85 },
   dialogCancel: { backgroundColor: colors.surface1, borderWidth: 1, borderColor: colors.ink15 },
   dialogCancelText: { fontFamily: fonts.sansSb, fontSize: 15, color: colors.ink100 },
