@@ -60,8 +60,8 @@ const s = StyleSheet.create({
   card: {
     borderRadius: radius.r24,
     overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.3)',
+    borderWidth: 1.5,
+    borderColor: colors.ink15,
     ...shadows.elev3,
   },
   swatch: { padding: 20, justifyContent: 'space-between' },
