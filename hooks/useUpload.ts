@@ -109,7 +109,7 @@ async function compressPhoto(uri: string): Promise<string> {
 
   const actions: ImageManipulator.Action[] = [];
   const currentRatio = width / height;
-  const targetRatio = 3 / 4;
+  const targetRatio = 3 / 4; // portrait
 
   if (Math.abs(currentRatio - targetRatio) > 0.01) {
     if (currentRatio > targetRatio) {
@@ -123,7 +123,7 @@ async function compressPhoto(uri: string): Promise<string> {
     }
   }
 
-  // 1080×1440 after the 3:4 crop
+  // 1080×1440 after the 3:4 portrait crop
   actions.push({ resize: { width: 1080 } });
 
   const result = await ImageManipulator.manipulateAsync(uri, actions, {
