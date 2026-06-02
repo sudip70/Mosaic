@@ -15,7 +15,8 @@ export const usePhotoStore = create<PhotoStore>((set) => ({
     set((state) => ({
       photosByDate: {
         ...state.photosByDate,
-        [date]: [...(state.photosByDate[date] ?? []), photo],
+        // Newest first — a fresh capture appears at the front of the list.
+        [date]: [photo, ...(state.photosByDate[date] ?? [])],
       },
     })),
 

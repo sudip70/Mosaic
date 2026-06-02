@@ -10,6 +10,9 @@ import type { Photo } from '@/types';
 // otherwise useSyncExternalStore sees a new object every call and loops infinitely.
 const EMPTY_PHOTOS: Photo[] = [];
 
+// Most-recent first.
+const byNewest = (a: Photo, b: Photo) => b.created_at.localeCompare(a.created_at);
+
 export function usePhotos(date: string, userId: string) {
   const [loading, setLoading] = useState(true);
   const photos = usePhotoStore((s) => s.photosByDate[date] ?? EMPTY_PHOTOS);
@@ -20,7 +23,7 @@ export function usePhotos(date: string, userId: string) {
       // 1. Show local data immediately — works offline, zero wait
       const local = await localStore.getPhotos(date);
       if (local.length > 0) {
-        setPhotos(date, local);
+        setPhotos(date, [...local].sort(byNewest));
         setLoading(false);
       }
 
@@ -63,7 +66,7 @@ export function usePhotos(date: string, userId: string) {
           (l) => l.sync_status === 'pending' && !data.find((d) => d.id === l.id)
         );
 
-        const merged = [...withUrls, ...pendingOnly];
+        const merged = [...withUrls, ...pendingOnly].sort(byNewest);
         setPhotos(date, merged);
 
         // Update local cache with synced status
