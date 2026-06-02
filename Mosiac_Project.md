@@ -1,4 +1,4 @@
-# Mosaic — Complete Project Documentation
+# Mosaic - Complete Project Documentation
 
 > A daily color photo app that makes people more observant of their surroundings, and gives them something beautiful to look back on.
 
@@ -10,8 +10,8 @@
 2. [Core Philosophy](#2-core-philosophy)
 3. [Competitive Landscape](#3-competitive-landscape)
 4. [Phased Approach](#4-phased-approach)
-   - [Phase 1 — Core Experience](#phase-1--core-experience)
-   - [Phase 2 — Social Layer](#phase-2--social-layer)
+   - [Phase 1 - Core Experience](#phase-1--core-experience)
+   - [Phase 2 - Social Layer](#phase-2--social-layer)
 5. [Design Principles](#5-design-principles)
 6. [Tech Stack](#6-tech-stack)
 7. [Project Folder Structure](#7-project-folder-structure)
@@ -23,7 +23,7 @@
 13. [Shared Types](#13-shared-types)
 14. [Zustand State Stores](#14-zustand-state-stores)
 15. [Non-Invasive Logging](#15-non-invasive-logging)
-16. [Auth — Phase 2](#16-auth--phase-2)
+16. [Auth - Phase 2](#16-auth--phase-2)
 17. [Getting Started](#17-getting-started)
 18. [Settings](#18-settings)
 19. [Open Questions](#19-open-questions)
@@ -32,7 +32,7 @@
 
 ## 1. The Idea
 
-Mosaic gives users **one color per day**. Their mission is to photograph that color as many times as they can throughout their day — a red fire hydrant, a friend's red scarf, the ketchup at lunch.
+Mosaic gives users **one color per day**. Their mission is to photograph that color as many times as they can throughout their day - a red fire hydrant, a friend's red scarf, the ketchup at lunch.
 
 Over time, these photos build into a **personal grid**: a living, colorful diary of how they moved through the world.
 
@@ -40,21 +40,21 @@ Over time, these photos build into a **personal grid**: a living, colorful diary
 
 - One color assigned daily
 - Multiple photos captured throughout the day
-- Grid profile builds over time — a color calendar of your life
+- Grid profile builds over time - a color calendar of your life
 - Tap any day to see that day's full photo collection
-- A year = 365 squares — a mosaic of your life through color
+- A year = 365 squares - a mosaic of your life through color
 
 ---
 
 ## 2. Core Philosophy
 
-- **Minimal** — one prompt, one action, no clutter
-- **Effortless** — open, see the color, go live your day
-- **Non-invasive** — the app lives in the background, not on your screen
-- **Private by default** — share only when you want to
-- **Calm technology** — the reward is your own archive, not likes or metrics
+- **Minimal** - one prompt, one action, no clutter
+- **Effortless** - open, see the color, go live your day
+- **Non-invasive** - the app lives in the background, not on your screen
+- **Private by default** - share only when you want to
+- **Calm technology** - the reward is your own archive, not likes or metrics
 
-> The app should almost disappear — it's in the back of your mind, not on your screen.
+> The app should almost disappear - it's in the back of your mind, not on your screen.
 
 ---
 
@@ -62,11 +62,11 @@ Over time, these photos build into a **personal grid**: a living, colorful diary
 
 | App | How It Differs from Mosaic |
 |---|---|
-| GuruShots | Heavy gamification, leaderboards, competitive voting — performance-focused |
-| SnapQuest | Friend competitions, voting system — social pressure baked in |
+| GuruShots | Heavy gamification, leaderboards, competitive voting - performance-focused |
+| SnapQuest | Friend competitions, voting system - social pressure baked in |
 | ThemeSnap | Daily themes but community rankings and EXIF data focus |
-| 52Frames | Weekly challenges, community-driven — less personal diary, more public contest |
-| Photo-Challenge App | Generic daily themes, pushes to Instagram — not color-specific |
+| 52Frames | Weekly challenges, community-driven - less personal diary, more public contest |
+| Photo-Challenge App | Generic daily themes, pushes to Instagram - not color-specific |
 
 **The gap:** no app combines a single daily color prompt + multiple captures + a personal mosaic grid + calm, non-competitive social. Mosaic owns that space.
 
@@ -74,7 +74,7 @@ Over time, these photos build into a **personal grid**: a living, colorful diary
 
 ## 4. Phased Approach
 
-### Phase 1 — Core Experience
+### Phase 1 - Core Experience
 
 **Goal:** Prove that the daily color loop is enjoyable and habit-forming on its own.
 
@@ -85,14 +85,14 @@ Over time, these photos build into a **personal grid**: a living, colorful diary
 - Photos are saved to that day's color entry
 
 #### The Grid
-- Profile screen shows a grid of every day — each square is that day's color
+- Profile screen shows a grid of every day - each square is that day's color
 - Tap any square to see all photos captured that day
 - Over time the grid becomes a personal color calendar and visual diary
-- One year = 365 squares — a mosaic of your life through color
+- One year = 365 squares - a mosaic of your life through color
 
 #### Streak Tracking
 - A streak counter tracks consecutive days with at least one photo
-- Gentle — no aggressive push notifications, no shame for missing a day
+- Gentle - no aggressive push notifications, no shame for missing a day
 - Streaks are personal motivation, not public performance
 
 #### Phase 1 Feature Summary
@@ -102,9 +102,9 @@ Over time, these photos build into a **personal grid**: a living, colorful diary
 | Daily Color | One color assigned globally per day, resets at midnight |
 | Multi-Photo Capture | Upload or shoot multiple photos per day |
 | Day Gallery | Swipeable view of all photos for a given day |
-| Color Grid | Full profile grid — color per day, tap to explore |
+| Color Grid | Full profile grid - color per day, tap to explore |
 | Streak Counter | Personal streak tracked locally |
-| Anonymous Auth | `signInAnonymously()` on first launch — no credentials, real Supabase session |
+| Anonymous Auth | `signInAnonymously()` on first launch - no credentials, real Supabase session |
 | Cloud Storage | Photos stored in Supabase Storage under `{user_id}/{date}/` from day one |
 | Single Notification | One gentle morning reminder, opt-in |
 
@@ -115,29 +115,29 @@ Over time, these photos build into a **personal grid**: a living, colorful diary
 
 ---
 
-### Phase 2 — Social Layer
+### Phase 2 - Social Layer
 
-**Goal:** Let users optionally share their world with a small, trusted circle. Social features are additive — the core experience works without them.
+**Goal:** Let users optionally share their world with a small, trusted circle. Social features are additive - the core experience works without them.
 
 #### Accounts & Identity
-- Simple account creation — email or magic link, no password required
-- Minimal profile — name, avatar, your grid. Nothing else.
+- Simple account creation - email or magic link, no password required
+- Minimal profile - name, avatar, your grid. Nothing else.
 
 #### Friends
-- Add friends by username or invite link — intentional, not algorithmic
-- Small circle design — not a follower/following model
+- Add friends by username or invite link - intentional, not algorithmic
+- Small circle design - not a follower/following model
 - No friend count displayed
 
 #### Sharing
-- Private by default — your grid and photos are only yours
+- Private by default - your grid and photos are only yours
 - Share a single day's collection with friends selectively
 - Or open your whole grid to friends as an ongoing view
-- No public profiles — sharing is always within your chosen circle
+- No public profiles - sharing is always within your chosen circle
 
 #### Social Interactions
 - No likes, no comment counts, no engagement metrics
-- Friends can "notice" a photo — a single quiet reaction, not a popularity score
-- The shared color view — see how different people shot the same color on the same day
+- Friends can "notice" a photo - a single quiet reaction, not a popularity score
+- The shared color view - see how different people shot the same color on the same day
 
 #### Phase 2 Feature Summary
 
@@ -147,10 +147,10 @@ Over time, these photos build into a **personal grid**: a living, colorful diary
 | Friend Circles | Add by username or invite, no follower model |
 | Privacy Control | Private by default, selectively share days or full grid |
 | Friend Grid View | See friends' grids when they choose to share |
-| Same-Day Compare | View how friends shot the same color — same day, different lives |
-| Notices | Quiet single reaction — not a like, just an acknowledgment |
+| Same-Day Compare | View how friends shot the same color - same day, different lives |
+| Notices | Quiet single reaction - not a like, just an acknowledgment |
 | No Public Feed | No algorithmic discovery, no strangers |
-| Login / Signup Screens | Welcome, login, signup — gated to Phase 2 only |
+| Login / Signup Screens | Welcome, login, signup - gated to Phase 2 only |
 
 #### Phase Split Summary
 
@@ -161,22 +161,22 @@ Over time, these photos build into a **personal grid**: a living, colorful diary
 | Color grid profile | ✅ | ✅ |
 | Streak tracking | ✅ | ✅ |
 | Anonymous auth (auto, no credentials) | ✅ | ✅ |
-| Named account (email / magic link) | — | ✅ |
-| Friend circles | — | ✅ |
-| Private/share toggle | — | ✅ |
-| Friend grid view | — | ✅ |
-| Notices (reactions) | — | ✅ |
-| Same-day compare view | — | ✅ |
-| Login / Signup screens | — | ✅ |
+| Named account (email / magic link) | - | ✅ |
+| Friend circles | - | ✅ |
+| Private/share toggle | - | ✅ |
+| Friend grid view | - | ✅ |
+| Notices (reactions) | - | ✅ |
+| Same-day compare view | - | ✅ |
+| Login / Signup screens | - | ✅ |
 
 ---
 
 ## 5. Design Principles
 
-- **The app should almost disappear** — one gentle opt-in morning notification max, no red badges, no endless scroll, no algorithm
-- **The grid is the reward** — users return to see their own life taking shape, not external validation
-- **Resist feature creep** — no filters, no editing tools, no Stories; if it moves toward Instagram, say no
-- **Accessibility matters** — always show color name alongside swatch; consider texture/pattern alternatives for colorblind users
+- **The app should almost disappear** - one gentle opt-in morning notification max, no red badges, no endless scroll, no algorithm
+- **The grid is the reward** - users return to see their own life taking shape, not external validation
+- **Resist feature creep** - no filters, no editing tools, no Stories; if it moves toward Instagram, say no
+- **Accessibility matters** - always show color name alongside swatch; consider texture/pattern alternatives for colorblind users
 
 ---
 
@@ -184,7 +184,7 @@ Over time, these photos build into a **personal grid**: a living, colorful diary
 
 | Layer | Technology | Purpose |
 |---|---|---|
-| Mobile Framework | React Native + Expo | iOS first, Android-ready — one codebase |
+| Mobile Framework | React Native + Expo | iOS first, Android-ready - one codebase |
 | Language | TypeScript | Type safety, better DX for solo dev |
 | Navigation | Expo Router | File-based routing, clean screen structure |
 | State Management | Zustand | Lightweight global state, no Redux overhead |
@@ -208,12 +208,12 @@ mosaic/
 │   │   ├── _layout.tsx         ← Redirects to tabs if already logged in
 │   │   ├── welcome.tsx         ← First launch / intro screen
 │   │   ├── login.tsx           ← Email + magic link or password
-│   │   └── signup.tsx          ← Create account (minimal — just email)
+│   │   └── signup.tsx          ← Create account (minimal - just email)
 │   ├── (tabs)/
 │   │   ├── index.tsx           ← Today screen (main daily view)
 │   │   ├── grid.tsx            ← Your full color grid
 │   │   └── friends.tsx         ← Friends & sharing [Phase 2]
-│   ├── day/[date].tsx          ← Day detail — all photos for a day
+│   ├── day/[date].tsx          ← Day detail - all photos for a day
 │   ├── camera.tsx              ← Camera / upload screen
 │   └── _layout.tsx             ← Root layout, auth guard
 │
@@ -266,7 +266,7 @@ mosaic/
 
 ## 8. Database Schema
 
-### `colors` — Daily color assignments (pre-seeded)
+### `colors` - Daily color assignments (pre-seeded)
 
 | Column | Type | Description |
 |---|---|---|
@@ -276,7 +276,7 @@ mosaic/
 | hex | text | Hex code e.g. '#E8735A' |
 | created_at | timestamptz | Record creation time |
 
-### `photos` — Every photo a user captures
+### `photos` - Every photo a user captures
 
 | Column | Type | Description |
 |---|---|---|
@@ -285,10 +285,10 @@ mosaic/
 | date | date | The day this photo belongs to |
 | color_id | uuid (FK → colors) | The color assigned on that day |
 | storage_path | text | Path in Supabase Storage bucket |
-| is_private | boolean (default: true) | Private by default — Phase 2 toggle |
+| is_private | boolean (default: true) | Private by default - Phase 2 toggle |
 | created_at | timestamptz | Upload timestamp |
 
-### `streaks` — Per-user streak tracking
+### `streaks` - Per-user streak tracking
 
 | Column | Type | Description |
 |---|---|---|
@@ -298,7 +298,7 @@ mosaic/
 | last_active_date | date | Last date user uploaded a photo |
 | updated_at | timestamptz | Last streak update time |
 
-### `friendships` — [Phase 2]
+### `friendships` - [Phase 2]
 
 | Column | Type | Description |
 |---|---|---|
@@ -308,7 +308,7 @@ mosaic/
 | status | text | 'pending' \| 'accepted' \| 'declined' |
 | created_at | timestamptz | When request was sent |
 
-### `notices` — [Phase 2] Quiet reactions
+### `notices` - [Phase 2] Quiet reactions
 
 | Column | Type | Description |
 |---|---|---|
@@ -352,14 +352,14 @@ Bucket: photos
 ### Grid Render
 1. Query `colors` table for all dates from account creation → today
 2. Query `photos` table to find which dates have photos
-3. Render grid — each tile shows color hex, filled vs empty state
+3. Render grid - each tile shows color hex, filled vs empty state
 4. Tap tile → navigate to `day/[date].tsx` → load that day's photos
 
 ---
 
 ## 11. Reusable Component System
 
-All shared UI lives in `components/ui/`. Screens never define one-off styles — they compose from this library.
+All shared UI lives in `components/ui/`. Screens never define one-off styles - they compose from this library.
 
 ### Button
 
@@ -433,7 +433,7 @@ export function ColorSwatch({ hex, name, size = 'md', showLabel = true }: ColorS
 }
 ```
 
-### DayTile — The Grid Square
+### DayTile - The Grid Square
 
 ```tsx
 // components/ui/DayTile.tsx
@@ -495,7 +495,7 @@ export function Typography({ variant = 'body', children, ...rest }: TypographyPr
 
 ## 12. Custom Hooks
 
-Screens are dumb — they render. Hooks are smart — they fetch, compute, and manage state.
+Screens are dumb - they render. Hooks are smart - they fetch, compute, and manage state.
 
 ### useToday
 
@@ -786,8 +786,8 @@ Two tools. One wrapper. Screens never call Sentry or PostHog directly.
 
 | Tool | Purpose | Data Collected | User Impact |
 |---|---|---|---|
-| Sentry | Crash & error tracking | Stack traces, device OS, app version — no PII | Zero — silent background capture |
-| PostHog | Behaviour analytics | Named events + anonymous ID — no PII, no photos | Zero — fire-and-forget events |
+| Sentry | Crash & error tracking | Stack traces, device OS, app version - no PII | Zero - silent background capture |
+| PostHog | Behaviour analytics | Named events + anonymous ID - no PII, no photos | Zero - fire-and-forget events |
 
 ### What Gets Tracked
 
@@ -834,12 +834,12 @@ export const posthog = new PostHog(
 );
 ```
 
-### hooks/useAnalytics.ts — The Single Wrapper
+### hooks/useAnalytics.ts - The Single Wrapper
 
 ```ts
 // hooks/useAnalytics.ts
 // The ONLY file that imports Sentry or PostHog.
-// All screens and hooks call this — never the tools directly.
+// All screens and hooks call this - never the tools directly.
 import * as Sentry from '@sentry/react-native';
 import { posthog } from '@/lib/analytics';
 
@@ -860,7 +860,7 @@ export function useAnalytics() {
     posthog.capture(event, properties);
   }
 
-  // Capture an error — goes to Sentry with full context
+  // Capture an error - goes to Sentry with full context
   function captureError(error: Error, context?: Record<string, string>) {
     Sentry.withScope(scope => {
       if (context) scope.setExtras(context);
@@ -880,7 +880,7 @@ export function useAnalytics() {
 ### Usage in a Screen
 
 ```tsx
-// app/(tabs)/index.tsx — Today screen
+// app/(tabs)/index.tsx - Today screen
 import { useEffect } from 'react';
 import { useAnalytics } from '@/hooks/useAnalytics';
 import { useToday } from '@/hooks/useToday';
@@ -899,15 +899,15 @@ export default function TodayScreen() {
 
 ---
 
-## 16. Auth — Phase 2
+## 16. Auth - Phase 2
 
 > Named accounts are excluded from Phase 1, but Supabase anonymous auth runs from first launch. The core loop (color → capture → grid → streak) is fully cloud-backed with no credentials required.
 
 Supabase Auth provides:
-- **Anonymous sign-in** — `signInAnonymously()` on first launch, no email needed
-- **Magic link upgrade** — Phase 2 links email to the existing anonymous session via `linkIdentity()`
-- **Session management** — handled automatically, persists across restarts
-- **Row-Level Security** — `auth.uid()` used directly in DB policies from day one
+- **Anonymous sign-in** - `signInAnonymously()` on first launch, no email needed
+- **Magic link upgrade** - Phase 2 links email to the existing anonymous session via `linkIdentity()`
+- **Session management** - handled automatically, persists across restarts
+- **Row-Level Security** - `auth.uid()` used directly in DB policies from day one
 
 ### hooks/useAuth.ts
 
@@ -927,7 +927,7 @@ export function useAuth() {
         setSession(data.session);
         setLoading(false);
       } else {
-        // Phase 1: auto sign-in anonymously — no credentials, real session
+        // Phase 1: auto sign-in anonymously - no credentials, real session
         const { data: anonData } = await supabase.auth.signInAnonymously();
         setSession(anonData.session);
         setLoading(false);
@@ -1034,7 +1034,7 @@ EXPO_PUBLIC_POSTHOG_KEY=your_posthog_key
 npx expo start --ios
 ```
 
-> **Phase 1 auth strategy:** Call `supabase.auth.signInAnonymously()` on first launch. Supabase creates a real session with a UUID — no credentials required. Photos, grid, and streaks all use this `user_id` from day one. When the user creates an account in Phase 2, they link their email to the same anonymous user and nothing migrates.
+> **Phase 1 auth strategy:** Call `supabase.auth.signInAnonymously()` on first launch. Supabase creates a real session with a UUID - no credentials required. Photos, grid, and streaks all use this `user_id` from day one. When the user creates an account in Phase 2, they link their email to the same anonymous user and nothing migrates.
 
 ---
 
@@ -1042,7 +1042,7 @@ npx expo start --ios
 
 Settings are split by auth state. Phase 1 users (anonymous) see local-only controls. Phase 2 users (named account) unlock identity and social settings.
 
-### Phase 1 — No Account, Local Only
+### Phase 1 - No Account, Local Only
 
 | Setting | Options / Controls |
 |---|---|
@@ -1052,7 +1052,7 @@ Settings are split by auth state. Phase 1 users (anonymous) see local-only contr
 | Storage | Cache size display + clear cache action |
 | About | App version, "What is Mosaic?" explainer, Share app |
 
-### Phase 2 — Unlocked with Account
+### Phase 2 - Unlocked with Account
 
 | Setting | Options / Controls |
 |---|---|
@@ -1061,19 +1061,19 @@ Settings are split by auth state. Phase 1 users (anonymous) see local-only contr
 | Account | Sign out, delete account |
 | Friends & Sharing | Default sharing preference, manage friend list |
 
-> Phase 2 settings appear below a visible divider in the settings screen. Anonymous users see them greyed out with a prompt to create an account, or they are hidden entirely — TBD.
+> Phase 2 settings appear below a visible divider in the settings screen. Anonymous users see them greyed out with a prompt to create an account, or they are hidden entirely - TBD.
 
 ---
 
 ## 19. Open Questions
 
-- **App name** — working title is Mosaic
-- **Color selection** — curated human palette or algorithmically generated?
-- **Streak leniency** — grace period for missed days? Freeze tokens?
-- **Grid shape** — square grid or calendar layout (month view)?
-- **Colorblind accessibility** — alternative prompt system needed
-- **Color palette size** — how many unique colors before repeating?
+- **App name** - working title is Mosaic
+- **Color selection** - curated human palette or algorithmically generated?
+- **Streak leniency** - grace period for missed days? Freeze tokens?
+- **Grid shape** - square grid or calendar layout (month view)?
+- **Colorblind accessibility** - alternative prompt system needed
+- **Color palette size** - how many unique colors before repeating?
 
 ---
 
-*Mosaic — Complete Project Documentation · Phase 1 & 2 · Draft*
+*Mosaic - Complete Project Documentation · Phase 1 & 2 · Draft*

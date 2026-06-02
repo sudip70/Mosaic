@@ -14,7 +14,7 @@ Built with **Expo (SDK 52) + React Native + TypeScript**, backed by **Supabase**
 | Node.js | 18 LTS or newer (20+ recommended) |
 | npm | 9+ |
 | Expo CLI | use `npx expo` (no global install needed) |
-| Xcode | 15+ with an iOS Simulator (for iOS) — macOS only |
+| Xcode | 15+ with an iOS Simulator (for iOS) - macOS only |
 | Expo Go | latest, on a physical device (optional alternative) |
 | Supabase project | free tier is fine |
 
@@ -32,7 +32,7 @@ npm install --legacy-peer-deps
 
 `--legacy-peer-deps` is required (Expo's peer ranges are stricter than the pinned
 versions). A `postinstall` step auto-applies a small patch in `patches/` via
-`patch-package` — that's expected.
+`patch-package` - that's expected.
 
 ### 2. Configure environment variables
 
@@ -45,8 +45,8 @@ Then fill in `.env`:
 ```
 EXPO_PUBLIC_SUPABASE_URL=https://<your-project>.supabase.co
 EXPO_PUBLIC_SUPABASE_ANON_KEY=<your-anon-key>
-EXPO_PUBLIC_SENTRY_DSN=        # optional — leave blank in dev
-EXPO_PUBLIC_POSTHOG_KEY=       # optional — leave blank in dev
+EXPO_PUBLIC_SENTRY_DSN=        # optional - leave blank in dev
+EXPO_PUBLIC_POSTHOG_KEY=       # optional - leave blank in dev
 ```
 
 Get the URL + anon key from your Supabase dashboard → **Settings → API**.
@@ -56,11 +56,11 @@ Sentry/PostHog are optional; the app no-ops them when the keys are absent.
 
 In the Supabase dashboard:
 
-1. **Auth → Providers → Anonymous** — enable it.
-2. **SQL Editor** — run `supabase/migrations/001_initial_schema.sql` (tables + RLS).
-3. **SQL Editor** — run `supabase/seeds/colors.sql` (3 years of daily colours).
+1. **Auth → Providers → Anonymous** - enable it.
+2. **SQL Editor** - run `supabase/migrations/001_initial_schema.sql` (tables + RLS).
+3. **SQL Editor** - run `supabase/seeds/colors.sql` (3 years of daily colours).
    - Regenerate it any time with `node supabase/seed.js`.
-4. **Storage** — create a **private** bucket named `photos`, then add a policy
+4. **Storage** - create a **private** bucket named `photos`, then add a policy
    allowing each user to read/write only their own folder:
    ```sql
    create policy "own photos" on storage.objects for all
@@ -100,13 +100,13 @@ npx tsc --noEmit   # type-check
 
 - **Simulator camera:** the iOS Simulator has no camera, so `takePictureAsync`
   returns a black placeholder image with a burned-in timestamp. This is an
-  expo-camera/simulator artifact, **not** an app bug — capture works normally on
+  expo-camera/simulator artifact, **not** an app bug - capture works normally on
   a real device.
 - **Native modules:** `expo-camera`, `expo-media-library`, `expo-sensors`, and
   `expo-store-review` work in Expo Go for development, but a few features
   (e.g. store review prompts) only fully exercise in a **development build**.
 - **Offline-first:** photos are written to the device first, then synced to
-  Supabase via a retry queue — the app works without a connection.
+  Supabase via a retry queue - the app works without a connection.
 
 ---
 

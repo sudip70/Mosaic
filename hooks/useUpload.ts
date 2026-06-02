@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import NetInfo from '@react-native-community/netinfo';
 import * as FileSystem from 'expo-file-system';
+import * as ImageManipulator from 'expo-image-manipulator';
 import { randomUUID } from 'expo-crypto';
 import { decode } from 'base64-arraybuffer';
 import { supabase } from '@/lib/supabase';
@@ -39,16 +40,18 @@ export function useUpload() {
         throw new Error('Photo is too large. Please choose a smaller image.');
       }
 
+      const compressedUri = await compressPhoto(uri);
+
       const photoId = randomUUID();
       const localDir = `${PHOTOS_DIR}${userId}/${date}/`;
-      const localUri = `${localDir}${photoId}.jpg`;
+      const localUri = `${localDir}${photoId}.webp`;
 
       // 1. Save to device first — the photo is immediately safe even if offline
       const dirInfo = await FileSystem.getInfoAsync(localDir);
       if (!dirInfo.exists) {
         await FileSystem.makeDirectoryAsync(localDir, { intermediates: true });
       }
-      await FileSystem.copyAsync({ from: uri, to: localUri });
+      await FileSystem.copyAsync({ from: compressedUri, to: localUri });
 
       const photo: Photo = {
         id: photoId,
@@ -100,6 +103,36 @@ export function useUpload() {
   return { uploadPhoto, uploading, error };
 }
 
+async function compressPhoto(uri: string): Promise<string> {
+  // Get original dimensions with a no-op pass
+  const { width, height } = await ImageManipulator.manipulateAsync(uri, []);
+
+  const actions: ImageManipulator.Action[] = [];
+  const currentRatio = width / height;
+  const targetRatio = 3 / 4;
+
+  if (Math.abs(currentRatio - targetRatio) > 0.01) {
+    if (currentRatio > targetRatio) {
+      // Too wide — trim sides
+      const cropWidth = Math.round(height * targetRatio);
+      actions.push({ crop: { originX: Math.round((width - cropWidth) / 2), originY: 0, width: cropWidth, height } });
+    } else {
+      // Too tall — trim top and bottom
+      const cropHeight = Math.round(width / targetRatio);
+      actions.push({ crop: { originX: 0, originY: Math.round((height - cropHeight) / 2), width, height: cropHeight } });
+    }
+  }
+
+  // 1080×1440 after the 3:4 crop
+  actions.push({ resize: { width: 1080 } });
+
+  const result = await ImageManipulator.manipulateAsync(uri, actions, {
+    compress: 0.82,
+    format: ImageManipulator.SaveFormat.WEBP,
+  });
+  return result.uri;
+}
+
 async function uploadToCloud(
   photo: Photo,
   localUri: string,
@@ -111,12 +144,12 @@ async function uploadToCloud(
     const base64 = await FileSystem.readAsStringAsync(localUri, {
       encoding: FileSystem.EncodingType.Base64,
     });
-    const storagePath = `${userId}/${date}/${photo.id}.jpg`;
+    const storagePath = `${userId}/${date}/${photo.id}.webp`;
 
     // upsert so a retry after a partial success doesn't fail on "already exists"
     const { error: storageError } = await supabase.storage
       .from('photos')
-      .upload(storagePath, decode(base64), { contentType: 'image/jpeg', upsert: true });
+      .upload(storagePath, decode(base64), { contentType: 'image/webp', upsert: true });
     if (storageError) throw storageError;
 
     const { error: insertError } = await supabase
