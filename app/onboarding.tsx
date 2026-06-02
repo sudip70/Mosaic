@@ -72,6 +72,9 @@ export default function OnboardingScreen() {
           ))}
         </View>
 
+        {/* Flexible spacer pushes the CTA toward the bottom on tall screens */}
+        <View style={s.spacer} />
+
         {/* CTA */}
         <Pressable onPress={begin} accessibilityRole="button" accessibilityLabel="Begin today">
           {({ pressed }) => (
@@ -92,14 +95,15 @@ export default function OnboardingScreen() {
 }
 
 const s = StyleSheet.create({
-  content: { paddingHorizontal: spacing.xl, paddingTop: spacing.md, paddingBottom: spacing.x3, gap: spacing.lg },
+  content: { flexGrow: 1, paddingHorizontal: spacing.xl, paddingTop: spacing.md, paddingBottom: spacing.x3, gap: spacing.lg },
+  spacer: { flex: 1, minHeight: spacing.lg },
 
   eyebrow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   dot: { width: 7, height: 7, borderRadius: 4, backgroundColor: colors.accent },
   tag: { fontFamily: fonts.sansSb, fontSize: 11, letterSpacing: 1, textTransform: 'uppercase', color: colors.accent },
 
   headline: { fontFamily: fonts.serifR, fontSize: 40, lineHeight: 44, letterSpacing: -1, color: colors.ink100 },
-  headlineAccent: { fontFamily: fonts.serif, color: colors.accent },
+  headlineAccent: { fontFamily: fonts.serif, fontSize: 40, lineHeight: 44, letterSpacing: -1, color: colors.accent },
   sub: { fontFamily: fonts.sans, fontSize: 13, lineHeight: 21, color: colors.ink60 },
 
   swatches: { flexDirection: 'row', gap: 6, height: 52 },
