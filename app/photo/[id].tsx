@@ -70,7 +70,8 @@ export default function PhotoViewer() {
             <AppText style={s.iconBtnText}>✕</AppText>
           </Pressable>
           {date && <AppText style={s.headerDate}>{format(parseISO(date), 'MMM d, yyyy')}</AppText>}
-          <View style={s.iconBtn} />
+          {/* Invisible spacer keeps the date centered opposite the close button */}
+          <View style={s.headerSpacer} />
         </View>
 
         {/* Image */}
@@ -158,6 +159,7 @@ const s = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   iconBtnText: { fontSize: 14, color: '#fff', fontFamily: fonts.sans },
+  headerSpacer: { width: 36, height: 36 },
   headerDate: { fontFamily: fonts.sansMd, fontSize: 14, color: 'rgba(255,255,255,0.85)' },
 
   imageWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },
