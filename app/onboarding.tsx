@@ -35,42 +35,43 @@ export default function OnboardingScreen() {
   return (
     <AppScreen background={colors.surface0}>
       <ScrollView contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
-        {/* Top block */}
-        <View style={s.top}>
-          <View style={s.eyebrow}>
-            <View style={s.dot} />
-            <AppText style={s.tag}>Welcome to Mosaic</AppText>
-          </View>
-
-          <AppText style={s.headline}>
-            See the world{'\n'}in <AppText style={s.headlineAccent}>colour.</AppText>
-          </AppText>
-          <AppText style={s.sub}>
-            One colour every day. Photograph it wherever you find it.
-            Build a diary of your life without even trying.
-          </AppText>
-
-          <View style={s.swatches}>
-            {SWATCHES.map((sw) => (
-              <View key={sw.name} style={[s.swatch, { backgroundColor: sw.hex }]} />
-            ))}
-          </View>
+        {/* Eyebrow */}
+        <View style={s.eyebrow}>
+          <View style={s.dot} />
+          <AppText style={s.tag}>Welcome to Mosaic</AppText>
         </View>
 
-        {/* Steps — distributed to fill the space between the swatches and CTA */}
-        <View style={s.steps}>
-          {STEPS.map((step) => (
-            <View key={step.title} style={s.step}>
-              <View style={[s.stepIcon, { backgroundColor: step.bg }]}>
-                <AppText style={{ fontSize: 18 }}>{step.icon}</AppText>
-              </View>
-              <View style={s.stepCopy}>
-                <AppText style={s.stepTitle}>{step.title}</AppText>
-                <AppText style={s.stepDesc}>{step.desc}</AppText>
-              </View>
-            </View>
+        {/* Headline */}
+        <AppText style={s.headline}>
+          See the world{'\n'}in <AppText style={s.headlineAccent}>colour.</AppText>
+        </AppText>
+        <AppText style={s.sub}>
+          One colour every day. Photograph it wherever you find it.
+          Build a diary of your life without even trying.
+        </AppText>
+
+        {/* Swatch strip */}
+        <View style={s.swatches}>
+          {SWATCHES.map((sw) => (
+            <View key={sw.name} style={[s.swatch, { backgroundColor: sw.hex }]} />
           ))}
         </View>
+
+        {/* Steps — same uniform gap as the rest of the top content */}
+        {STEPS.map((step) => (
+          <View key={step.title} style={s.step}>
+            <View style={[s.stepIcon, { backgroundColor: step.bg }]}>
+              <AppText style={{ fontSize: 18 }}>{step.icon}</AppText>
+            </View>
+            <View style={s.stepCopy}>
+              <AppText style={s.stepTitle}>{step.title}</AppText>
+              <AppText style={s.stepDesc}>{step.desc}</AppText>
+            </View>
+          </View>
+        ))}
+
+        {/* Spacer pushes the CTA to the bottom */}
+        <View style={s.spacer} />
 
         {/* CTA — pinned to the bottom */}
         <Pressable onPress={begin} accessibilityRole="button" accessibilityLabel="Begin today">
@@ -92,8 +93,10 @@ export default function OnboardingScreen() {
 }
 
 const s = StyleSheet.create({
-  content: { flexGrow: 1, paddingHorizontal: spacing.xl, paddingTop: spacing.md, paddingBottom: spacing.x4 },
-  top: { gap: spacing.lg },
+  // Single uniform gap so the colour swatches and the three points share the
+  // same vertical rhythm; the spacer below pushes the CTA to the bottom.
+  content: { flexGrow: 1, paddingHorizontal: spacing.xl, paddingTop: spacing.md, paddingBottom: spacing.x4, gap: spacing.lg },
+  spacer: { flex: 1 },
 
   eyebrow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   dot: { width: 7, height: 7, borderRadius: 4, backgroundColor: colors.accent },
@@ -106,9 +109,6 @@ const s = StyleSheet.create({
   swatches: { flexDirection: 'row', gap: 6, height: 52 },
   swatch: { flex: 1, borderRadius: radius.r12, ...shadows.elev1 },
 
-  // flex:1 fills the space between swatches and the CTA; the steps are
-  // grouped (centered) with a comfortable fixed gap rather than spread apart.
-  steps: { flex: 1, justifyContent: 'center', gap: spacing.x3 },
   step: { flexDirection: 'row', gap: spacing.md, alignItems: 'flex-start' },
   stepIcon: {
     width: 38, height: 38, borderRadius: radius.r12,
