@@ -19,7 +19,7 @@ interface Settings {
 export const useSettings = create<Settings>()(
   persist(
     (set) => ({
-      morningReminder: true,
+      morningReminder: false,
       reminderTime: '8:30 AM',
       theme: 'System',
       gridDensity: 'Comfortable',

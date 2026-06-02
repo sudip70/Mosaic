@@ -16,10 +16,9 @@ import { fonts, radius } from '@/lib/theme';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const ITEM_H  = 48;
+const ITEM_H  = 44;
 const VISIBLE = 5;
-const DIAL_H  = ITEM_H * VISIBLE;   // 240
-const CARD_W  = 300;
+const DIAL_H  = ITEM_H * VISIBLE;   // 220
 
 const HOURS   = Array.from({ length: 12 }, (_, i) => String(i + 1));
 const MINUTES = Array.from({ length: 60 }, (_, i) => i.toString().padStart(2, '0'));
@@ -83,17 +82,18 @@ interface DialColumnProps {
   fontSize?: number;
   fontFamily?: string;
   flex?: number;
+  loop?: boolean;
 }
 
 function DialColumn({
   items, selectedIndex, onChange, inkColor,
-  fontSize = 26, fontFamily = fonts.sansMd, flex = 2,
+  fontSize = 24, fontFamily = fonts.sansMd, flex = 2, loop = true,
 }: DialColumnProps) {
   const N      = items.length;
-  const looped = [...items, ...items, ...items]; // 3 reps → seamless wrap
+  const track  = loop ? [...items, ...items, ...items] : [...items];
+  const initIdx = loop ? selectedIndex + N : selectedIndex;
 
-  // Start in the middle repetition so there's room to scroll in both directions
-  const offset      = useSharedValue(-(selectedIndex + N) * ITEM_H);
+  const offset      = useSharedValue(-initIdx * ITEM_H);
   const startOffset = useSharedValue(0);
 
   const gesture = Gesture.Pan()
@@ -103,36 +103,35 @@ function DialColumn({
     })
     .onUpdate((e) => {
       const raw = startOffset.value + e.translationY;
-      // Soft-clamp at the edges of the tripled list
-      offset.value = Math.max(-(looped.length - 1) * ITEM_H, Math.min(0, raw));
+      offset.value = Math.max(-(track.length - 1) * ITEM_H, Math.min(0, raw));
     })
     .onEnd(() => {
       const rawIdx  = Math.round(-offset.value / ITEM_H);
-      const clamped = Math.max(0, Math.min(looped.length - 1, rawIdx));
-      const original = ((clamped % N) + N) % N;
-      const middle   = original + N; // target repetition after normalization
+      const clamped = Math.max(0, Math.min(track.length - 1, rawIdx));
 
-      // Pick the closest equivalent in the looped array (avoids backward springs)
-      const c0 = original, c1 = original + N, c2 = original + 2 * N;
-      const closest = [c0, c1, c2].reduce((best, c) =>
-        Math.abs(c - clamped) < Math.abs(best - clamped) ? c : best,
-      );
-
-      offset.value = withSpring(
-        -closest * ITEM_H,
-        { damping: 22, stiffness: 300, mass: 0.8 },
-        (finished) => {
-          'worklet';
-          // Silently jump to the middle rep — visually identical, resets headroom
-          if (finished) offset.value = -middle * ITEM_H;
-        },
-      );
-
-      runOnJS(onChange)(original);
+      if (loop) {
+        const original = ((clamped % N) + N) % N;
+        const middle   = original + N;
+        const c0 = original, c1 = original + N, c2 = original + 2 * N;
+        const closest = [c0, c1, c2].reduce((best, c) =>
+          Math.abs(c - clamped) < Math.abs(best - clamped) ? c : best,
+        );
+        offset.value = withSpring(
+          -closest * ITEM_H,
+          { damping: 22, stiffness: 300, mass: 0.8 },
+          (finished) => {
+            'worklet';
+            if (finished) offset.value = -middle * ITEM_H;
+          },
+        );
+        runOnJS(onChange)(original);
+      } else {
+        offset.value = withSpring(-clamped * ITEM_H, { damping: 22, stiffness: 300, mass: 0.8 });
+        runOnJS(onChange)(clamped);
+      }
     });
 
   const trackStyle = useAnimatedStyle(() => ({
-    // Offset + 2 × ITEM_H shifts the track so item[0] lands on the centre slot
     transform: [{ translateY: offset.value + ITEM_H * 2 }],
   }));
 
@@ -140,7 +139,7 @@ function DialColumn({
     <View style={{ flex, height: DIAL_H, overflow: 'hidden' }}>
       <GestureDetector gesture={gesture}>
         <Animated.View style={trackStyle}>
-          {looped.map((label, i) => (
+          {track.map((label, i) => (
             <DialItem
               key={i}
               index={i}
@@ -214,6 +213,7 @@ export function TimePicker({ visible, current, onSelect, onClose }: TimePickerPr
                 fontSize={15}
                 fontFamily={fonts.sansSb}
                 flex={1}
+                loop={false}
               />
             </View>
 
@@ -255,30 +255,32 @@ const s = StyleSheet.create({
   },
 
   card: {
-    width: CARD_W,
+    width: '80%',
+    maxWidth: 300,
     borderRadius: 24,
     borderWidth: StyleSheet.hairlineWidth,
-    padding: 20,
-    gap: 14,
+    paddingHorizontal: 20,
+    paddingVertical: 18,
+    gap: 12,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.18,
-    shadowRadius: 28,
-    elevation: 16,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.16,
+    shadowRadius: 24,
+    elevation: 14,
   },
 
   preview: {
     flexDirection: 'row', alignItems: 'baseline',
     justifyContent: 'center', gap: 6,
   },
-  previewTime:   { fontFamily: fonts.serifR, fontSize: 40, letterSpacing: -1.5 },
-  previewPeriod: { fontFamily: fonts.sansSb, fontSize: 16, letterSpacing: 0.5 },
+  previewTime:   { fontFamily: fonts.sansSb, fontSize: 34, letterSpacing: -0.5 },
+  previewPeriod: { fontFamily: fonts.sansSb, fontSize: 14, letterSpacing: 0.5 },
 
   item: { height: ITEM_H, alignItems: 'center', justifyContent: 'center' },
 
   dialsOuter: { position: 'relative', height: DIAL_H },
   dialsRow:   { flexDirection: 'row', height: DIAL_H, alignItems: 'center' },
-  colon:      { fontFamily: fonts.sansMd, fontSize: 22, paddingHorizontal: 2, marginBottom: 2 },
+  colon:      { fontFamily: fonts.sansMd, fontSize: 20, paddingHorizontal: 2, marginBottom: 2 },
   sep:        { width: StyleSheet.hairlineWidth, height: DIAL_H * 0.38, marginHorizontal: 6 },
 
   selBand: {

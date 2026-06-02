@@ -1,4 +1,5 @@
 import * as Notifications from 'expo-notifications';
+import { reportError } from './reportError';
 
 const REMINDER_ID = 'morning-reminder';
 
@@ -19,26 +20,73 @@ export async function requestNotificationPermission(): Promise<boolean> {
   return status === 'granted';
 }
 
-export async function scheduleReminder(timeString: string): Promise<void> {
-  await cancelReminder();
-  const { hour, minute } = parseTime(timeString);
-  await Notifications.scheduleNotificationAsync({
-    identifier: REMINDER_ID,
-    content: {
-      title: 'A fresh colour today',
-      body: 'Yours to find in the world around you.',
-      sound: true,
-    },
-    trigger: {
-      type: Notifications.SchedulableTriggerInputTypes.DAILY,
-      hour,
-      minute,
-    },
-  });
+// Serialises concurrent calls so two rapid scheduleReminder() invocations
+// (e.g. from Zustand persist hydration firing the effect twice) can't race.
+let pendingSchedule: Promise<void> = Promise.resolve();
+
+export function scheduleReminder(timeString: string): void {
+  pendingSchedule = pendingSchedule.then(() => _schedule(timeString)).catch(() => {});
 }
 
-export async function cancelReminder(): Promise<void> {
-  await Notifications.cancelScheduledNotificationAsync(REMINDER_ID);
+async function _schedule(timeString: string): Promise<void> {
+  try {
+    const { status } = await Notifications.getPermissionsAsync();
+    if (status !== 'granted') {
+      console.warn('[notifications] permission not granted — skipping schedule');
+      return;
+    }
+    await Notifications.cancelScheduledNotificationAsync(REMINDER_ID);
+    const { hour, minute } = parseTime(timeString);
+    await Notifications.scheduleNotificationAsync({
+      identifier: REMINDER_ID,
+      content: {
+        title: 'A fresh colour today',
+        body: 'Yours to find in the world around you.',
+        sound: true,
+      },
+      trigger: {
+        type: Notifications.SchedulableTriggerInputTypes.DAILY,
+        hour,
+        minute,
+      },
+    });
+    console.log(`[notifications] scheduled daily reminder at ${hour}:${String(minute).padStart(2, '0')}`);
+  } catch (e) {
+    reportError(e, { scope: 'scheduleReminder', timeString });
+    console.warn('[notifications] scheduleReminder failed:', e);
+  }
+}
+
+export function cancelReminder(): void {
+  pendingSchedule = pendingSchedule
+    .then(() => Notifications.cancelScheduledNotificationAsync(REMINDER_ID))
+    .catch(() => {});
+}
+
+// Fire a notification in `seconds` seconds — useful for verifying the pipeline works.
+export async function scheduleTestNotification(seconds = 10): Promise<void> {
+  try {
+    const granted = await requestNotificationPermission();
+    if (!granted) {
+      console.warn('[notifications] test notification: permission denied');
+      return;
+    }
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title: 'A fresh colour today',
+        body: 'Yours to find in the world around you.',
+        sound: true,
+      },
+      trigger: {
+        type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+        seconds,
+        repeats: false,
+      },
+    });
+    console.log(`[notifications] test notification fires in ${seconds}s`);
+  } catch (e) {
+    console.warn('[notifications] scheduleTestNotification failed:', e);
+  }
 }
 
 // "8:30 AM" / "11:00 PM" → { hour: 0–23, minute: 0–59 }
