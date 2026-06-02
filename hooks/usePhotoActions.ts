@@ -2,10 +2,13 @@ import { useState } from 'react';
 import * as FileSystem from 'expo-file-system';
 import * as MediaLibrary from 'expo-media-library';
 import * as Sharing from 'expo-sharing';
+import { format, subDays } from 'date-fns';
 import { supabase } from '@/lib/supabase';
 import { localStore } from '@/lib/localStore';
 import { syncQueue } from '@/lib/syncQueue';
+import { reportError } from '@/lib/reportError';
 import { usePhotoStore } from '@/store/usePhotoStore';
+import { useStreakStore } from '@/store/useStreakStore';
 import type { Photo } from '@/types';
 
 const TMP_DIR = `${FileSystem.cacheDirectory}share/`;
@@ -81,8 +84,12 @@ export function usePhotoActions() {
       }
       await supabase.from('photos').delete().eq('id', photo.id);
 
+      // Deleting may have shortened the streak — recompute from what's left.
+      await recomputeStreakFromLocal();
+
       return { ok: true, message: 'Photo deleted' };
     } catch (e: any) {
+      reportError(e, { scope: 'deletePhoto', photoId: photo.id });
       return { ok: false, message: e.message ?? 'Could not delete photo' };
     } finally {
       setBusy(false);
@@ -90,4 +97,15 @@ export function usePhotoActions() {
   }
 
   return { download, share, remove, busy };
+}
+
+// Recompute the streak from the last ~60 days of local photo presence.
+async function recomputeStreakFromLocal() {
+  const dates: string[] = [];
+  const base = new Date();
+  for (let i = 0; i < 60; i++) {
+    dates.push(format(subDays(base, i), 'yyyy-MM-dd'));
+  }
+  const present = await localStore.getPhotosPresenceForDates(dates);
+  useStreakStore.getState().recompute([...present]);
 }

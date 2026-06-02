@@ -5,43 +5,52 @@ import type { Color, Photo } from '@/types';
 
 const photoKey = (date: string) => `photos_${date}`;
 
+// Serialize photo writes so concurrent read-modify-write cycles (rapid
+// captures, or a capture overlapping a sync update) can't clobber each other.
+let writeChain: Promise<unknown> = Promise.resolve();
+function runExclusive<T>(fn: () => Promise<T>): Promise<T> {
+  const next = writeChain.then(fn, fn);
+  // Keep the chain alive regardless of individual failures.
+  writeChain = next.then(() => undefined, () => undefined);
+  return next;
+}
+
 async function getPhotos(date: string): Promise<Photo[]> {
   const raw = await AsyncStorage.getItem(photoKey(date));
-  return raw ? JSON.parse(raw) : [];
-}
-
-async function savePhoto(date: string, photo: Photo): Promise<void> {
-  const photos = await getPhotos(date);
-  const idx = photos.findIndex((p) => p.id === photo.id);
-  if (idx >= 0) {
-    photos[idx] = photo;
-  } else {
-    photos.push(photo);
+  if (!raw) return [];
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return []; // corrupt entry — don't crash the screen
   }
-  await AsyncStorage.setItem(photoKey(date), JSON.stringify(photos));
 }
 
-async function updatePhoto(
-  date: string,
-  id: string,
-  updates: Partial<Photo>
-): Promise<void> {
-  const photos = await getPhotos(date);
-  const idx = photos.findIndex((p) => p.id === id);
-  if (idx >= 0) {
-    photos[idx] = { ...photos[idx], ...updates };
+function savePhoto(date: string, photo: Photo): Promise<void> {
+  return runExclusive(async () => {
+    const photos = await getPhotos(date);
+    const idx = photos.findIndex((p) => p.id === photo.id);
+    if (idx >= 0) photos[idx] = photo;
+    else photos.push(photo);
     await AsyncStorage.setItem(photoKey(date), JSON.stringify(photos));
-  }
+  });
 }
 
-async function hasPhotos(date: string): Promise<boolean> {
-  const photos = await getPhotos(date);
-  return photos.length > 0;
+function updatePhoto(date: string, id: string, updates: Partial<Photo>): Promise<void> {
+  return runExclusive(async () => {
+    const photos = await getPhotos(date);
+    const idx = photos.findIndex((p) => p.id === id);
+    if (idx >= 0) {
+      photos[idx] = { ...photos[idx], ...updates };
+      await AsyncStorage.setItem(photoKey(date), JSON.stringify(photos));
+    }
+  });
 }
 
-async function deletePhoto(date: string, id: string): Promise<void> {
-  const photos = await getPhotos(date);
-  await AsyncStorage.setItem(photoKey(date), JSON.stringify(photos.filter((p) => p.id !== id)));
+function deletePhoto(date: string, id: string): Promise<void> {
+  return runExclusive(async () => {
+    const photos = await getPhotos(date);
+    await AsyncStorage.setItem(photoKey(date), JSON.stringify(photos.filter((p) => p.id !== id)));
+  });
 }
 
 // ─── Color cache ──────────────────────────────────────────────────────────────
@@ -86,7 +95,6 @@ export const localStore = {
   savePhoto,
   updatePhoto,
   deletePhoto,
-  hasPhotos,
   getPhotosPresenceForDates,
   getColorCache,
   cacheColors,

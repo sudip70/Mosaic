@@ -1,12 +1,15 @@
 import {
-  View, Text, ScrollView, Switch, Pressable, StyleSheet, Share,
+  View, Text, ScrollView, Switch, Pressable, StyleSheet, Share, Alert,
 } from 'react-native';
-import { useEffect, useState } from 'react';
-import { router } from 'expo-router';
+import { useCallback, useState } from 'react';
+import { router, useFocusEffect } from 'expo-router';
+import * as StoreReview from 'expo-store-review';
 import { AppScreen } from '@/components/ui/AppScreen';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { colors, fonts, shadows, radius, spacing } from '@/lib/theme';
 import { useAnalytics } from '@/hooks/useAnalytics';
+import { useSettings } from '@/store/useSettings';
+import { getStorageInfo, clearCache, formatBytes, StorageInfo } from '@/lib/storageInfo';
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
 
@@ -119,25 +122,48 @@ function DisabledRow({ icon, iconBg, label, sub, last }: Omit<RowProps, 'onPress
 
 export default function SettingsScreen() {
   const { trackScreen } = useAnalytics();
-  const [notifEnabled, setNotifEnabled] = useState(true);
-  const [theme, setTheme] = useState<'System' | 'Light' | 'Dark'>('System');
-  const [gridDensity, setGridDensity] = useState<'Comfortable' | 'Compact'>('Comfortable');
+  const {
+    morningReminder, reminderTime, theme, gridDensity,
+    setMorningReminder, cycleTheme, cycleGridDensity,
+  } = useSettings();
 
-  useEffect(() => { trackScreen('settings'); }, []);
+  const [storage, setStorage] = useState<StorageInfo | null>(null);
 
-  function cycleTheme() {
-    setTheme(t => t === 'System' ? 'Light' : t === 'Light' ? 'Dark' : 'System');
-  }
+  const loadStorage = useCallback(() => { getStorageInfo().then(setStorage); }, []);
 
-  function cycleGrid() {
-    setGridDensity(d => d === 'Comfortable' ? 'Compact' : 'Comfortable');
-  }
+  useFocusEffect(
+    useCallback(() => {
+      trackScreen('settings');
+      loadStorage();
+    }, [loadStorage])
+  );
 
   async function shareApp() {
     await Share.share({
       message: 'Check out Mosaic — a daily colour photo journal. One colour, one day, a year of your life.',
     });
   }
+
+  async function rateApp() {
+    if (await StoreReview.hasAction()) await StoreReview.requestReview();
+  }
+
+  function handleClearCache() {
+    Alert.alert('Clear cache?', 'Frees up space. Your photos stay safe.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Clear',
+        onPress: async () => { await clearCache(); loadStorage(); },
+      },
+    ]);
+  }
+
+  const photosUsed = storage ? formatBytes(storage.photosBytes) : '…';
+  const cacheUsed = storage ? formatBytes(storage.cacheBytes) : '…';
+  const freeSpace = storage ? formatBytes(storage.freeBytes) : '…';
+  const usedFraction = storage && storage.freeBytes > 0
+    ? Math.min(storage.photosBytes / (storage.photosBytes + storage.freeBytes), 1)
+    : 0;
 
   return (
     <AppScreen>
@@ -161,8 +187,8 @@ export default function SettingsScreen() {
               sub="One gentle nudge to find today's colour"
               right={
                 <Switch
-                  value={notifEnabled}
-                  onValueChange={setNotifEnabled}
+                  value={morningReminder}
+                  onValueChange={setMorningReminder}
                   trackColor={{ false: colors.surface2, true: colors.accent }}
                   thumbColor={colors.surface0}
                 />
@@ -171,9 +197,9 @@ export default function SettingsScreen() {
             <Row
               icon="⏰" iconBg="#EDF4FF"
               label="Reminder time"
-              sub={notifEnabled ? 'When should we nudge you?' : 'Enable reminder first'}
-              right={notifEnabled ? <><ValChip label="8:30 AM" /><Chevron /></> : null}
-              onPress={notifEnabled ? () => {} : undefined}
+              sub={morningReminder ? 'When should we nudge you?' : 'Enable reminder first'}
+              right={morningReminder ? <><ValChip label={reminderTime} /><Chevron /></> : null}
+              onPress={morningReminder ? () => {} : undefined}
               last
             />
           </SettingsCard>
@@ -195,7 +221,7 @@ export default function SettingsScreen() {
               label="Grid density"
               sub="How many tiles fit on screen"
               right={<><ValChip label={gridDensity} /><Chevron /></>}
-              onPress={cycleGrid}
+              onPress={cycleGridDensity}
               last
             />
           </SettingsCard>
@@ -213,17 +239,17 @@ export default function SettingsScreen() {
               <View style={s.storageCopy}>
                 <Text style={s.rowLabel}>Photos on device</Text>
                 <View style={s.storageTrack}>
-                  <View style={s.storageFill} />
+                  <View style={[s.storageFill, { width: `${Math.max(usedFraction * 100, 2)}%` }]} />
                 </View>
-                <Text style={s.storageLabel}>142 MB of 420 MB used</Text>
+                <Text style={s.storageLabel}>{photosUsed} used · {freeSpace} free</Text>
               </View>
             </View>
             <Row
               icon="🗑" iconBg="#FFF0EC"
               label="Clear cache"
-              sub="Frees up space, photos stay safe in the cloud"
-              right={<><ValChip label="28 MB" /><Chevron /></>}
-              onPress={() => {}}
+              sub="Frees up space, photos stay safe"
+              right={<><ValChip label={cacheUsed} /><Chevron /></>}
+              onPress={handleClearCache}
               last
             />
           </SettingsCard>
@@ -233,9 +259,9 @@ export default function SettingsScreen() {
         <View style={s.group}>
           <GroupLabel label="About" />
           <SettingsCard>
-            <Row icon="✦" iconBg="#F5F0E8" label="What is Mosaic?" sub="The story behind the app" right={<Chevron />} onPress={() => {}} />
+            <Row icon="✦" iconBg="#F5F0E8" label="What is Mosaic?" sub="The story behind the app" right={<Chevron />} onPress={() => router.push('/onboarding')} />
             <Row icon="🔒" iconBg="#EDF4FF" label="Privacy Policy" sub="How your data is handled" right={<Chevron />} onPress={() => router.push('/privacy')} />
-            <Row icon="⭐" iconBg="#FFF8EC" label="Rate Mosaic" sub="Enjoying it? Let us know" right={<Chevron />} onPress={() => {}} />
+            <Row icon="⭐" iconBg="#FFF8EC" label="Rate Mosaic" sub="Enjoying it? Let us know" right={<Chevron />} onPress={rateApp} />
             <Row icon="🌱" iconBg="#EDF7ED" label="Share with a friend" sub="Help someone find their colour" right={<Chevron />} onPress={shareApp} />
             <Row icon="ℹ" iconBg="#F5F0E8" label="Version" sub="Up to date" right={<ValChip label="1.0.0" />} last />
           </SettingsCard>
@@ -336,7 +362,7 @@ const s = StyleSheet.create({
   },
   storageCopy: { flex: 1, gap: 8 },
   storageTrack: { height: 5, backgroundColor: colors.surface2, borderRadius: 3, overflow: 'hidden' },
-  storageFill: { height: '100%', width: '34%', backgroundColor: colors.accent, borderRadius: 3 },
+  storageFill: { height: '100%', backgroundColor: colors.accent, borderRadius: 3 },
   storageLabel: { fontFamily: fonts.sans, fontSize: 11, color: colors.ink30 },
 
   phaseBadgeRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },

@@ -1,7 +1,7 @@
 import { View, ScrollView, Pressable, ActivityIndicator, Image, StyleSheet } from 'react-native';
 import { useEffect } from 'react';
 import { router } from 'expo-router';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, differenceInCalendarDays } from 'date-fns';
 import { AppScreen } from '@/components/ui/AppScreen';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { ColorHero } from '@/components/ui/ColorHero';
@@ -36,11 +36,16 @@ export default function TodayScreen() {
 
   useEffect(() => { trackScreen('today'); }, []);
 
+  // "Day N" = days since the account was created (1-indexed).
+  const dayNumber = user?.created_at
+    ? differenceInCalendarDays(new Date(), parseISO(user.created_at)) + 1
+    : 1;
+
   return (
     <AppScreen>
       <ScreenHeader
         wordmark="Mosaic"
-        right={{ icon: '···', accessibilityLabel: 'Menu', onPress: () => router.push('/settings') }}
+        right={{ icon: '···', accessibilityLabel: 'Settings', onPress: () => router.navigate('/settings') }}
       />
 
       <ScrollView
@@ -63,7 +68,7 @@ export default function TodayScreen() {
             hex={color.hex}
             name={color.name}
             kicker="Today's colour"
-            chip={`Day ${current > 0 ? current : 1}`}
+            chip={`Day ${dayNumber}`}
             footRight={formatShort(date)}
           />
         ) : null}

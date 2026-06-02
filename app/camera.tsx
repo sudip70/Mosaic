@@ -19,7 +19,7 @@ export default function CameraScreen() {
   const cameraRef = useRef<CameraView>(null);
   const [permission, requestPermission] = useCameraPermissions();
   const { user } = useAuth();
-  const { uploadPhoto, uploading } = useUpload();
+  const { uploadPhoto, uploading, error: uploadError } = useUpload();
   const todayColor = useColorStore((s) => s.todayColor);
 
   const [facing, setFacing] = useState<CameraType>('back');
@@ -44,7 +44,7 @@ export default function CameraScreen() {
   const handleLibrary = useCallback(async () => {
     if (!canCapture) return;
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ['images'],
       quality: 0.8,
     });
     if (!result.canceled) {
@@ -128,6 +128,11 @@ export default function CameraScreen() {
           {grid && <GridOverlay />}
           {leveling && <LevelIndicator />}
           {timestamp && <TimestampOverlay />}
+          {uploadError && (
+            <View style={s.errorBanner}>
+              <AppText style={s.errorText}>{uploadError}</AppText>
+            </View>
+          )}
         </View>
 
         {/* Controls */}
@@ -370,6 +375,14 @@ const s = StyleSheet.create({
 
   // Finder
   finderMid: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+
+  // Error banner
+  errorBanner: {
+    position: 'absolute', bottom: 16, alignSelf: 'center',
+    backgroundColor: 'rgba(198,40,40,0.92)', borderRadius: 9999,
+    paddingHorizontal: 16, paddingVertical: 8, maxWidth: '90%',
+  },
+  errorText: { fontFamily: fonts.sansMd, fontSize: 12, color: '#fff', textAlign: 'center' },
 
   // Controls
   controls: {

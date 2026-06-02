@@ -12,10 +12,11 @@ import { useAuth } from '@/hooks/useAuth';
 import { useStreak } from '@/hooks/useStreak';
 import { useToday } from '@/hooks/useToday';
 import { useAnalytics } from '@/hooks/useAnalytics';
+import { useSettings } from '@/store/useSettings';
 import { colors, fonts, shadows, radius, spacing } from '@/lib/theme';
 import type { GridDay } from '@/types';
 
-const TILE_SIZE = 26;
+const TILE_SIZE = { Comfortable: 30, Compact: 22 } as const;
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const PIP_COUNT = 14;
 
@@ -67,6 +68,8 @@ export default function GridScreen() {
   const { trackScreen } = useAnalytics();
   const { current: streakCurrent, longest: streakLongest } = useStreak();
   const { color: todayColor } = useToday();
+  const gridDensity = useSettings((s) => s.gridDensity);
+  const tileSize = TILE_SIZE[gridDensity];
 
   const startDate = user?.created_at?.slice(0, 10) ?? new Date().toISOString().slice(0, 10);
   const { days, reload } = useGrid(user?.id ?? '', startDate);
@@ -84,10 +87,7 @@ export default function GridScreen() {
 
   return (
     <AppScreen>
-      <ScreenHeader
-        wordmark="My Mosaic"
-        right={{ icon: '↓', accessibilityLabel: 'Export grid' }}
-      />
+      <ScreenHeader wordmark="My Mosaic" />
 
       <ScrollView style={st.scroll} contentContainerStyle={st.content} showsVerticalScrollIndicator={false}>
         <StreakRing current={streakCurrent} longest={streakLongest} />
@@ -108,7 +108,7 @@ export default function GridScreen() {
                 key={day.date}
                 style={[
                   st.tile,
-                  { backgroundColor: day.hex },
+                  { width: tileSize, height: tileSize, backgroundColor: day.hex },
                   !day.hasPhotos && st.tileEmpty,
                   day.isToday && st.tileToday,
                 ]}
@@ -130,7 +130,7 @@ export default function GridScreen() {
 
         {todayColor && (
           <Pressable
-            onPress={() => router.push('/')}
+            onPress={() => router.navigate('/')}
             accessibilityRole="button"
             accessibilityLabel={`${todayColor.name} today`}
           >
@@ -175,7 +175,7 @@ const st = StyleSheet.create({
   gridHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: spacing.lg },
 
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  tile: { width: TILE_SIZE, height: TILE_SIZE, borderRadius: 10 },
+  tile: { borderRadius: 10 },
   tileEmpty: { opacity: 0.25 },
   tileToday: { borderWidth: 2.5, borderColor: colors.ink100 },
 

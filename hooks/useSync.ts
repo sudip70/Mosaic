@@ -5,6 +5,7 @@ import { decode } from 'base64-arraybuffer';
 import { supabase } from '@/lib/supabase';
 import { syncQueue } from '@/lib/syncQueue';
 import { localStore } from '@/lib/localStore';
+import { reportError } from '@/lib/reportError';
 
 // Module-level lock — prevents concurrent runs if network events fire rapidly.
 let isProcessing = false;
@@ -44,18 +45,26 @@ async function processQueue() {
         });
         const storagePath = `${item.userId}/${item.date}/${item.id}.jpg`;
 
-        await supabase.storage
+        // upsert so a retried partial upload doesn't fail on duplicates
+        const { error: storageError } = await supabase.storage
           .from('photos')
-          .upload(storagePath, decode(base64), { contentType: 'image/jpeg' });
+          .upload(storagePath, decode(base64), { contentType: 'image/jpeg', upsert: true });
+        if (storageError) throw storageError;
 
-        await supabase.from('photos').insert({
-          id: item.id,
-          user_id: item.userId,
-          date: item.date,
-          color_id: item.colorId,
-          storage_path: storagePath,
-          created_at: item.createdAt,
-        });
+        const { error: insertError } = await supabase
+          .from('photos')
+          .upsert(
+            {
+              id: item.id,
+              user_id: item.userId,
+              date: item.date,
+              color_id: item.colorId,
+              storage_path: storagePath,
+              created_at: item.createdAt,
+            },
+            { onConflict: 'id' }
+          );
+        if (insertError) throw insertError;
 
         await localStore.updatePhoto(item.date, item.id, {
           sync_status: 'synced',
@@ -63,8 +72,9 @@ async function processQueue() {
         });
 
         await syncQueue.remove(item.id);
-      } catch {
+      } catch (e) {
         // Network or server error — leave in queue, retry on next connection.
+        reportError(e, { scope: 'syncQueue', photoId: item.id });
       }
     }
   } finally {
