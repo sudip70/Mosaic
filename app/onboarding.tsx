@@ -35,29 +35,29 @@ export default function OnboardingScreen() {
   return (
     <AppScreen background={colors.surface0}>
       <ScrollView contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
-        {/* Eyebrow */}
-        <View style={s.eyebrow}>
-          <View style={s.dot} />
-          <AppText style={s.tag}>Welcome to Mosaic</AppText>
+        {/* Top block */}
+        <View style={s.top}>
+          <View style={s.eyebrow}>
+            <View style={s.dot} />
+            <AppText style={s.tag}>Welcome to Mosaic</AppText>
+          </View>
+
+          <AppText style={s.headline}>
+            See the world{'\n'}in <AppText style={s.headlineAccent}>colour.</AppText>
+          </AppText>
+          <AppText style={s.sub}>
+            One colour every day. Photograph it wherever you find it.
+            Build a diary of your life without even trying.
+          </AppText>
+
+          <View style={s.swatches}>
+            {SWATCHES.map((sw) => (
+              <View key={sw.name} style={[s.swatch, { backgroundColor: sw.hex }]} />
+            ))}
+          </View>
         </View>
 
-        {/* Headline */}
-        <AppText style={s.headline}>
-          See the world{'\n'}in <AppText style={s.headlineAccent}>colour.</AppText>
-        </AppText>
-        <AppText style={s.sub}>
-          One colour every day. Photograph it wherever you find it.
-          Build a diary of your life without even trying.
-        </AppText>
-
-        {/* Swatch strip */}
-        <View style={s.swatches}>
-          {SWATCHES.map((sw) => (
-            <View key={sw.name} style={[s.swatch, { backgroundColor: sw.hex }]} />
-          ))}
-        </View>
-
-        {/* Steps */}
+        {/* Steps — distributed to fill the space between the swatches and CTA */}
         <View style={s.steps}>
           {STEPS.map((step) => (
             <View key={step.title} style={s.step}>
@@ -72,7 +72,7 @@ export default function OnboardingScreen() {
           ))}
         </View>
 
-        {/* CTA — flows right after the steps */}
+        {/* CTA — pinned to the bottom */}
         <Pressable onPress={begin} accessibilityRole="button" accessibilityLabel="Begin today">
           {({ pressed }) => (
             <View style={[s.cta, pressed && s.ctaPressed]}>
@@ -92,7 +92,8 @@ export default function OnboardingScreen() {
 }
 
 const s = StyleSheet.create({
-  content: { paddingHorizontal: spacing.xl, paddingTop: spacing.md, paddingBottom: spacing.x3, gap: spacing.lg },
+  content: { flexGrow: 1, paddingHorizontal: spacing.xl, paddingTop: spacing.md, paddingBottom: spacing.xl },
+  top: { gap: spacing.lg },
 
   eyebrow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   dot: { width: 7, height: 7, borderRadius: 4, backgroundColor: colors.accent },
@@ -105,7 +106,9 @@ const s = StyleSheet.create({
   swatches: { flexDirection: 'row', gap: 6, height: 52 },
   swatch: { flex: 1, borderRadius: radius.r12, ...shadows.elev1 },
 
-  steps: { gap: spacing.md, marginTop: spacing.xs },
+  // flex:1 lets the steps fill the space between the swatches and the CTA;
+  // space-evenly spreads the three points apart instead of bunching them up.
+  steps: { flex: 1, justifyContent: 'space-evenly', paddingVertical: spacing.lg },
   step: { flexDirection: 'row', gap: spacing.md, alignItems: 'flex-start' },
   stepIcon: {
     width: 38, height: 38, borderRadius: radius.r12,
