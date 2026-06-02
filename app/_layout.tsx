@@ -13,11 +13,12 @@ import {
   DMSans_500Medium,
   DMSans_600SemiBold,
 } from '@expo-google-fonts/dm-sans';
+import { StatusBar } from 'expo-status-bar';
 import { useAuth } from '@/hooks/useAuth';
 import { useSync } from '@/hooks/useSync';
+import { useTheme } from '@/hooks/useTheme';
 import { initAnalytics } from '@/lib/analytics';
 import { ONBOARDING_KEY } from '@/lib/constants';
-import { colors } from '@/lib/theme';
 import { useAppStore } from '@/store/useAppStore';
 import '../global.css';
 
@@ -34,6 +35,7 @@ export default function RootLayout() {
 
   const { loading } = useAuth();
   useSync();
+  const { colors, isDark } = useTheme();
 
   const router = useRouter();
   const segments = useSegments();
@@ -61,6 +63,7 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
+      <StatusBar style={isDark ? 'light' : 'dark'} />
       <Stack screenOptions={{ headerShown: false }} />
     </GestureHandlerRootView>
   );

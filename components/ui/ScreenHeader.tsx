@@ -1,7 +1,8 @@
 import { View, StyleSheet } from 'react-native';
 import { AppText } from './AppText';
 import { IconButton } from './IconButton';
-import { colors, layout } from '@/lib/theme';
+import { layout, type Palette } from '@/lib/theme';
+import { useThemedStyles } from '@/hooks/useThemedStyles';
 
 interface HeaderAction {
   icon: string;
@@ -25,6 +26,7 @@ interface ScreenHeaderProps {
  * Keeps nav padding identical on every screen.
  */
 export function ScreenHeader({ wordmark, title, left, right }: ScreenHeaderProps) {
+  const s = useThemedStyles(makeStyles);
   if (title) {
     return (
       <View style={s.bar}>
@@ -47,7 +49,7 @@ export function ScreenHeader({ wordmark, title, left, right }: ScreenHeaderProps
   );
 }
 
-const s = StyleSheet.create({
+const makeStyles = (c: Palette) => StyleSheet.create({
   bar: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -55,7 +57,7 @@ const s = StyleSheet.create({
     paddingHorizontal: layout.navPadH,
     paddingTop: layout.navPadTop,
     paddingBottom: layout.navPadBottom,
-    backgroundColor: colors.surface0,
+    backgroundColor: c.surface0,
   },
   slot: { width: layout.iconBtn },
   slotRight: { alignItems: 'flex-end' },

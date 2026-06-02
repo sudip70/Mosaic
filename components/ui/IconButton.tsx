@@ -1,5 +1,6 @@
 import { Pressable, Text, View, StyleSheet } from 'react-native';
-import { colors, shadows, layout } from '@/lib/theme';
+import { shadows, layout, fonts, type Palette } from '@/lib/theme';
+import { useThemedStyles } from '@/hooks/useThemedStyles';
 
 interface IconButtonProps {
   icon: string;
@@ -14,6 +15,7 @@ interface IconButtonProps {
  * Single source of truth for the 36px round icon affordance.
  */
 export function IconButton({ icon, onPress, accessibilityLabel, ghost }: IconButtonProps) {
+  const s = useThemedStyles(makeStyles);
   return (
     <Pressable
       onPress={onPress}
@@ -32,14 +34,14 @@ export function IconButton({ icon, onPress, accessibilityLabel, ghost }: IconBut
   );
 }
 
-const s = StyleSheet.create({
+const makeStyles = (c: Palette) => StyleSheet.create({
   btn: {
     width: layout.iconBtn,
     height: layout.iconBtn,
     borderRadius: layout.iconBtn / 2,
-    backgroundColor: colors.surface1,
+    backgroundColor: c.surface1,
     borderWidth: 1,
-    borderColor: colors.ink15,
+    borderColor: c.ink15,
     alignItems: 'center',
     justifyContent: 'center',
     ...shadows.elev1,
@@ -50,6 +52,6 @@ const s = StyleSheet.create({
     shadowOpacity: 0,
     elevation: 0,
   },
-  pressed: { backgroundColor: colors.surface2 },
-  icon: { fontFamily: 'DMSans_500Medium', fontSize: 14, color: colors.ink60 },
+  pressed: { backgroundColor: c.surface2 },
+  icon: { fontFamily: fonts.sansMd, fontSize: 14, color: c.ink60 },
 });
