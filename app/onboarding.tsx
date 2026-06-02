@@ -72,10 +72,7 @@ export default function OnboardingScreen() {
           ))}
         </View>
 
-        {/* Flexible spacer pushes the CTA toward the bottom on tall screens */}
-        <View style={s.spacer} />
-
-        {/* CTA */}
+        {/* CTA — flows right after the steps */}
         <Pressable onPress={begin} accessibilityRole="button" accessibilityLabel="Begin today">
           {({ pressed }) => (
             <View style={[s.cta, pressed && s.ctaPressed]}>
@@ -95,8 +92,7 @@ export default function OnboardingScreen() {
 }
 
 const s = StyleSheet.create({
-  content: { flexGrow: 1, paddingHorizontal: spacing.xl, paddingTop: spacing.md, paddingBottom: spacing.x3, gap: spacing.lg },
-  spacer: { flex: 1, minHeight: spacing.lg },
+  content: { paddingHorizontal: spacing.xl, paddingTop: spacing.md, paddingBottom: spacing.x3, gap: spacing.lg },
 
   eyebrow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   dot: { width: 7, height: 7, borderRadius: 4, backgroundColor: colors.accent },
