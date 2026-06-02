@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import NetInfo from '@react-native-community/netinfo';
 import * as FileSystem from 'expo-file-system';
+import { randomUUID } from 'expo-crypto';
 import { decode } from 'base64-arraybuffer';
 import { supabase } from '@/lib/supabase';
 import { syncQueue } from '@/lib/syncQueue';
 import { localStore } from '@/lib/localStore';
+import { reportError } from '@/lib/reportError';
 import { usePhotoStore } from '@/store/usePhotoStore';
 import { useStreakStore } from '@/store/useStreakStore';
 import { useAnalytics } from './useAnalytics';
@@ -24,7 +26,8 @@ export function useUpload() {
     uri: string,
     userId: string,
     date: string,
-    colorId: string
+    colorId: string,
+    stamped = false
   ) {
     setUploading(true);
     setError(null);
@@ -36,7 +39,7 @@ export function useUpload() {
         throw new Error('Photo is too large. Please choose a smaller image.');
       }
 
-      const photoId = crypto.randomUUID();
+      const photoId = randomUUID();
       const localDir = `${PHOTOS_DIR}${userId}/${date}/`;
       const localUri = `${localDir}${photoId}.jpg`;
 
@@ -57,6 +60,7 @@ export function useUpload() {
         sync_status: 'pending',
         is_private: true,
         created_at: new Date().toISOString(),
+        timestamp: stamped,
         url: localUri,
       };
 
@@ -85,6 +89,7 @@ export function useUpload() {
       track('photo_uploaded', { date });
       return { success: true };
     } catch (e: any) {
+      reportError(e, { scope: 'uploadPhoto', date });
       setError(e.message ?? 'Upload failed');
       return { success: false };
     } finally {
@@ -108,25 +113,34 @@ async function uploadToCloud(
     });
     const storagePath = `${userId}/${date}/${photo.id}.jpg`;
 
-    await supabase.storage
+    // upsert so a retry after a partial success doesn't fail on "already exists"
+    const { error: storageError } = await supabase.storage
       .from('photos')
-      .upload(storagePath, decode(base64), { contentType: 'image/jpeg' });
+      .upload(storagePath, decode(base64), { contentType: 'image/jpeg', upsert: true });
+    if (storageError) throw storageError;
 
-    await supabase.from('photos').insert({
-      id: photo.id,
-      user_id: userId,
-      date,
-      color_id: colorId,
-      storage_path: storagePath,
-      created_at: photo.created_at,
-    });
+    const { error: insertError } = await supabase
+      .from('photos')
+      .upsert(
+        {
+          id: photo.id,
+          user_id: userId,
+          date,
+          color_id: colorId,
+          storage_path: storagePath,
+          created_at: photo.created_at,
+        },
+        { onConflict: 'id' }
+      );
+    if (insertError) throw insertError;
 
     await localStore.updatePhoto(date, photo.id, {
       sync_status: 'synced',
       storage_path: storagePath,
     });
-  } catch {
+  } catch (e) {
     // Cloud failed — queue for retry
+    reportError(e, { scope: 'uploadToCloud', photoId: photo.id });
     await syncQueue.add({
       id: photo.id,
       localUri,

@@ -1,13 +1,55 @@
 import { Tabs } from 'expo-router';
-import { Text, View, StyleSheet } from 'react-native';
-import { colors, fonts } from '@/lib/theme';
+import { Text, View, Pressable, StyleSheet } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
+import { fonts, type Palette } from '@/lib/theme';
+import { Aperture, Grid2x2, Users, Settings, ICON_STROKE, type LucideIcon } from '@/lib/icons';
+import { useTheme } from '@/hooks/useTheme';
+import { useThemedStyles } from '@/hooks/useThemedStyles';
 
-function TabIcon({ icon, label, focused }: { icon: string; label: string; focused: boolean }) {
+const TABS: Record<string, { icon: LucideIcon; label: string }> = {
+  index:    { icon: Aperture, label: 'Today' },
+  grid:     { icon: Grid2x2, label: 'Grid' },
+  friends:  { icon: Users, label: 'Friends' },
+  settings: { icon: Settings, label: 'Settings' },
+};
+
+function MosaicTabBar({ state, navigation }: BottomTabBarProps) {
+  const insets = useSafeAreaInsets();
+  const { colors, isDark } = useTheme();
+  const s = useThemedStyles(makeStyles);
+  const activePillBg = isDark ? colors.surface2 : colors.ink100;
+
   return (
-    <View style={[s.tab, focused && s.tabActive]}>
-      <Text style={[s.tabIcon, focused && s.tabIconActive]}>{icon}</Text>
-      <Text style={[s.tabLabel, focused && s.tabLabelActive]}>{label}</Text>
-      {focused && <View style={s.tabDot} />}
+    <View style={[s.bar, { paddingBottom: Math.max(insets.bottom, 12) }]}>
+      {state.routes.map((route, index) => {
+        const meta = TABS[route.name];
+        if (!meta) return null;
+        const focused = state.index === index;
+        const Icon = meta.icon;
+
+        const onPress = () => {
+          const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
+          if (!focused && !event.defaultPrevented) navigation.navigate(route.name);
+        };
+
+        return (
+          <Pressable
+            key={route.key}
+            onPress={onPress}
+            style={s.cell}
+            accessibilityRole="button"
+            accessibilityState={{ selected: focused }}
+            accessibilityLabel={meta.label}
+          >
+            <View style={[s.pill, focused && { backgroundColor: activePillBg }]}>
+              <Icon size={19} strokeWidth={ICON_STROKE} color={focused ? '#fff' : colors.ink30} />
+              <Text style={[s.label, focused && s.labelActive]}>{meta.label}</Text>
+              {focused && <View style={s.dot} />}
+            </View>
+          </Pressable>
+        );
+      })}
     </View>
   );
 }
@@ -15,85 +57,43 @@ function TabIcon({ icon, label, focused }: { icon: string; label: string; focuse
 export default function TabsLayout() {
   return (
     <Tabs
-      screenOptions={{
-        headerShown: false,
-        tabBarShowLabel: false,
-        tabBarStyle: s.tabBar,
-      }}
+      tabBar={(props) => <MosaicTabBar {...props} />}
+      screenOptions={{ headerShown: false }}
     >
-      <Tabs.Screen
-        name="index"
-        options={{
-          tabBarIcon: ({ focused }) => (
-            <TabIcon icon="◉" label="Today" focused={focused} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="grid"
-        options={{
-          tabBarIcon: ({ focused }) => (
-            <TabIcon icon="▦" label="Grid" focused={focused} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="friends"
-        options={{
-          tabBarIcon: ({ focused }) => (
-            <TabIcon icon="◎" label="Friends" focused={focused} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="settings"
-        options={{
-          tabBarIcon: ({ focused }) => (
-            <TabIcon icon="⚙" label="Settings" focused={focused} />
-          ),
-        }}
-      />
+      <Tabs.Screen name="index" />
+      <Tabs.Screen name="grid" />
+      <Tabs.Screen name="friends" />
+      <Tabs.Screen name="settings" />
     </Tabs>
   );
 }
 
-const s = StyleSheet.create({
-  tabBar: {
-    backgroundColor: 'rgba(254,252,248,0.94)',
+const makeStyles = (c: Palette) => StyleSheet.create({
+  bar: {
+    flexDirection: 'row',
+    backgroundColor: c.surface0,
     borderTopWidth: 1,
-    borderTopColor: colors.ink15,
-    height: 72,
-    paddingHorizontal: 8,
-    paddingBottom: 12,
+    borderTopColor: c.ink15,
+    paddingHorizontal: 12,
     paddingTop: 8,
   },
-  tab: {
-    flex: 1,
+  cell: { flex: 1, alignItems: 'center' },
+  pill: {
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 4,
+    gap: 3,
     paddingVertical: 8,
-    paddingHorizontal: 12,
+    paddingHorizontal: 18,
     borderRadius: 16,
-    position: 'relative',
+    minWidth: 64,
   },
-  tabActive: { backgroundColor: colors.ink100 },
-  tabIcon: { fontSize: 18, color: colors.ink30 },
-  tabIconActive: { color: '#fff' },
-  tabLabel: {
+  label: {
     fontFamily: fonts.sansMd,
     fontSize: 9.5,
     letterSpacing: 0.6,
     textTransform: 'uppercase',
-    color: colors.ink30,
+    color: c.ink30,
   },
-  tabLabelActive: { color: 'rgba(255,255,255,0.55)' },
-  tabDot: {
-    position: 'absolute',
-    bottom: 5,
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: colors.accent,
-  },
+  labelActive: { color: 'rgba(255,255,255,0.6)' },
+  dot: { width: 4, height: 4, borderRadius: 2, backgroundColor: c.accent, marginTop: 1 },
 });

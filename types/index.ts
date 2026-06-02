@@ -17,6 +17,7 @@ export interface Photo {
   sync_status: SyncStatus;
   is_private: boolean;
   created_at: string;
+  timestamp?: boolean;    // was the camera Timestamp setting on at capture? drives the time badge
   url?: string;           // resolved at render: local_uri if pending, Supabase URL if synced
 }
 

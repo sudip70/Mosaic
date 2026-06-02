@@ -42,6 +42,14 @@
         }
       ],
       [
+        "expo-media-library",
+        {
+          "photosPermission": "Mosaic saves a photo to your library when you download it.",
+          "savePhotosPermission": "Mosaic saves a photo to your library when you download it.",
+          "isAccessMediaLocationEnabled": false
+        }
+      ],
+      [
         "expo-notifications",
         {
           "icon": "./assets/icon.png",

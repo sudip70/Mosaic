@@ -1,6 +1,7 @@
-import { View, ScrollView, Pressable, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, ScrollView, Pressable, ActivityIndicator, Image, StyleSheet } from 'react-native';
 import { useEffect } from 'react';
 import { router } from 'expo-router';
+import { format, parseISO, differenceInCalendarDays } from 'date-fns';
 import { AppScreen } from '@/components/ui/AppScreen';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { ColorHero } from '@/components/ui/ColorHero';
@@ -12,10 +13,17 @@ import { useStreak } from '@/hooks/useStreak';
 import { usePhotos } from '@/hooks/usePhotos';
 import { useAuth } from '@/hooks/useAuth';
 import { useAnalytics } from '@/hooks/useAnalytics';
-import { colors, fonts, radius, shadows, spacing } from '@/lib/theme';
+import { useTheme } from '@/hooks/useTheme';
+import { useThemedStyles } from '@/hooks/useThemedStyles';
+import { fonts, radius, shadows, spacing, type Palette } from '@/lib/theme';
+import { Camera, Plus, Ellipsis, ICON_STROKE } from '@/lib/icons';
 import { formatShort } from '@/lib/dates';
 
+const formatTime = (iso: string) => format(parseISO(iso), 'HH:mm');
+
 function Stat({ value, label, accent }: { value: number; label: string; accent?: boolean }) {
+  const { colors } = useTheme();
+  const st = useThemedStyles(makeStyles);
   return (
     <Card style={st.statCard} padded={false}>
       <AppText variant="serifLg" color={accent ? colors.accent : colors.ink100}>{value}</AppText>
@@ -30,14 +38,21 @@ export default function TodayScreen() {
   const { photos } = usePhotos(date, user?.id ?? '');
   const { current, longest } = useStreak();
   const { trackScreen } = useAnalytics();
+  const { colors } = useTheme();
+  const st = useThemedStyles(makeStyles);
 
   useEffect(() => { trackScreen('today'); }, []);
+
+  // "Day N" = days since the account was created (1-indexed).
+  const dayNumber = user?.created_at
+    ? differenceInCalendarDays(new Date(), parseISO(user.created_at)) + 1
+    : 1;
 
   return (
     <AppScreen>
       <ScreenHeader
         wordmark="Mosaic"
-        right={{ icon: '···', accessibilityLabel: 'Menu', onPress: () => router.push('/settings') }}
+        right={{ icon: Ellipsis, accessibilityLabel: 'Settings', onPress: () => router.navigate('/settings') }}
       />
 
       <ScrollView
@@ -60,7 +75,7 @@ export default function TodayScreen() {
             hex={color.hex}
             name={color.name}
             kicker="Today's colour"
-            chip={`Day ${current > 0 ? current : 1}`}
+            chip={`Day ${dayNumber}`}
             footRight={formatShort(date)}
           />
         ) : null}
@@ -82,51 +97,74 @@ export default function TodayScreen() {
               </Pressable>
             )}
           </View>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={st.thumbStrip}>
-            {photos.map((p) => (
-              <Pressable
-                key={p.id}
-                style={st.thumb}
-                onPress={() => router.push(`/day/${date}`)}
-                accessibilityRole="imagebutton"
-                accessibilityLabel="View capture"
-              >
-                <View style={[st.thumbInner, { backgroundColor: color?.hex ?? colors.surface2 }]} />
-              </Pressable>
-            ))}
-            <Pressable
-              style={st.thumbAdd}
-              onPress={() => color && router.push('/camera')}
-              disabled={!color}
-              accessibilityRole="button"
-              accessibilityLabel="Add a capture"
-            >
-              <AppText style={st.thumbAddPlus}>+</AppText>
-              <AppText variant="overline" style={st.thumbAddLabel}>Add</AppText>
-            </Pressable>
-          </ScrollView>
-        </View>
+          {photos.length > 0 && (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={st.thumbStrip}>
+              {photos.map((p) => (
+                <Pressable
+                  key={p.id}
+                  style={st.thumb}
+                  onPress={() => router.push({ pathname: '/photo/[id]', params: { id: p.id, date } })}
+                  accessibilityRole="imagebutton"
+                  accessibilityLabel="View capture"
+                >
+                  {p.url ? (
+                    <Image source={{ uri: p.url }} style={st.thumbInner} resizeMode="cover" />
+                  ) : (
+                    <View style={[st.thumbInner, { backgroundColor: color?.hex ?? colors.surface2 }]} />
+                  )}
+                  {!!p.timestamp && !!p.created_at && (
+                    <View style={st.thumbTime}>
+                      <AppText style={st.thumbTimeText}>{formatTime(p.created_at)}</AppText>
+                    </View>
+                  )}
+                </Pressable>
+              ))}
+            </ScrollView>
+          )}
 
-        {/* CTA */}
+          {/* Add tile — own row so it stays visible no matter how many captures */}
+          <Pressable
+            style={[st.thumbAdd, photos.length > 0 && st.thumbAddBelow]}
+            onPress={() => color && router.push('/camera')}
+            disabled={!color}
+            accessibilityRole="button"
+            accessibilityLabel="Add a capture"
+          >
+            <Plus size={22} color={colors.ink30} strokeWidth={ICON_STROKE} />
+            <AppText variant="overline" style={st.thumbAddLabel}>Add</AppText>
+          </Pressable>
+        </View>
+      </ScrollView>
+
+      {/* Fixed CTA — pinned just above the tab bar */}
+      <View style={st.footer}>
         <PrimaryButton
           label="Capture now"
           sublabel={color ? `Find ${color.name} around you →` : undefined}
-          icon="📷"
+          icon={Camera}
+          iconColor={color?.hex}
           onPress={() => router.push('/camera')}
           disabled={!color || loading}
         />
-      </ScrollView>
+      </View>
     </AppScreen>
   );
 }
 
-const st = StyleSheet.create({
+const makeStyles = (c: Palette) => StyleSheet.create({
   scroll: { flex: 1 },
-  content: { paddingHorizontal: spacing.xl, paddingBottom: spacing.x3, gap: spacing.lg },
+  content: { paddingHorizontal: spacing.xl, paddingBottom: spacing.lg, gap: spacing.lg },
+
+  footer: {
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.md,
+    backgroundColor: c.surface0,
+  },
 
   heroFallback: {
     height: 240, alignItems: 'center', justifyContent: 'center',
-    gap: spacing.sm, backgroundColor: colors.surface1,
+    gap: spacing.sm, backgroundColor: c.surface1,
   },
 
   statsRow: { flexDirection: 'row', gap: spacing.sm },
@@ -134,19 +172,25 @@ const st = StyleSheet.create({
   statLabel: { marginTop: 2 },
 
   secHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md },
-  secLink: { fontFamily: fonts.sansMd, fontSize: 12, color: colors.accent },
+  secLink: { fontFamily: fonts.sansMd, fontSize: 12, color: c.accent },
 
   thumbStrip: { gap: spacing.sm },
   thumb: {
     width: 80, height: 80, borderRadius: radius.r16, overflow: 'hidden',
     borderWidth: 1, borderColor: 'rgba(255,255,255,0.6)', ...shadows.elev1,
   },
-  thumbInner: { flex: 1 },
+  thumbInner: { width: '100%', height: '100%' },
+  thumbTime: {
+    position: 'absolute', bottom: 5, left: 6,
+    backgroundColor: 'rgba(0,0,0,0.22)', borderRadius: 4,
+    paddingHorizontal: 5, paddingVertical: 1,
+  },
+  thumbTimeText: { fontFamily: fonts.sansSb, fontSize: 8, color: 'rgba(255,255,255,0.85)' },
   thumbAdd: {
     width: 80, height: 80, borderRadius: radius.r16,
-    borderWidth: 1.5, borderColor: colors.ink15, borderStyle: 'dashed',
+    borderWidth: 1.5, borderColor: c.ink15, borderStyle: 'dashed',
     alignItems: 'center', justifyContent: 'center', gap: 3,
   },
-  thumbAddPlus: { fontSize: 22, color: colors.ink15, fontFamily: fonts.sans },
+  thumbAddBelow: { marginTop: spacing.sm },
   thumbAddLabel: { fontSize: 8.5 },
 });

@@ -9,8 +9,3 @@ export async function getPhotoUrl(storagePath: string): Promise<string> {
   if (error || !data) throw new Error(`Failed to sign photo URL: ${error?.message}`);
   return data.signedUrl;
 }
-
-export async function deletePhoto(storagePath: string): Promise<void> {
-  const { error } = await supabase.storage.from('photos').remove([storagePath]);
-  if (error) throw new Error(`Failed to delete photo: ${error.message}`);
-}

@@ -4,7 +4,8 @@ import { router } from 'expo-router';
 import { AppScreen } from '@/components/ui/AppScreen';
 import { AppText } from '@/components/ui/AppText';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
-import { colors, spacing } from '@/lib/theme';
+import { spacing } from '@/lib/theme';
+import { ArrowRight } from '@/lib/icons';
 
 export default function WelcomeScreen() {
   return (
@@ -18,8 +19,8 @@ export default function WelcomeScreen() {
       <View style={s.actions}>
         <PrimaryButton
           label="Create account"
-          sublabel="Save your grid across devices →"
-          icon="→"
+          sublabel="Save your grid across devices"
+          icon={ArrowRight}
           onPress={() => router.push('/(auth)/signup')}
         />
       </View>
@@ -30,6 +31,6 @@ export default function WelcomeScreen() {
 const s = StyleSheet.create({
   body: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.md, paddingHorizontal: spacing.x3 },
   title: { textAlign: 'center' },
-  sub: { textAlign: 'center', color: colors.ink60 },
+  sub: { textAlign: 'center' },
   actions: { paddingHorizontal: spacing.xl, paddingBottom: spacing.xl, gap: spacing.md },
 });

@@ -1,6 +1,6 @@
 import { View, ScrollView, Pressable, StyleSheet } from 'react-native';
-import { useEffect, useMemo } from 'react';
-import { router } from 'expo-router';
+import { useCallback, useMemo } from 'react';
+import { router, useFocusEffect } from 'expo-router';
 import { format, parseISO, getMonth } from 'date-fns';
 import Svg, { Circle } from 'react-native-svg';
 import { AppScreen } from '@/components/ui/AppScreen';
@@ -12,10 +12,13 @@ import { useAuth } from '@/hooks/useAuth';
 import { useStreak } from '@/hooks/useStreak';
 import { useToday } from '@/hooks/useToday';
 import { useAnalytics } from '@/hooks/useAnalytics';
-import { colors, fonts, shadows, radius, spacing } from '@/lib/theme';
+import { useSettings } from '@/store/useSettings';
+import { useTheme } from '@/hooks/useTheme';
+import { useThemedStyles } from '@/hooks/useThemedStyles';
+import { fonts, shadows, radius, spacing, type Palette } from '@/lib/theme';
 import type { GridDay } from '@/types';
 
-const TILE_SIZE = 26;
+const TILE_SIZE = { Comfortable: 30, Compact: 22 } as const;
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const PIP_COUNT = 14;
 
@@ -26,6 +29,8 @@ function getVisibleMonths(days: GridDay[]): string[] {
 }
 
 function StreakRing({ current, longest }: { current: number; longest: number }) {
+  const { colors } = useTheme();
+  const sr = useThemedStyles(makeRingStyles);
   const r = 26;
   const circumference = 2 * Math.PI * r;
   const fraction = Math.min(current / Math.max(longest, 1), 1);
@@ -67,21 +72,27 @@ export default function GridScreen() {
   const { trackScreen } = useAnalytics();
   const { current: streakCurrent, longest: streakLongest } = useStreak();
   const { color: todayColor } = useToday();
+  const gridDensity = useSettings((s) => s.gridDensity);
+  const tileSize = TILE_SIZE[gridDensity];
+  const st = useThemedStyles(makeStyles);
 
   const startDate = user?.created_at?.slice(0, 10) ?? new Date().toISOString().slice(0, 10);
-  const { days } = useGrid(user?.id ?? '', startDate);
+  const { days, reload } = useGrid(user?.id ?? '', startDate);
 
-  useEffect(() => { trackScreen('grid'); }, []);
+  // Re-read photo presence each time the tab regains focus — picks up new captures.
+  useFocusEffect(
+    useCallback(() => {
+      trackScreen('grid');
+      reload();
+    }, [reload])
+  );
 
   const visibleMonths = useMemo(() => getVisibleMonths(days), [days]);
   const currentMonth = MONTHS[getMonth(new Date())];
 
   return (
     <AppScreen>
-      <ScreenHeader
-        wordmark="My Mosaic"
-        right={{ icon: '↓', accessibilityLabel: 'Export grid' }}
-      />
+      <ScreenHeader wordmark="My Mosaic" />
 
       <ScrollView style={st.scroll} contentContainerStyle={st.content} showsVerticalScrollIndicator={false}>
         <StreakRing current={streakCurrent} longest={streakLongest} />
@@ -102,7 +113,7 @@ export default function GridScreen() {
                 key={day.date}
                 style={[
                   st.tile,
-                  { backgroundColor: day.hex },
+                  { width: tileSize, height: tileSize, backgroundColor: day.hex },
                   !day.hasPhotos && st.tileEmpty,
                   day.isToday && st.tileToday,
                 ]}
@@ -124,19 +135,20 @@ export default function GridScreen() {
 
         {todayColor && (
           <Pressable
-            style={st.nudge}
-            onPress={() => router.push('/')}
+            onPress={() => router.navigate('/')}
             accessibilityRole="button"
             accessibilityLabel={`${todayColor.name} today`}
           >
-            <View style={[st.nudgeIcon, { backgroundColor: todayColor.hex }]}>
-              <AppText style={{ fontSize: 18 }}>🎯</AppText>
-            </View>
-            <View>
-              <AppText style={st.nudgeTitle}>{todayColor.name} today</AppText>
-              <AppText style={st.nudgeSub}>
-                {streakCurrent > 0 ? 'keep the streak going' : 'capture your first photo'}
-              </AppText>
+            <View style={st.nudge}>
+              <View style={[st.nudgeIcon, { backgroundColor: todayColor.hex }]}>
+                <AppText style={{ fontSize: 18 }}>🎯</AppText>
+              </View>
+              <View>
+                <AppText style={st.nudgeTitle}>{todayColor.name} today</AppText>
+                <AppText style={st.nudgeSub}>
+                  {streakCurrent > 0 ? 'keep the streak going' : 'capture your first photo'}
+                </AppText>
+              </View>
             </View>
           </Pressable>
         )}
@@ -145,50 +157,50 @@ export default function GridScreen() {
   );
 }
 
-const sr = StyleSheet.create({
+const makeRingStyles = (c: Palette) => StyleSheet.create({
   card: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg, padding: spacing.xl, borderRadius: radius.r24 },
   ringWrap: { width: 64, height: 64 },
   ringCenter: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center' },
-  ringNum: { fontFamily: fonts.serifR, fontSize: 22, color: colors.accent, lineHeight: 22 },
-  ringUnit: { fontFamily: fonts.sansSb, fontSize: 8, color: colors.ink30, letterSpacing: 0.8, textTransform: 'uppercase' },
+  ringNum: { fontFamily: fonts.serifR, fontSize: 22, color: c.accent, lineHeight: 22 },
+  ringUnit: { fontFamily: fonts.sansSb, fontSize: 8, color: c.ink30, letterSpacing: 0.8, textTransform: 'uppercase' },
   info: { flex: 1 },
   infoTitle: { marginBottom: 6 },
   pips: { flexDirection: 'row', gap: 4, marginBottom: 6, flexWrap: 'wrap' },
-  pip: { height: 6, width: 20, borderRadius: 3, backgroundColor: colors.surface2 },
-  pipOn: { backgroundColor: colors.accent },
-  pipNow: { backgroundColor: colors.ink100 },
-  best: { fontFamily: fonts.sans, fontSize: 11, color: colors.ink30 },
-  bestVal: { fontFamily: fonts.sansSb, color: colors.ink60 },
+  pip: { height: 6, width: 20, borderRadius: 3, backgroundColor: c.surface2 },
+  pipOn: { backgroundColor: c.accent },
+  pipNow: { backgroundColor: c.ink100 },
+  best: { fontFamily: fonts.sans, fontSize: 11, color: c.ink30 },
+  bestVal: { fontFamily: fonts.sansSb, color: c.ink60 },
 });
 
-const st = StyleSheet.create({
+const makeStyles = (c: Palette) => StyleSheet.create({
   scroll: { flex: 1 },
   content: { paddingHorizontal: spacing.xl, paddingBottom: spacing.x3, gap: spacing.lg },
 
   gridHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: spacing.lg },
 
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  tile: { width: TILE_SIZE, height: TILE_SIZE, borderRadius: 10 },
+  tile: { borderRadius: 10 },
   tileEmpty: { opacity: 0.25 },
-  tileToday: { borderWidth: 2.5, borderColor: colors.ink100 },
+  tileToday: { borderWidth: 2.5, borderColor: c.ink100 },
 
   monthRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: spacing.md, paddingHorizontal: 2 },
   mChip: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: radius.r8 },
   mChipCurrent: {
-    backgroundColor: colors.surface0, borderWidth: 1, borderColor: colors.ink15,
+    backgroundColor: c.surface0, borderWidth: 1, borderColor: c.ink15,
     borderRadius: radius.full, paddingHorizontal: 12, ...shadows.elev1,
   },
-  mChipText: { fontFamily: fonts.sansMd, fontSize: 11, letterSpacing: 0.4, textTransform: 'uppercase', color: colors.ink30 },
-  mChipTextCurrent: { fontFamily: fonts.sansSb, color: colors.ink100 },
+  mChipText: { fontFamily: fonts.sansMd, fontSize: 11, letterSpacing: 0.4, textTransform: 'uppercase', color: c.ink30 },
+  mChipTextCurrent: { fontFamily: fonts.sansSb, color: c.ink100 },
 
   nudge: {
-    backgroundColor: colors.accentSoft, borderRadius: radius.r20, padding: spacing.lg,
-    flexDirection: 'row', alignItems: 'center', gap: spacing.md, borderWidth: 1, borderColor: colors.accent15,
+    backgroundColor: c.accentSoft, borderRadius: radius.r20, padding: spacing.lg,
+    flexDirection: 'row', alignItems: 'center', gap: spacing.md, borderWidth: 1, borderColor: c.accent15,
   },
   nudgeIcon: {
     width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center',
-    shadowColor: colors.accent, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 8,
+    shadowColor: c.accent, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 8,
   },
-  nudgeTitle: { fontFamily: fonts.sansSb, fontSize: 13, color: colors.accent },
-  nudgeSub: { fontFamily: fonts.sans, fontSize: 11, color: 'rgba(196,96,74,0.6)', marginTop: 1 },
+  nudgeTitle: { fontFamily: fonts.sansSb, fontSize: 13, color: c.accent },
+  nudgeSub: { fontFamily: fonts.sans, fontSize: 11, color: c.accent, marginTop: 1 },
 });

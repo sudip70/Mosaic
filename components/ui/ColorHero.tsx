@@ -1,6 +1,7 @@
 import { View, StyleSheet } from 'react-native';
 import { AppText } from './AppText';
-import { colors, radius, shadows, fonts } from '@/lib/theme';
+import { radius, shadows, fonts, type Palette } from '@/lib/theme';
+import { useThemedStyles } from '@/hooks/useThemedStyles';
 
 interface ColorHeroProps {
   hex: string;
@@ -26,6 +27,7 @@ interface ColorHeroProps {
 export function ColorHero({
   hex, name, kicker, chip, footLeft, footRight, height = 188, nameSize = 54,
 }: ColorHeroProps) {
+  const s = useThemedStyles(makeStyles);
   return (
     <View style={s.card}>
       <View style={[s.swatch, { backgroundColor: hex, height }]}>
@@ -56,12 +58,12 @@ export function ColorHero({
   );
 }
 
-const s = StyleSheet.create({
+const makeStyles = (c: Palette) => StyleSheet.create({
   card: {
     borderRadius: radius.r24,
     overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.3)',
+    borderWidth: 1.5,
+    borderColor: c.ink15,
     ...shadows.elev3,
   },
   swatch: { padding: 20, justifyContent: 'space-between' },
@@ -85,15 +87,15 @@ const s = StyleSheet.create({
     textShadowColor: 'rgba(0,0,0,0.12)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 16,
   },
   foot: {
-    backgroundColor: colors.surface0, paddingHorizontal: 20, paddingVertical: 14,
+    backgroundColor: c.surface0, paddingHorizontal: 20, paddingVertical: 14,
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    borderTopWidth: 1, borderTopColor: colors.ink15,
+    borderTopWidth: 1, borderTopColor: c.ink15,
   },
   hexWrap: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   hexDot: {
     width: 18, height: 18, borderRadius: 9,
-    borderWidth: 3, borderColor: colors.surface0,
+    borderWidth: 3, borderColor: c.surface0,
   },
-  hexVal: { fontFamily: fonts.sansMd, fontSize: 12, color: colors.ink60, letterSpacing: 0.6 },
-  footRight: { fontFamily: fonts.sans, fontSize: 12, color: colors.ink30 },
+  hexVal: { fontFamily: fonts.sansMd, fontSize: 12, color: c.ink60, letterSpacing: 0.6 },
+  footRight: { fontFamily: fonts.sans, fontSize: 12, color: c.ink30 },
 });

@@ -1,26 +1,26 @@
-import { Text, TextProps, StyleSheet } from 'react-native';
-import { type } from '@/lib/theme';
+import { Text, TextProps } from 'react-native';
+import { type, typeColorKey } from '@/lib/theme';
+import { useTheme } from '@/hooks/useTheme';
 
 type Variant = keyof typeof type;
 
 interface AppTextProps extends TextProps {
   variant?: Variant;
+  /** Override the variant's default colour (e.g. on coloured surfaces). */
   color?: string;
   children: React.ReactNode;
 }
 
 /**
- * The single text primitive for the whole app. Pulls its style from the
- * typography scale in theme.ts so every label/heading is consistent.
- * Override colour per-instance with the `color` prop (e.g. on coloured swatches).
+ * The single text primitive for the app. Size/font come from the typography
+ * scale; colour resolves against the active theme (or the `color` override).
  */
 export function AppText({ variant = 'body', color, style, children, ...rest }: AppTextProps) {
+  const { colors } = useTheme();
+  const resolved = color ?? colors[typeColorKey[variant]];
   return (
-    <Text style={[type[variant], color ? { color } : null, style]} {...rest}>
+    <Text style={[type[variant], { color: resolved }, style]} {...rest}>
       {children}
     </Text>
   );
 }
-
-// Re-export for screens that want raw style objects
-export const textStyles = StyleSheet.create(type as any);
