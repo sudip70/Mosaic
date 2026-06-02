@@ -6,6 +6,8 @@ interface PrimaryButtonProps {
   label: string;
   sublabel?: string;
   icon?: string;
+  /** Colour of the icon circle (and its glow). Defaults to the brand accent. */
+  iconColor?: string;
   onPress: () => void;
   disabled?: boolean;
 }
@@ -14,7 +16,7 @@ interface PrimaryButtonProps {
  * The dark pill call-to-action with an accent circle icon on the right.
  * Used for the headline action on a screen (Capture now, Begin today…).
  */
-export function PrimaryButton({ label, sublabel, icon, onPress, disabled }: PrimaryButtonProps) {
+export function PrimaryButton({ label, sublabel, icon, iconColor = colors.accent, onPress, disabled }: PrimaryButtonProps) {
   return (
     <Pressable
       onPress={onPress}
@@ -32,7 +34,7 @@ export function PrimaryButton({ label, sublabel, icon, onPress, disabled }: Prim
             {sublabel && <AppText style={s.sub}>{sublabel}</AppText>}
           </View>
           {icon && (
-            <View style={s.icon}>
+            <View style={[s.icon, { backgroundColor: iconColor, shadowColor: iconColor }]}>
               <AppText style={s.iconText}>{icon}</AppText>
             </View>
           )}

@@ -135,6 +135,7 @@ export default function TodayScreen() {
           label="Capture now"
           sublabel={color ? `Find ${color.name} around you →` : undefined}
           icon="📷"
+          iconColor={color?.hex}
           onPress={() => router.push('/camera')}
           disabled={!color || loading}
         />
