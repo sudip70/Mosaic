@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react';
-import { View, Image, Pressable, Modal, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, Image, Pressable, ActivityIndicator, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
 import { format, parseISO } from 'date-fns';
 import { AppText } from '@/components/ui/AppText';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { usePhotoStore } from '@/store/usePhotoStore';
 import { localStore } from '@/lib/localStore';
 import { usePhotoActions } from '@/hooks/usePhotoActions';
-import { colors, fonts, radius, spacing, shadows } from '@/lib/theme';
+import { fonts, radius } from '@/lib/theme';
 import type { Photo } from '@/types';
 
 export default function PhotoViewer() {
@@ -108,36 +109,18 @@ export default function PhotoViewer() {
         </View>
       )}
 
-      {/* Delete confirmation — themed in-app modal */}
-      <Modal visible={confirmDelete} transparent animationType="fade" onRequestClose={() => setConfirmDelete(false)}>
-        <Pressable style={s.dialogBackdrop} onPress={() => setConfirmDelete(false)}>
-          <Pressable style={s.dialog} onPress={() => {}}>
-            <View style={s.dialogIcon}>
-              <AppText style={{ fontSize: 24 }}>🗑</AppText>
-            </View>
-            <AppText style={s.dialogTitle}>Delete this photo?</AppText>
-            <AppText style={s.dialogBody}>
-              This permanently removes it from your grid. This can't be undone.
-            </AppText>
-            <View style={s.dialogActions}>
-              <Pressable style={s.dialogBtnWrap} onPress={() => setConfirmDelete(false)}>
-                {({ pressed }) => (
-                  <View style={[s.dialogBtn, s.dialogCancel, pressed && s.pressed]}>
-                    <AppText style={s.dialogCancelText}>Cancel</AppText>
-                  </View>
-                )}
-              </Pressable>
-              <Pressable style={s.dialogBtnWrap} onPress={onConfirmDelete}>
-                {({ pressed }) => (
-                  <View style={[s.dialogBtn, s.dialogDelete, pressed && s.pressed]}>
-                    <AppText style={s.dialogDeleteText}>Delete</AppText>
-                  </View>
-                )}
-              </Pressable>
-            </View>
-          </Pressable>
-        </Pressable>
-      </Modal>
+      {/* Delete confirmation */}
+      <ConfirmDialog
+        visible={confirmDelete}
+        icon="🗑"
+        iconBg="#FFEBEE"
+        title="Delete this photo?"
+        body="This permanently removes it from your grid. This can't be undone."
+        confirmLabel="Delete"
+        tone="danger"
+        onConfirm={onConfirmDelete}
+        onCancel={() => setConfirmDelete(false)}
+      />
     </View>
   );
 }
@@ -218,30 +201,4 @@ const s = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.4)',
     alignItems: 'center', justifyContent: 'center',
   },
-
-  // Themed delete dialog
-  dialogBackdrop: {
-    flex: 1, backgroundColor: 'rgba(15,14,13,0.6)',
-    alignItems: 'center', justifyContent: 'center', padding: spacing.xl,
-  },
-  dialog: {
-    width: '100%', maxWidth: 340,
-    backgroundColor: colors.surface0, borderRadius: radius.r24,
-    padding: spacing.xl, alignItems: 'center', gap: spacing.sm,
-    borderWidth: 1, borderColor: colors.ink15, ...shadows.elev3,
-  },
-  dialogIcon: {
-    width: 52, height: 52, borderRadius: 26, backgroundColor: '#FFEBEE',
-    alignItems: 'center', justifyContent: 'center', marginBottom: spacing.xs,
-  },
-  dialogTitle: { fontFamily: fonts.serifR, fontSize: 22, color: colors.ink100, letterSpacing: -0.4, textAlign: 'center' },
-  dialogBody: { fontFamily: fonts.sans, fontSize: 13, lineHeight: 20, color: colors.ink60, textAlign: 'center' },
-  dialogActions: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.md, alignSelf: 'stretch' },
-  dialogBtnWrap: { flex: 1 },
-  dialogBtn: { paddingVertical: 13, borderRadius: radius.r16, alignItems: 'center' },
-  pressed: { opacity: 0.85 },
-  dialogCancel: { backgroundColor: colors.surface1, borderWidth: 1, borderColor: colors.ink15 },
-  dialogCancelText: { fontFamily: fonts.sansSb, fontSize: 15, color: colors.ink100 },
-  dialogDelete: { backgroundColor: '#C62828' },
-  dialogDeleteText: { fontFamily: fonts.sansSb, fontSize: 15, color: '#fff' },
 });

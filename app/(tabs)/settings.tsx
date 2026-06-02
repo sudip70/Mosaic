@@ -1,11 +1,12 @@
 import {
-  View, Text, ScrollView, Switch, Pressable, StyleSheet, Share, Alert,
+  View, Text, ScrollView, Switch, Pressable, StyleSheet, Share,
 } from 'react-native';
 import { useCallback, useState } from 'react';
 import { router, useFocusEffect } from 'expo-router';
 import * as StoreReview from 'expo-store-review';
 import { AppScreen } from '@/components/ui/AppScreen';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { colors, fonts, shadows, radius, spacing } from '@/lib/theme';
 import { useAnalytics } from '@/hooks/useAnalytics';
 import { useSettings } from '@/store/useSettings';
@@ -148,14 +149,12 @@ export default function SettingsScreen() {
     if (await StoreReview.hasAction()) await StoreReview.requestReview();
   }
 
-  function handleClearCache() {
-    Alert.alert('Clear cache?', 'Frees up space. Your photos stay safe.', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Clear',
-        onPress: async () => { await clearCache(); loadStorage(); },
-      },
-    ]);
+  const [showClearCache, setShowClearCache] = useState(false);
+
+  async function confirmClearCache() {
+    setShowClearCache(false);
+    await clearCache();
+    loadStorage();
   }
 
   const photosUsed = storage ? formatBytes(storage.photosBytes) : '…';
@@ -249,7 +248,7 @@ export default function SettingsScreen() {
               label="Clear cache"
               sub="Frees up space, photos stay safe"
               right={<><ValChip label={cacheUsed} /><Chevron /></>}
-              onPress={handleClearCache}
+              onPress={() => setShowClearCache(true)}
               last
             />
           </SettingsCard>
@@ -305,6 +304,17 @@ export default function SettingsScreen() {
           <Text style={s.footerVer}>Version 1.0.0 · Made with care</Text>
         </View>
       </ScrollView>
+
+      <ConfirmDialog
+        visible={showClearCache}
+        icon="🗑"
+        iconBg="#FFF0EC"
+        title="Clear cache?"
+        body="Frees up space. Your photos stay safe."
+        confirmLabel="Clear"
+        onConfirm={confirmClearCache}
+        onCancel={() => setShowClearCache(false)}
+      />
     </AppScreen>
   );
 }
