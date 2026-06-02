@@ -92,7 +92,7 @@ export default function OnboardingScreen() {
 }
 
 const s = StyleSheet.create({
-  content: { flexGrow: 1, paddingHorizontal: spacing.xl, paddingTop: spacing.md, paddingBottom: spacing.xl },
+  content: { flexGrow: 1, paddingHorizontal: spacing.xl, paddingTop: spacing.md, paddingBottom: spacing.x4 },
   top: { gap: spacing.lg },
 
   eyebrow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
@@ -106,9 +106,9 @@ const s = StyleSheet.create({
   swatches: { flexDirection: 'row', gap: 6, height: 52 },
   swatch: { flex: 1, borderRadius: radius.r12, ...shadows.elev1 },
 
-  // flex:1 lets the steps fill the space between the swatches and the CTA;
-  // space-evenly spreads the three points apart instead of bunching them up.
-  steps: { flex: 1, justifyContent: 'space-evenly', paddingVertical: spacing.lg },
+  // flex:1 fills the space between swatches and the CTA; the steps are
+  // grouped (centered) with a comfortable fixed gap rather than spread apart.
+  steps: { flex: 1, justifyContent: 'center', gap: spacing.x3 },
   step: { flexDirection: 'row', gap: spacing.md, alignItems: 'flex-start' },
   stepIcon: {
     width: 38, height: 38, borderRadius: radius.r12,
