@@ -3,11 +3,13 @@ import { router } from 'expo-router';
 import { AppScreen } from '@/components/ui/AppScreen';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { AppText } from '@/components/ui/AppText';
-import { colors, fonts, radius, spacing } from '@/lib/theme';
+import { useThemedStyles } from '@/hooks/useThemedStyles';
+import { fonts, radius, spacing, type Palette } from '@/lib/theme';
 
 const LAST_UPDATED = 'June 1, 2026';
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  const s = useThemedStyles(makeStyles);
   return (
     <View style={s.section}>
       <AppText style={s.sectionTitle}>{title}</AppText>
@@ -17,10 +19,12 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 }
 
 function P({ children }: { children: React.ReactNode }) {
+  const s = useThemedStyles(makeStyles);
   return <AppText style={s.paragraph}>{children}</AppText>;
 }
 
 function Bullet({ children }: { children: React.ReactNode }) {
+  const s = useThemedStyles(makeStyles);
   return (
     <View style={s.bulletRow}>
       <View style={s.bulletDot} />
@@ -30,6 +34,7 @@ function Bullet({ children }: { children: React.ReactNode }) {
 }
 
 export default function PrivacyScreen() {
+  const s = useThemedStyles(makeStyles);
   return (
     <AppScreen>
       <ScreenHeader
@@ -124,30 +129,30 @@ export default function PrivacyScreen() {
   );
 }
 
-const s = StyleSheet.create({
+const makeStyles = (c: Palette) => StyleSheet.create({
   scroll: { flex: 1 },
   content: { paddingHorizontal: spacing.xl, paddingBottom: spacing.x4, gap: spacing.xxl },
 
   intro: {
-    backgroundColor: colors.accentSoft, borderRadius: radius.r20,
+    backgroundColor: c.accentSoft, borderRadius: radius.r20,
     padding: spacing.xl, gap: spacing.sm,
-    borderWidth: 1, borderColor: colors.accent15,
+    borderWidth: 1, borderColor: c.accent15,
   },
-  introTitle: { fontFamily: fonts.serifR, fontSize: 22, color: colors.ink100, letterSpacing: -0.4 },
-  introBody: { fontFamily: fonts.sans, fontSize: 13, lineHeight: 20, color: colors.ink60 },
-  updated: { fontFamily: fonts.sansMd, fontSize: 11, color: colors.ink30, marginTop: spacing.xs },
+  introTitle: { fontFamily: fonts.serifR, fontSize: 22, color: c.ink100, letterSpacing: -0.4 },
+  introBody: { fontFamily: fonts.sans, fontSize: 13, lineHeight: 20, color: c.ink60 },
+  updated: { fontFamily: fonts.sansMd, fontSize: 11, color: c.ink30, marginTop: spacing.xs },
 
   section: { gap: spacing.sm },
-  sectionTitle: { fontFamily: fonts.sansSb, fontSize: 15, color: colors.ink100 },
-  paragraph: { fontFamily: fonts.sans, fontSize: 13, lineHeight: 21, color: colors.ink60 },
+  sectionTitle: { fontFamily: fonts.sansSb, fontSize: 15, color: c.ink100 },
+  paragraph: { fontFamily: fonts.sans, fontSize: 13, lineHeight: 21, color: c.ink60 },
 
   bulletRow: { flexDirection: 'row', gap: spacing.sm, alignItems: 'flex-start' },
   bulletDot: {
-    width: 5, height: 5, borderRadius: 3, backgroundColor: colors.accent,
+    width: 5, height: 5, borderRadius: 3, backgroundColor: c.accent,
     marginTop: 7,
   },
-  bulletText: { flex: 1, fontFamily: fonts.sans, fontSize: 13, lineHeight: 21, color: colors.ink60 },
+  bulletText: { flex: 1, fontFamily: fonts.sans, fontSize: 13, lineHeight: 21, color: c.ink60 },
 
   footer: { alignItems: 'center', paddingTop: spacing.sm },
-  footerLogo: { fontFamily: fonts.serifR, fontSize: 18, color: colors.ink30, letterSpacing: -0.2 },
+  footerLogo: { fontFamily: fonts.serifR, fontSize: 18, color: c.ink30, letterSpacing: -0.2 },
 });

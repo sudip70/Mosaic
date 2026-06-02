@@ -7,18 +7,22 @@ import * as StoreReview from 'expo-store-review';
 import { AppScreen } from '@/components/ui/AppScreen';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
-import { colors, fonts, shadows, radius, spacing } from '@/lib/theme';
+import { fonts, shadows, radius, spacing, type Palette } from '@/lib/theme';
 import { useAnalytics } from '@/hooks/useAnalytics';
+import { useTheme } from '@/hooks/useTheme';
+import { useThemedStyles } from '@/hooks/useThemedStyles';
 import { useSettings } from '@/store/useSettings';
 import { getStorageInfo, clearCache, formatBytes, StorageInfo } from '@/lib/storageInfo';
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
 
 function GroupLabel({ label }: { label: string }) {
+  const s = useThemedStyles(makeStyles);
   return <Text style={s.groupLabel}>{label}</Text>;
 }
 
 function SettingsCard({ children }: { children: React.ReactNode }) {
+  const s = useThemedStyles(makeStyles);
   return <View style={s.card}>{children}</View>;
 }
 
@@ -34,6 +38,7 @@ interface RowProps {
 }
 
 function Row({ icon, iconBg, label, sub, right, onPress, danger, last }: RowProps) {
+  const s = useThemedStyles(makeStyles);
   return (
     <Pressable
       onPress={onPress}
@@ -63,6 +68,7 @@ function Row({ icon, iconBg, label, sub, right, onPress, danger, last }: RowProp
 }
 
 function ValChip({ label }: { label: string }) {
+  const s = useThemedStyles(makeStyles);
   return (
     <View style={s.valChip}>
       <Text style={s.valChipText}>{label}</Text>
@@ -71,10 +77,12 @@ function ValChip({ label }: { label: string }) {
 }
 
 function Chevron() {
+  const s = useThemedStyles(makeStyles);
   return <Text style={s.chevron}>›</Text>;
 }
 
 function PhaseBadge({ phase, label }: { phase: 1 | 2; label: string }) {
+  const s = useThemedStyles(makeStyles);
   return (
     <View style={s.phaseBadgeRow}>
       <View style={[s.phaseBadge, phase === 1 ? s.phaseBadgeP1 : s.phaseBadgeP2]}>
@@ -89,6 +97,7 @@ function PhaseBadge({ phase, label }: { phase: 1 | 2; label: string }) {
 }
 
 function Phase2Section({ title, children }: { title: string; children: React.ReactNode }) {
+  const s = useThemedStyles(makeStyles);
   return (
     <View style={s.phase2Wrap}>
       <View style={s.phase2Header}>
@@ -103,6 +112,7 @@ function Phase2Section({ title, children }: { title: string; children: React.Rea
 }
 
 function DisabledRow({ icon, iconBg, label, sub, last }: Omit<RowProps, 'onPress'>) {
+  const s = useThemedStyles(makeStyles);
   return (
     <View style={[s.row, !last && s.rowBorder, s.rowDisabled]}>
       <View style={s.rowLeft}>
@@ -123,6 +133,8 @@ function DisabledRow({ icon, iconBg, label, sub, last }: Omit<RowProps, 'onPress
 
 export default function SettingsScreen() {
   const { trackScreen } = useAnalytics();
+  const { colors } = useTheme();
+  const s = useThemedStyles(makeStyles);
   const {
     morningReminder, reminderTime, theme, gridDensity,
     setMorningReminder, cycleTheme, cycleGridDensity,
@@ -319,7 +331,7 @@ export default function SettingsScreen() {
   );
 }
 
-const s = StyleSheet.create({
+const makeStyles = (c: Palette) => StyleSheet.create({
   scroll: { flex: 1 },
   scrollContent: {
     paddingHorizontal: spacing.xl,
@@ -331,12 +343,12 @@ const s = StyleSheet.create({
   group: { gap: spacing.md },
   groupLabel: {
     fontFamily: fonts.sansSb, fontSize: 11, letterSpacing: 1.3,
-    textTransform: 'uppercase', color: colors.ink30, paddingHorizontal: 4,
+    textTransform: 'uppercase', color: c.ink30, paddingHorizontal: 4,
   },
 
   card: {
-    backgroundColor: colors.surface0, borderRadius: radius.r20,
-    borderWidth: 1, borderColor: colors.ink15, overflow: 'hidden',
+    backgroundColor: c.surface0, borderRadius: radius.r20,
+    borderWidth: 1, borderColor: c.ink15, overflow: 'hidden',
     ...shadows.elev1,
   },
 
@@ -344,8 +356,8 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 16, paddingVertical: 15, gap: 12,
   },
-  rowBorder: { borderBottomWidth: 1, borderBottomColor: colors.ink15 },
-  rowPressed: { backgroundColor: colors.surface1 },
+  rowBorder: { borderBottomWidth: 1, borderBottomColor: c.ink15 },
+  rowPressed: { backgroundColor: c.surface1 },
   rowDisabled: { opacity: 0.38 },
   rowLeft: { flexDirection: 'row', alignItems: 'center', gap: 13, flex: 1 },
   rowIcon: {
@@ -354,26 +366,26 @@ const s = StyleSheet.create({
   },
   rowIconText: { fontSize: 17 },
   rowCopy: { flex: 1 },
-  rowLabel: { fontFamily: fonts.sansMd, fontSize: 14, color: colors.ink100, letterSpacing: -0.1 },
+  rowLabel: { fontFamily: fonts.sansMd, fontSize: 14, color: c.ink100, letterSpacing: -0.1 },
   rowLabelDanger: { color: '#C62828' },
-  rowSub: { fontFamily: fonts.sans, fontSize: 12, lineHeight: 16, color: colors.ink30, marginTop: 2 },
+  rowSub: { fontFamily: fonts.sans, fontSize: 12, lineHeight: 16, color: c.ink30, marginTop: 2 },
   rowRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
 
   valChip: {
-    backgroundColor: colors.surface1, borderWidth: 1, borderColor: colors.ink15,
+    backgroundColor: c.surface1, borderWidth: 1, borderColor: c.ink15,
     borderRadius: radius.full, paddingHorizontal: 11, paddingVertical: 4,
   },
-  valChipText: { fontFamily: fonts.sansMd, fontSize: 12, color: colors.ink60 },
-  chevron: { fontFamily: fonts.sans, fontSize: 17, color: colors.ink30 },
+  valChipText: { fontFamily: fonts.sansMd, fontSize: 12, color: c.ink60 },
+  chevron: { fontFamily: fonts.sans, fontSize: 17, color: c.ink30 },
 
   storageRow: {
     flexDirection: 'row', alignItems: 'center', gap: 13,
     paddingHorizontal: 16, paddingVertical: 15,
   },
   storageCopy: { flex: 1, gap: 8 },
-  storageTrack: { height: 5, backgroundColor: colors.surface2, borderRadius: 3, overflow: 'hidden' },
-  storageFill: { height: '100%', backgroundColor: colors.accent, borderRadius: 3 },
-  storageLabel: { fontFamily: fonts.sans, fontSize: 11, color: colors.ink30 },
+  storageTrack: { height: 5, backgroundColor: c.surface2, borderRadius: 3, overflow: 'hidden' },
+  storageFill: { height: '100%', backgroundColor: c.accent, borderRadius: 3 },
+  storageLabel: { fontFamily: fonts.sans, fontSize: 11, color: c.ink30 },
 
   phaseBadgeRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   phaseBadge: {
@@ -382,28 +394,28 @@ const s = StyleSheet.create({
     borderWidth: 1,
   },
   phaseBadgeP1: { backgroundColor: '#EDF7ED', borderColor: 'rgba(46,125,50,0.2)' },
-  phaseBadgeP2: { backgroundColor: colors.surface2, borderColor: colors.ink15 },
+  phaseBadgeP2: { backgroundColor: c.surface2, borderColor: c.ink15 },
   phaseDot: { width: 5, height: 5, borderRadius: 3 },
   phaseDotP1: { backgroundColor: '#2E7D32' },
-  phaseDotP2: { backgroundColor: colors.ink30 },
+  phaseDotP2: { backgroundColor: c.ink30 },
   phaseBadgeText: { fontFamily: fonts.sansSb, fontSize: 10, letterSpacing: 0.6, textTransform: 'uppercase' },
   phaseBadgeTextP1: { color: '#2E7D32' },
-  phaseBadgeTextP2: { color: colors.ink30 },
-  phaseSubLabel: { fontFamily: fonts.sans, fontSize: 12, color: colors.ink30 },
+  phaseBadgeTextP2: { color: c.ink30 },
+  phaseSubLabel: { fontFamily: fonts.sans, fontSize: 12, color: c.ink30 },
 
-  phase2Wrap: { borderRadius: radius.r20, overflow: 'hidden', borderWidth: 1.5, borderColor: colors.ink15, opacity: 0.75 },
+  phase2Wrap: { borderRadius: radius.r20, overflow: 'hidden', borderWidth: 1.5, borderColor: c.ink15, opacity: 0.75 },
   phase2Header: {
-    backgroundColor: colors.surface1, paddingHorizontal: 16, paddingVertical: 10,
+    backgroundColor: c.surface1, paddingHorizontal: 16, paddingVertical: 10,
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
   },
   phase2HeaderText: {
     fontFamily: fonts.sansSb, fontSize: 11, letterSpacing: 0.8,
-    textTransform: 'uppercase', color: colors.ink30,
+    textTransform: 'uppercase', color: c.ink30,
   },
   lockIcon: { fontSize: 12 },
   phase2Card: { borderRadius: 0, borderWidth: 0, shadowOpacity: 0 },
 
   footer: { alignItems: 'center', gap: 4, paddingTop: spacing.sm, paddingBottom: spacing.lg },
-  footerLogo: { fontFamily: fonts.serifR, fontSize: 18, color: colors.ink30, letterSpacing: -0.2 },
-  footerVer: { fontFamily: fonts.sansMd, fontSize: 10, color: colors.ink15, letterSpacing: 0.6 },
+  footerLogo: { fontFamily: fonts.serifR, fontSize: 18, color: c.ink30, letterSpacing: -0.2 },
+  footerVer: { fontFamily: fonts.sansMd, fontSize: 10, color: c.ink15, letterSpacing: 0.6 },
 });

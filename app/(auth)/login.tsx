@@ -6,13 +6,17 @@ import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { AppText } from '@/components/ui/AppText';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
 import { useAuth } from '@/hooks/useAuth';
+import { useTheme } from '@/hooks/useTheme';
+import { useThemedStyles } from '@/hooks/useThemedStyles';
 import { router } from 'expo-router';
-import { colors, fonts, radius, spacing } from '@/lib/theme';
+import { fonts, radius, spacing, type Palette } from '@/lib/theme';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [sent, setSent] = useState(false);
   const { signInWithMagicLink } = useAuth();
+  const { colors } = useTheme();
+  const s = useThemedStyles(makeStyles);
 
   const valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
@@ -57,14 +61,14 @@ export default function LoginScreen() {
   );
 }
 
-const s = StyleSheet.create({
+const makeStyles = (c: Palette) => StyleSheet.create({
   body: { flex: 1, paddingHorizontal: spacing.xl, paddingTop: spacing.x3, gap: spacing.md },
   input: {
-    backgroundColor: colors.surface0, borderWidth: 1, borderColor: colors.ink15,
+    backgroundColor: c.surface0, borderWidth: 1, borderColor: c.ink15,
     borderRadius: radius.r16, paddingHorizontal: spacing.lg, paddingVertical: 14,
-    fontFamily: fonts.sans, fontSize: 15, color: colors.ink100,
+    fontFamily: fonts.sans, fontSize: 15, color: c.ink100,
   },
   sentWrap: { gap: spacing.sm, paddingTop: spacing.x3 },
   sentTitle: {},
-  sentSub: { color: colors.ink60, lineHeight: 21 },
+  sentSub: { lineHeight: 21 },
 });

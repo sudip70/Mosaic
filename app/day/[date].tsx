@@ -10,7 +10,9 @@ import { usePhotos } from '@/hooks/usePhotos';
 import { useDateColor } from '@/hooks/useDateColor';
 import { useAuth } from '@/hooks/useAuth';
 import { useAnalytics } from '@/hooks/useAnalytics';
-import { colors, fonts, radius, shadows, spacing } from '@/lib/theme';
+import { useTheme } from '@/hooks/useTheme';
+import { useThemedStyles } from '@/hooks/useThemedStyles';
+import { fonts, radius, shadows, spacing, type Palette } from '@/lib/theme';
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -23,6 +25,8 @@ export default function DayScreen() {
   const { photos } = usePhotos(isValid ? safeDate : '', user?.id ?? '');
   const color = useDateColor(isValid ? safeDate : '');
   const { track } = useAnalytics();
+  const { colors } = useTheme();
+  const st = useThemedStyles(makeStyles);
 
   // Hooks must run unconditionally — guard inside the effect, not around it.
   useEffect(() => {
@@ -97,6 +101,7 @@ function openPhoto(id: string, date: string) {
 }
 
 function PhotoCell({ photo, hero, onPress }: { photo: { id: string; url?: string; created_at: string; timestamp?: boolean }; hero?: boolean; onPress?: () => void }) {
+  const st = useThemedStyles(makeStyles);
   const time = photo.created_at ? format(parseISO(photo.created_at), 'HH:mm') : '';
   // Only show the time stamp when it was enabled at capture.
   const showStamp = !!photo.timestamp && !!time;
@@ -123,7 +128,7 @@ function PhotoCell({ photo, hero, onPress }: { photo: { id: string; url?: string
 
 const GAP = spacing.sm;
 
-const st = StyleSheet.create({
+const makeStyles = (c: Palette) => StyleSheet.create({
   scroll: { flex: 1 },
   content: { paddingHorizontal: spacing.xl, paddingBottom: spacing.x3, gap: spacing.lg },
 
@@ -139,7 +144,7 @@ const st = StyleSheet.create({
   cellHero: { width: '100%', aspectRatio: 1.4 },
   cellHalf: { width: `${50}%`, aspectRatio: 1, flexGrow: 1, flexBasis: '47%' },
   cellImg: { width: '100%', height: '100%' },
-  cellEmpty: { backgroundColor: colors.surface2 },
+  cellEmpty: { backgroundColor: c.surface2 },
 
   timeBadge: {
     position: 'absolute', bottom: 7, right: 8,

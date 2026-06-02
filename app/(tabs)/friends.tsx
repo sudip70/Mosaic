@@ -2,12 +2,14 @@ import { View, StyleSheet } from 'react-native';
 import { AppScreen } from '@/components/ui/AppScreen';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { AppText } from '@/components/ui/AppText';
-import { colors, fonts, radius, spacing } from '@/lib/theme';
+import { useThemedStyles } from '@/hooks/useThemedStyles';
+import { fonts, radius, spacing, type Palette } from '@/lib/theme';
 
 // Phase 2 — intentional "coming soon" state, not an empty screen.
 const PREVIEW_COLORS = ['#C4604A', '#5B8DB8', '#6BAF6B', '#D4A843', '#A0668A'];
 
 export default function FriendsScreen() {
+  const s = useThemedStyles(makeStyles);
   return (
     <AppScreen>
       <ScreenHeader wordmark="Friends" />
@@ -37,18 +39,18 @@ export default function FriendsScreen() {
   );
 }
 
-const s = StyleSheet.create({
+const makeStyles = (c: Palette) => StyleSheet.create({
   body: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing.x3, gap: spacing.lg },
   avatars: { flexDirection: 'row', marginBottom: spacing.xs },
   avatar: {
     width: 44, height: 44, borderRadius: 22,
-    borderWidth: 2, borderColor: colors.surface0,
+    borderWidth: 2, borderColor: c.surface0,
   },
   lockPill: {
-    backgroundColor: colors.surface1, borderWidth: 1, borderColor: colors.ink15,
+    backgroundColor: c.surface1, borderWidth: 1, borderColor: c.ink15,
     borderRadius: radius.full, paddingHorizontal: 12, paddingVertical: 5,
   },
-  lockText: { fontFamily: fonts.sansSb, fontSize: 11, color: colors.ink30, letterSpacing: 0.4 },
+  lockText: { fontFamily: fonts.sansSb, fontSize: 11, color: c.ink30, letterSpacing: 0.4 },
   title: { textAlign: 'center' },
-  sub: { textAlign: 'center', lineHeight: 21, color: colors.ink60 },
+  sub: { textAlign: 'center', lineHeight: 21, color: c.ink60 },
 });

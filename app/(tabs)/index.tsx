@@ -13,12 +13,16 @@ import { useStreak } from '@/hooks/useStreak';
 import { usePhotos } from '@/hooks/usePhotos';
 import { useAuth } from '@/hooks/useAuth';
 import { useAnalytics } from '@/hooks/useAnalytics';
-import { colors, fonts, radius, shadows, spacing } from '@/lib/theme';
+import { useTheme } from '@/hooks/useTheme';
+import { useThemedStyles } from '@/hooks/useThemedStyles';
+import { fonts, radius, shadows, spacing, type Palette } from '@/lib/theme';
 import { formatShort } from '@/lib/dates';
 
 const formatTime = (iso: string) => format(parseISO(iso), 'HH:mm');
 
 function Stat({ value, label, accent }: { value: number; label: string; accent?: boolean }) {
+  const { colors } = useTheme();
+  const st = useThemedStyles(makeStyles);
   return (
     <Card style={st.statCard} padded={false}>
       <AppText variant="serifLg" color={accent ? colors.accent : colors.ink100}>{value}</AppText>
@@ -33,6 +37,8 @@ export default function TodayScreen() {
   const { photos } = usePhotos(date, user?.id ?? '');
   const { current, longest } = useStreak();
   const { trackScreen } = useAnalytics();
+  const { colors } = useTheme();
+  const st = useThemedStyles(makeStyles);
 
   useEffect(() => { trackScreen('today'); }, []);
 
@@ -144,7 +150,7 @@ export default function TodayScreen() {
   );
 }
 
-const st = StyleSheet.create({
+const makeStyles = (c: Palette) => StyleSheet.create({
   scroll: { flex: 1 },
   content: { paddingHorizontal: spacing.xl, paddingBottom: spacing.lg, gap: spacing.lg },
 
@@ -152,12 +158,12 @@ const st = StyleSheet.create({
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.sm,
     paddingBottom: spacing.md,
-    backgroundColor: colors.surface0,
+    backgroundColor: c.surface0,
   },
 
   heroFallback: {
     height: 240, alignItems: 'center', justifyContent: 'center',
-    gap: spacing.sm, backgroundColor: colors.surface1,
+    gap: spacing.sm, backgroundColor: c.surface1,
   },
 
   statsRow: { flexDirection: 'row', gap: spacing.sm },
@@ -165,7 +171,7 @@ const st = StyleSheet.create({
   statLabel: { marginTop: 2 },
 
   secHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md },
-  secLink: { fontFamily: fonts.sansMd, fontSize: 12, color: colors.accent },
+  secLink: { fontFamily: fonts.sansMd, fontSize: 12, color: c.accent },
 
   thumbStrip: { gap: spacing.sm },
   thumb: {
@@ -181,10 +187,10 @@ const st = StyleSheet.create({
   thumbTimeText: { fontFamily: fonts.sansSb, fontSize: 8, color: 'rgba(255,255,255,0.85)' },
   thumbAdd: {
     width: 80, height: 80, borderRadius: radius.r16,
-    borderWidth: 1.5, borderColor: colors.ink15, borderStyle: 'dashed',
+    borderWidth: 1.5, borderColor: c.ink15, borderStyle: 'dashed',
     alignItems: 'center', justifyContent: 'center', gap: 3,
   },
   thumbAddBelow: { marginTop: spacing.sm },
-  thumbAddPlus: { fontSize: 22, color: colors.ink15, fontFamily: fonts.sans },
+  thumbAddPlus: { fontSize: 22, color: c.ink15, fontFamily: fonts.sans },
   thumbAddLabel: { fontSize: 8.5 },
 });
