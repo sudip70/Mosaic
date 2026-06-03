@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import NetInfo from '@react-native-community/netinfo';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import { decode } from 'base64-arraybuffer';
 import { supabase } from '@/lib/supabase';
 import { syncQueue } from '@/lib/syncQueue';
@@ -40,7 +40,7 @@ async function processQueue() {
 
     for (const item of queue) {
       try {
-        const fileInfo = await FileSystem.getInfoAsync(item.localUri, { size: true });
+        const fileInfo = await FileSystem.getInfoAsync(item.localUri);
 
         if (!fileInfo.exists || (fileInfo.size !== undefined && fileInfo.size < 100)) {
           // File missing or corrupt — remove from queue rather than retrying forever.

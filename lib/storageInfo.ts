@@ -1,4 +1,4 @@
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import { reportError } from './reportError';
 
 const PHOTOS_DIR = `${FileSystem.documentDirectory}photos/`;
@@ -12,7 +12,7 @@ async function dirSize(dir: string): Promise<number> {
     let total = 0;
     for (const name of entries) {
       const path = `${dir}${name}`;
-      const i = await FileSystem.getInfoAsync(path, { size: true });
+      const i = await FileSystem.getInfoAsync(path);
       if (!i.exists) continue;
       if (i.isDirectory) total += await dirSize(`${path}/`);
       else total += i.size ?? 0;

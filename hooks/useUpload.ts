@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { randomUUID } from 'expo-crypto';
 import { localStore } from '@/lib/localStore';
@@ -33,7 +33,7 @@ export function useUpload() {
     setError(null);
     try {
       // Guard: validate source file exists and is within size limit
-      const sourceInfo = await FileSystem.getInfoAsync(uri, { size: true });
+      const sourceInfo = await FileSystem.getInfoAsync(uri);
       if (!sourceInfo.exists) throw new Error('Selected file no longer exists');
       if ((sourceInfo.size ?? 0) > MAX_FILE_SIZE) {
         throw new Error('Photo is too large. Please choose a smaller image.');
