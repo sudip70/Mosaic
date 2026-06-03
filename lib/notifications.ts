@@ -50,10 +50,9 @@ async function _schedule(timeString: string): Promise<void> {
         minute,
       },
     });
-    console.log(`[notifications] scheduled daily reminder at ${hour}:${String(minute).padStart(2, '0')}`);
+    if (__DEV__) console.log(`[notifications] scheduled daily reminder at ${hour}:${String(minute).padStart(2, '0')}`);
   } catch (e) {
     reportError(e, { scope: 'scheduleReminder', timeString });
-    console.warn('[notifications] scheduleReminder failed:', e);
   }
 }
 
@@ -61,32 +60,6 @@ export function cancelReminder(): void {
   pendingSchedule = pendingSchedule
     .then(() => Notifications.cancelScheduledNotificationAsync(REMINDER_ID))
     .catch(() => {});
-}
-
-// Fire a notification in `seconds` seconds — useful for verifying the pipeline works.
-export async function scheduleTestNotification(seconds = 10): Promise<void> {
-  try {
-    const granted = await requestNotificationPermission();
-    if (!granted) {
-      console.warn('[notifications] test notification: permission denied');
-      return;
-    }
-    await Notifications.scheduleNotificationAsync({
-      content: {
-        title: 'A fresh colour today',
-        body: 'Yours to find in the world around you.',
-        sound: true,
-      },
-      trigger: {
-        type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
-        seconds,
-        repeats: false,
-      },
-    });
-    console.log(`[notifications] test notification fires in ${seconds}s`);
-  } catch (e) {
-    console.warn('[notifications] scheduleTestNotification failed:', e);
-  }
 }
 
 // "8:30 AM" / "11:00 PM" → { hour: 0–23, minute: 0–59 }

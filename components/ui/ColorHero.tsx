@@ -1,6 +1,6 @@
 import { View, StyleSheet } from 'react-native';
 import { AppText } from './AppText';
-import { radius, shadows, fonts, type Palette } from '@/lib/theme';
+import { radius, shadows, fonts, inkOnColor, type Palette } from '@/lib/theme';
 import { useThemedStyles } from '@/hooks/useThemedStyles';
 
 interface ColorHeroProps {
@@ -28,21 +28,24 @@ export function ColorHero({
   hex, name, kicker, chip, footLeft, footRight, height = 188, nameSize = 54,
 }: ColorHeroProps) {
   const s = useThemedStyles(makeStyles);
+  // The swatch colour varies daily and is often light, so adapt the text/chrome
+  // laid over it for readable contrast instead of always-white.
+  const ink = inkOnColor(hex);
   return (
     <View style={s.card}>
       <View style={[s.swatch, { backgroundColor: hex, height }]}>
-        <View style={s.overlay} pointerEvents="none" />
+        <View style={[s.overlay, { backgroundColor: ink.overlay }]} pointerEvents="none" />
         {(kicker || chip) && (
           <View style={s.topRow}>
-            {kicker ? <AppText style={s.kicker}>{kicker}</AppText> : <View />}
+            {kicker ? <AppText style={[s.kicker, { color: ink.soft }]}>{kicker}</AppText> : <View />}
             {chip && (
-              <View style={s.chip}>
-                <AppText style={s.chipText}>{chip}</AppText>
+              <View style={[s.chip, { backgroundColor: ink.chipBg, borderColor: ink.chipBorder }]}>
+                <AppText style={[s.chipText, { color: ink.chipText }]}>{chip}</AppText>
               </View>
             )}
           </View>
         )}
-        <AppText style={[s.name, { fontSize: nameSize, lineHeight: nameSize * 0.96 }]}>
+        <AppText style={[s.name, { fontSize: nameSize, lineHeight: nameSize * 0.96, color: ink.strong, textShadowColor: ink.shadow }]}>
           {name}
         </AppText>
       </View>

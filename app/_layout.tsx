@@ -15,7 +15,6 @@ import {
 } from '@expo-google-fonts/dm-sans';
 import { StatusBar } from 'expo-status-bar';
 import { useAuth } from '@/hooks/useAuth';
-import { useSync } from '@/hooks/useSync';
 import { useNotifications } from '@/hooks/useNotifications';
 import { useTheme } from '@/hooks/useTheme';
 import { initAnalytics } from '@/lib/analytics';
@@ -35,7 +34,6 @@ export default function RootLayout() {
   });
 
   const { loading } = useAuth();
-  useSync();
   useNotifications();
   const { colors, isDark } = useTheme();
 

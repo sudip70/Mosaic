@@ -43,9 +43,10 @@ export default function TodayScreen() {
 
   useEffect(() => { trackScreen('today'); }, []);
 
-  // "Day N" = days since the account was created (1-indexed).
+  // "Day N" = days since the account was created (1-indexed). Clamp to >= 1 so a
+  // future created_at (clock skew) can't render "Day 0" / a negative number.
   const dayNumber = user?.created_at
-    ? differenceInCalendarDays(new Date(), parseISO(user.created_at)) + 1
+    ? Math.max(1, differenceInCalendarDays(new Date(), parseISO(user.created_at)) + 1)
     : 1;
 
   return (

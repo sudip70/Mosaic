@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import * as MediaLibrary from 'expo-media-library';
 import * as Sharing from 'expo-sharing';
 import { format, subDays } from 'date-fns';
@@ -78,11 +78,17 @@ export function usePhotoActions() {
       removeFromStore(photo.date, photo.id);
       await syncQueue.remove(photo.id);
 
-      // Cloud — best effort (ignore if offline)
-      if (photo.storage_path) {
-        await supabase.storage.from('photos').remove([photo.storage_path]);
+      // Cloud cleanup — best effort, isolated so it can never undo the local
+      // delete. Phase 1 photos are device-only (nothing in the cloud); Phase 2
+      // synced photos clean up here, but a transient/offline failure is ignored.
+      if (photo.sync_status !== 'local' && photo.storage_path) {
+        try {
+          await supabase.storage.from('photos').remove([photo.storage_path]);
+          await supabase.from('photos').delete().eq('id', photo.id);
+        } catch (cloudErr) {
+          reportError(cloudErr, { scope: 'deletePhotoCloud', photoId: photo.id });
+        }
       }
-      await supabase.from('photos').delete().eq('id', photo.id);
 
       // Deleting may have shortened the streak — recompute from what's left.
       await recomputeStreakFromLocal();

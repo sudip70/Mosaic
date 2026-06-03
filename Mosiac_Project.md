@@ -105,7 +105,7 @@ Over time, these photos build into a **personal grid**: a living, colorful diary
 | Color Grid | Full profile grid - color per day, tap to explore |
 | Streak Counter | Personal streak tracked locally |
 | Anonymous Auth | `signInAnonymously()` on first launch - no credentials, real Supabase session |
-| Cloud Storage | Photos stored in Supabase Storage under `{user_id}/{date}/` from day one |
+| Local Storage | Photos stored on-device only - no cloud upload in Phase 1 (see Cloud Sync, Backup & Privacy Model) |
 | Single Notification | One gentle morning reminder, opt-in |
 
 #### Phase 1 Success Criteria
@@ -168,6 +168,63 @@ Over time, these photos build into a **personal grid**: a living, colorful diary
 | Notices (reactions) | - | ✅ |
 | Same-day compare view | - | ✅ |
 | Login / Signup screens | - | ✅ |
+| Local-only storage (private photos) | ✅ | ✅ |
+| Cloud upload for shared photos | - | ✅ |
+| Opt-in full backup + multi-device restore | - | ✅ |
+
+---
+
+### Cloud Sync, Backup & Privacy Model
+
+This is the core of how photos move (or don't move) between the device and the cloud.
+
+#### Principle: the cloud is opt-in, never automatic
+
+- **Phase 1 is local-only.** A captured photo is written to the device and nothing else. There is no upload-on-capture, no sync queue for captures, and no DB row for a private photo. The owner's grid, day view, and Today screen read entirely from local storage. This makes "private by default" a physical guarantee (the bytes never leave the phone), keeps cloud cost near zero, and removes a whole class of auth/RLS failures from the capture path.
+- **Phase 2 adds two independent cloud paths, both opt-in:**
+  1. **Sharing** - making a photo public uploads it so friends can read it. Making it private again removes it.
+  2. **Backup** - an explicit "Back up my images" toggle. When enabled, all photos upload (kept private, owner-only) so a new device can restore them. When disabled, the device is the only copy.
+
+#### The single rule
+
+> A photo exists in the cloud **if and only if** `backup is ON` **OR** `is_public = true`.
+
+Consequences:
+- **Unpublish with backup OFF** -> delete the file from Storage and the row from the DB (preserves "private => not in cloud").
+- **Unpublish with backup ON** -> keep the file, just flip `is_private = true` so friends lose access but the backup copy remains.
+- Turning **backup OFF** removes every still-private photo from the cloud; public photos stay (they're shared).
+
+Backup is the user's conscious exception to local-only privacy, so it is always explicit and revocable.
+
+#### Timestamp & date model - keeping the grid consistent
+
+The grid is a calendar. When photos sync or restore across devices, each one must land on the **exact day** it was captured and in the **right order within that day**, regardless of when or where it was uploaded. Two distinct fields make this deterministic:
+
+| Field | Type | Meaning | Role |
+|---|---|---|---|
+| `date` | `text` `yyyy-MM-dd` | The **intended calendar day**, captured from the user's local date at shutter time | **Grouping key** - which grid tile the photo belongs to |
+| `created_at` | `timestamptz` (UTC) | The exact capture instant | **Ordering key** - position within a day |
+
+Rules that prevent the grid from mixing up:
+
+1. **`date` is set at capture from the user's local calendar date** - never derived from upload time or server time. A photo shot at 11:58 PM and synced at 12:30 AM still belongs to the 11:58 PM day, not the day it happened to upload.
+2. **Grouping is always by `date`, never by `created_at`.** Timezone differences on a new device can shift a UTC `created_at` across midnight, but `date` is a fixed string, so a restored photo never jumps tiles.
+3. **Within a day, sort by `created_at` ascending** (oldest first); the UI reverses to show newest-first. Identical for local, cloud, and merged data.
+4. **Tie-break by `id`** when two photos share a `created_at` (rapid burst), so ordering is byte-for-byte identical on every device.
+5. **`created_at` is stored as UTC** and only ever used for ordering/relative time, not for day placement.
+
+#### Merge / restore algorithm (local + cloud)
+
+When local and cloud sources are combined (background sync, or first launch after restore):
+
+```
+1. Union all photos by `id`            (dedupe - id is a stable UUID minted on capture)
+2. Group the union by `date`           (calendar bucket)
+3. Sort each day's list by (created_at ASC, id ASC)
+4. Reverse per-day for newest-first display
+```
+
+This is **idempotent** - running it any number of times yields the same grid. Because `id`, `date`, and `created_at` are all fixed at capture and travel with the photo, a device that restores from backup rebuilds a grid identical to the original, with no day mix-ups and stable intra-day ordering.
 
 ---
 
@@ -204,62 +261,77 @@ Over time, these photos build into a **personal grid**: a living, colorful diary
 ```
 mosaic/
 ├── app/                        ← All screens (Expo Router)
-│   ├── (auth)/                 ← [Phase 2 only]
-│   │   ├── _layout.tsx         ← Redirects to tabs if already logged in
-│   │   ├── welcome.tsx         ← First launch / intro screen
-│   │   ├── login.tsx           ← Email + magic link or password
-│   │   └── signup.tsx          ← Create account (minimal - just email)
+│   ├── (auth)/                 ← [Phase 2 only - not reachable in Phase 1]
+│   │   ├── _layout.tsx
+│   │   ├── welcome.tsx
+│   │   ├── login.tsx           ← Email magic link
+│   │   └── signup.tsx
 │   ├── (tabs)/
+│   │   ├── _layout.tsx         ← Custom bottom tab bar
 │   │   ├── index.tsx           ← Today screen (main daily view)
-│   │   ├── grid.tsx            ← Your full color grid
-│   │   └── friends.tsx         ← Friends & sharing [Phase 2]
+│   │   ├── grid.tsx            ← Color grid + selected-day preview
+│   │   ├── friends.tsx         ← Friends & sharing [Phase 2 placeholder]
+│   │   └── profile.tsx         ← Profile + stats (settings gear → /settings)
 │   ├── day/[date].tsx          ← Day detail - all photos for a day
-│   ├── camera.tsx              ← Camera / upload screen
-│   └── _layout.tsx             ← Root layout, auth guard
+│   ├── photo/[id].tsx          ← Full-screen swipeable photo viewer
+│   ├── camera.tsx              ← Capture screen (local-only in Phase 1)
+│   ├── settings.tsx            ← Settings (pushed screen, opened from Profile)
+│   ├── onboarding.tsx          ← First-launch intro
+│   ├── privacy.tsx             ← Privacy policy
+│   └── _layout.tsx             ← Root layout (fonts, auth, onboarding gate)
 │
-├── components/
-│   ├── ui/                     ← Reusable primitives
-│   │   ├── Button.tsx
-│   │   ├── ColorSwatch.tsx
-│   │   ├── PhotoTile.tsx
-│   │   ├── DayTile.tsx
-│   │   ├── StreakBadge.tsx
-│   │   ├── EmptyState.tsx
-│   │   └── Typography.tsx
-│   ├── layout/                 ← Structural wrappers
-│   │   ├── Screen.tsx          ← Safe area + scroll wrapper
-│   │   └── Section.tsx         ← Padded content block
-│   └── features/               ← Feature-specific (use ui/ internally)
-│       ├── PhotoGrid.tsx
-│       ├── DayGallery.tsx
-│       └── PhotoCapture.tsx
+├── components/ui/              ← Reusable primitives (composed by screens)
+│   ├── AppScreen.tsx           ← Safe-area + themed background wrapper
+│   ├── AppText.tsx             ← Typography primitive (variant + theme colour)
+│   ├── Card.tsx                ← Surface card
+│   ├── ColorHero.tsx           ← Daily colour swatch card (contrast-aware text)
+│   ├── ConfirmDialog.tsx       ← Themed confirm dialog + info popup
+│   ├── IconButton.tsx          ← Circular header button
+│   ├── PrimaryButton.tsx       ← Pill CTA with coloured icon
+│   ├── ScreenHeader.tsx        ← Uniform top nav (wordmark / title modes)
+│   └── TimePicker.tsx          ← Looping drum-roll reminder time picker
 │
 ├── hooks/
-│   ├── useToday.ts             ← Today's color + date
-│   ├── usePhotos.ts            ← Photos for a given date
-│   ├── useGrid.ts              ← Full grid data (colors + photo presence)
-│   ├── useStreak.ts            ← Current + longest streak
-│   ├── useUpload.ts            ← Photo upload with loading/error state
+│   ├── useToday.ts             ← Today's colour + date (deduped fetch)
+│   ├── useDateColor.ts         ← Colour for any past date
+│   ├── usePhotos.ts            ← A day's photos (local-only in Phase 1)
+│   ├── usePhotoActions.ts      ← Download / share / delete a photo
+│   ├── useGrid.ts              ← Grid data (local presence + colour palette)
+│   ├── useStreak.ts            ← Current + longest streak (read)
+│   ├── useUpload.ts            ← Capture → compress → save locally
+│   ├── useNotifications.ts     ← Sync the daily reminder to settings
 │   ├── useAnalytics.ts         ← Logging wrapper (Sentry + PostHog)
-│   └── useAuth.ts              ← Auth state [Phase 2]
+│   ├── useTheme.ts             ← Resolve light/dark palette
+│   ├── useThemedStyles.ts      ← Memoised themed StyleSheet
+│   ├── useAuth.ts              ← Auth state (anonymous in Phase 1)
+│   └── useSync.ts              ← [Dormant - revived for Phase 2 cloud]
 │
-├── store/
-│   ├── useColorStore.ts        ← Today's color, color history
-│   ├── usePhotoStore.ts        ← Photos by date, upload state
-│   └── useStreakStore.ts       ← Streak count + last active date
+├── store/                      ← Zustand stores
+│   ├── useColorStore.ts        ← Today's colour
+│   ├── usePhotoStore.ts        ← Photos by date (in-memory)
+│   ├── useStreakStore.ts       ← Streak (persisted)
+│   ├── useSettings.ts          ← App settings (persisted)
+│   ├── useCameraSettings.ts    ← Camera prefs (persisted)
+│   ├── useAppStore.ts          ← Onboarding flag
+│   └── useAuthStore.ts         ← Session singleton
 │
 ├── lib/
 │   ├── supabase.ts             ← Supabase client init
 │   ├── analytics.ts            ← Sentry + PostHog init
-│   ├── colors.ts               ← Color palette + daily assignment logic
-│   ├── storage.ts              ← Photo upload/download helpers
-│   └── dates.ts                ← Date formatting utilities
+│   ├── notifications.ts        ← Daily reminder scheduling
+│   ├── localStore.ts           ← AsyncStorage photo metadata + colour cache
+│   ├── dates.ts                ← Date helpers
+│   ├── theme.ts                ← Palette, type scale, contrast helpers
+│   ├── icons.ts                ← Curated Lucide icon set
+│   ├── reportError.ts          ← Single handled-error entry point
+│   ├── storageInfo.ts          ← On-device storage usage + clear cache
+│   ├── constants.ts            ← AsyncStorage keys
+│   ├── storage.ts              ← [Dormant - signed URLs, Phase 2 cloud]
+│   └── syncQueue.ts            ← [Dormant - offline upload queue, Phase 2]
 │
-├── types/
-│   └── index.ts                ← All TypeScript interfaces
-│
-├── assets/                     ← Fonts, icons, images
-└── supabase/                   ← DB migrations, edge functions
+├── types/index.ts             ← Shared TypeScript interfaces
+├── assets/                    ← Fonts, icons, images
+└── supabase/                  ← DB migration + colour seed
 ```
 
 ---
@@ -285,7 +357,7 @@ mosaic/
 | date | date | The day this photo belongs to |
 | color_id | uuid (FK → colors) | The color assigned on that day |
 | storage_path | text | Path in Supabase Storage bucket |
-| is_private | boolean (default: true) | Private by default - Phase 2 toggle |
+| is_private | boolean (default: true) | Private by default. A row only exists in the cloud when the photo is public or backup is on (Phase 2) |
 | created_at | timestamptz | Upload timestamp |
 
 ### `streaks` - Per-user streak tracking
@@ -319,18 +391,20 @@ mosaic/
 
 ---
 
-## 9. Supabase Storage Structure
+## 9. Supabase Storage Structure (Phase 2 only)
+
+The cloud bucket is **unused in Phase 1** (photos are device-only). It is populated in Phase 2 for shared photos and, if the user opts in, backup.
 
 ```
-Bucket: photos
+Bucket: photos (private)
 └── {user_id}/
     └── {date}/             ← e.g. 2026-05-31/
-        ├── {photo_id}.jpg
-        ├── {photo_id}.jpg
-        └── {photo_id}.jpg
+        ├── {photo_id}.webp
+        ├── {photo_id}.webp
+        └── {photo_id}.webp
 ```
 
-> Row-Level Security on the photos table ensures users can only read/write their own files. Phase 2 sharing is handled by the `is_private` flag.
+> The bucket is private. Storage RLS restricts each user to their own `{user_id}/` prefix; friend reads of shared photos go through short-lived signed URLs. A photo is uploaded here only when `is_public = true` or backup is enabled (see Cloud Sync, Backup & Privacy Model).
 
 ---
 
@@ -342,18 +416,19 @@ Bucket: photos
 3. Display color name + hex swatch on Today screen
 4. Color stored in Zustand for use across camera + grid
 
-### Photo Upload
+### Photo Capture (Phase 1 - local-only)
 1. User taps capture → expo-camera or image picker opens
-2. Photo uploaded to Supabase Storage at `{user_id}/{date}/{uuid}.jpg`
-3. Row inserted into `photos` table with `storage_path` + `color_id`
-4. Edge function fires → updates `streaks` table for this user
-5. Grid tile for today updates in real-time via Zustand
+2. Image is cropped/compressed to portrait 3:4 WebP
+3. File saved on-device at `{documentDirectory}/photos/{user_id}/{date}/{uuid}.webp`
+4. Metadata saved to local storage (`id`, `date`, `created_at`, `color_id`, `is_private = true`) - no DB row, no Storage upload
+5. Streak updated locally; grid tile for today updates via Zustand
+> Cloud upload happens only in Phase 2, and only for shared photos or when backup is enabled. See Cloud Sync, Backup & Privacy Model.
 
-### Grid Render
-1. Query `colors` table for all dates from account creation → today
-2. Query `photos` table to find which dates have photos
+### Grid Render (Phase 1)
+1. Build the date range from account creation → today
+2. Read the local color cache for tile colors and local photo presence per date
 3. Render grid - each tile shows color hex, filled vs empty state
-4. Tap tile → navigate to `day/[date].tsx` → load that day's photos
+4. Tap tile → select it → inline preview of that day's photos (grouped by `date`, ordered by `created_at`)
 
 ---
 
@@ -497,6 +572,13 @@ export function Typography({ variant = 'body', children, ...rest }: TypographyPr
 
 Screens are dumb - they render. Hooks are smart - they fetch, compute, and manage state.
 
+> **Note:** The snippets below are simplified illustrations of intent. The real,
+> current implementations in `hooks/` are the source of truth. In particular,
+> **Phase 1 reads photos from the device only** - `usePhotos` and `useGrid` do
+> not query the cloud for photos (only the public `colors` palette is fetched),
+> and `useUpload` saves locally without uploading. See the Cloud Sync, Backup &
+> Privacy Model for when the cloud comes into play (Phase 2).
+
 ### useToday
 
 ```ts
@@ -560,44 +642,56 @@ export function usePhotos(date: string, userId: string) {
 }
 ```
 
-### useUpload
+### useUpload (Phase 1 - local-only)
+
+The capture flow compresses to a portrait 3:4 WebP, writes it to the device, and
+updates local state. There is **no network call** - nothing is uploaded.
 
 ```ts
-// hooks/useUpload.ts
+// hooks/useUpload.ts (simplified)
 import { useState } from 'react';
-import { supabase } from '@/lib/supabase';
+import * as FileSystem from 'expo-file-system/legacy';
+import * as ImageManipulator from 'expo-image-manipulator';
+import { randomUUID } from 'expo-crypto';
+import { localStore } from '@/lib/localStore';
+import { usePhotoStore } from '@/store/usePhotoStore';
+import { useStreakStore } from '@/store/useStreakStore';
 import { useAnalytics } from './useAnalytics';
-import * as FileSystem from 'expo-file-system';
-import { decode } from 'base64-arraybuffer';
 
 export function useUpload() {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const addPhoto = usePhotoStore((s) => s.addPhoto);
+  const incrementStreak = useStreakStore((s) => s.increment);
   const { track } = useAnalytics();
 
-  async function uploadPhoto(uri: string, userId: string, date: string, colorId: string) {
+  async function uploadPhoto(uri: string, userId: string, date: string, colorId: string, stamped = false) {
     setUploading(true);
     setError(null);
     try {
-      const base64 = await FileSystem.readAsStringAsync(uri, {
-        encoding: FileSystem.EncodingType.Base64,
-      });
-      const photoId = crypto.randomUUID();
-      const path = `${userId}/${date}/${photoId}.jpg`;
+      // Crop to portrait 3:4 + resize to 1080×1440 + encode WebP (~10–20× smaller).
+      const compressed = await compressPhoto(uri);
 
-      await supabase.storage.from('photos').upload(path, decode(base64),
-        { contentType: 'image/jpeg' }
-      );
+      const photoId = randomUUID();
+      const localUri = `${FileSystem.documentDirectory}photos/${userId}/${date}/${photoId}.webp`;
+      // ...ensure the directory exists, then copy the file to localUri...
+      await FileSystem.copyAsync({ from: compressed, to: localUri });
 
-      await supabase.from('photos').insert({
-        id: photoId, user_id: userId, date,
-        color_id: colorId, storage_path: path,
-      });
+      const photo = {
+        id: photoId, user_id: userId, date, color_id: colorId,
+        storage_path: '', local_uri: localUri, url: localUri,
+        sync_status: 'local' as const, is_private: true,
+        created_at: new Date().toISOString(), timestamp: stamped,
+      };
 
-      track('photo_uploaded', { date }); // non-invasive log
+      await localStore.savePhoto(date, photo); // persist metadata on device
+      addPhoto(date, photo);                    // optimistic UI
+      incrementStreak(date);                    // idempotent per day
+
+      track('photo_uploaded', { date });
       return { success: true };
     } catch (e: any) {
-      setError(e.message);
+      setError(e.message ?? 'Could not save photo');
       return { success: false };
     } finally {
       setUploading(false);
@@ -1034,7 +1128,7 @@ EXPO_PUBLIC_POSTHOG_KEY=your_posthog_key
 npx expo start --ios
 ```
 
-> **Phase 1 auth strategy:** Call `supabase.auth.signInAnonymously()` on first launch. Supabase creates a real session with a UUID - no credentials required. Photos, grid, and streaks all use this `user_id` from day one. When the user creates an account in Phase 2, they link their email to the same anonymous user and nothing migrates.
+> **Phase 1 auth strategy:** Call `supabase.auth.signInAnonymously()` on first launch. Supabase creates a real session with a UUID - no credentials required. Photos are stored locally tagged with this `user_id`; grid and streaks use it too. When the user creates an account in Phase 2, `linkIdentity()` attaches their email to the same anonymous user, so the `user_id` never changes and nothing migrates - any photos they later share or back up upload under that stable id.
 
 ---
 

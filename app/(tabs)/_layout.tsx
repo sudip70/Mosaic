@@ -3,7 +3,7 @@ import { Text, View, Pressable, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { fonts, type Palette } from '@/lib/theme';
-import { Aperture, Grid2x2, Users, Settings, ICON_STROKE, type LucideIcon } from '@/lib/icons';
+import { Aperture, Grid2x2, Users, User, ICON_STROKE, type LucideIcon } from '@/lib/icons';
 import { useTheme } from '@/hooks/useTheme';
 import { useThemedStyles } from '@/hooks/useThemedStyles';
 
@@ -11,7 +11,7 @@ const TABS: Record<string, { icon: LucideIcon; label: string }> = {
   index:    { icon: Aperture, label: 'Today' },
   grid:     { icon: Grid2x2, label: 'Grid' },
   friends:  { icon: Users, label: 'Friends' },
-  settings: { icon: Settings, label: 'Settings' },
+  profile:  { icon: User, label: 'Profile' },
 };
 
 function MosaicTabBar({ state, navigation }: BottomTabBarProps) {
@@ -63,7 +63,7 @@ export default function TabsLayout() {
       <Tabs.Screen name="index" />
       <Tabs.Screen name="grid" />
       <Tabs.Screen name="friends" />
-      <Tabs.Screen name="settings" />
+      <Tabs.Screen name="profile" />
     </Tabs>
   );
 }

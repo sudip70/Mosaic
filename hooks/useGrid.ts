@@ -5,18 +5,22 @@ import { today } from '@/lib/dates';
 import { localStore } from '@/lib/localStore';
 import type { GridDay } from '@/types';
 
-export function useGrid(userId: string, startDate: string) {
+// Photo presence is local-only in Phase 1. The daily *colours* are still fetched
+// from Supabase — they're a global, public, server-seeded palette, not user data.
+export function useGrid(_userId: string, startDate: string) {
   const [days, setDays] = useState<GridDay[]>([]);
   const [loading, setLoading] = useState(true);
 
   const build = useCallback(async () => {
     const todayStr = today();
-    const allDates = eachDayOfInterval({
-      start: parseISO(startDate),
-      end: parseISO(todayStr),
-    }).map((d) => format(d, 'yyyy-MM-dd'));
+    const end = parseISO(todayStr);
+    // Clamp the start so a future created_at (clock skew / TZ) can't make
+    // start > end, which would throw a RangeError from eachDayOfInterval.
+    const rawStart = parseISO(startDate);
+    const start = rawStart > end ? end : rawStart;
+    const allDates = eachDayOfInterval({ start, end }).map((d) => format(d, 'yyyy-MM-dd'));
 
-    // 1. Build from local data first — works offline
+    // 1. Build from local data first — instant, works offline
     const colorCache = await localStore.getColorCache();
     const localPresent = await localStore.getPhotosPresenceForDates(allDates);
 
@@ -31,17 +35,12 @@ export function useGrid(userId: string, startDate: string) {
     );
     setLoading(false);
 
-    // 2. Fetch from Supabase and merge (updates colors cache + cloud photo presence)
+    // 2. Refresh the global colour palette from Supabase (public read). Photo
+    //    presence stays local — captures never touch the cloud in Phase 1.
     try {
-      const [{ data: colors }, { data: photos }] = await Promise.all([
-        supabase.from('colors').select('date,hex,name,id').in('date', allDates),
-        userId ? supabase.from('photos').select('date').eq('user_id', userId) : Promise.resolve({ data: [] }),
-      ]);
-
-      if (colors) await localStore.cacheColors(colors as any);
-
-      const cloudDates = new Set(photos?.map((p) => p.date) ?? []);
-      const mergedPresence = new Set([...localPresent, ...cloudDates]);
+      const { data: colors } = await supabase.from('colors').select('date,hex,name,id').in('date', allDates);
+      if (!colors) return;
+      await localStore.cacheColors(colors as any);
       const freshColorCache = await localStore.getColorCache();
 
       setDays(
@@ -49,14 +48,14 @@ export function useGrid(userId: string, startDate: string) {
           date,
           hex: freshColorCache[date]?.hex ?? '#CCCCCC',
           name: freshColorCache[date]?.name ?? '',
-          hasPhotos: mergedPresence.has(date),
+          hasPhotos: localPresent.has(date),
           isToday: date === todayStr,
         }))
       );
     } catch {
       // Offline — already showing local grid above
     }
-  }, [userId, startDate]);
+  }, [startDate]);
 
   useEffect(() => { build(); }, [build]);
 

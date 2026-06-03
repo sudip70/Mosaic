@@ -143,3 +143,31 @@ export const typeColorKey: Record<keyof typeof type, keyof Palette> = {
   title: 'ink100', body: 'ink60', bodyMd: 'ink100', label: 'ink100',
   caption: 'ink30', sub: 'ink30', overline: 'ink30',
 };
+
+// ─── Readable text over an arbitrary colour ───────────────────────────────────
+// Half the daily palette is light, so text laid over a swatch must adapt.
+
+/** True when a hex colour is light enough that white text reads poorly on it. */
+export function isLightColor(hex: string): boolean {
+  const h = hex.replace('#', '');
+  if (h.length !== 6) return false;
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  // Perceptual (Rec. 709) luminance on a 0–255 scale.
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b > 150;
+}
+
+/** Foreground ink for content laid directly over a coloured swatch. */
+export function inkOnColor(hex: string) {
+  const light = isLightColor(hex);
+  return {
+    strong:   light ? '#1A1714' : '#FFFFFF',
+    soft:     light ? 'rgba(0,0,0,0.55)' : 'rgba(255,255,255,0.62)',
+    chipBg:   light ? 'rgba(0,0,0,0.08)' : 'rgba(0,0,0,0.18)',
+    chipBorder: light ? 'rgba(0,0,0,0.12)' : 'rgba(255,255,255,0.15)',
+    chipText: light ? 'rgba(0,0,0,0.68)' : 'rgba(255,255,255,0.78)',
+    overlay:  light ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.06)',
+    shadow:   light ? 'transparent' : 'rgba(0,0,0,0.12)',
+  };
+}

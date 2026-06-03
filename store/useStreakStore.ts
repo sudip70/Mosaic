@@ -12,7 +12,6 @@ interface StreakStore {
   // Recompute the current streak from the set of dates that still have photos
   // (used after a delete, which can shorten the streak).
   recompute: (presentDates: string[]) => void;
-  reset: () => void;
 }
 
 export const useStreakStore = create<StreakStore>()(
@@ -65,8 +64,6 @@ export const useStreakStore = create<StreakStore>()(
             lastActiveDate: cursor,
           };
         }),
-
-      reset: () => set({ current: 0, lastActiveDate: null }),
     }),
     { name: 'streak', storage: createJSONStorage(() => AsyncStorage) }
   )

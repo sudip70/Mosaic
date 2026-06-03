@@ -109,9 +109,11 @@ create index photos_user_date on photos(user_id, date);
 ```
 
 **Notes:**
-- `date` is the *intended* day (the user's current calendar date), not the upload timestamp. A user uploading at 11:58 PM and again at 12:01 AM gets two different days.
-- `storage_path` format: `{user_id}/{date}/{photo_id}.jpg` - mirrors the Storage bucket structure.
-- `is_private` is inert in Phase 1. Phase 2 reads it to control friend visibility.
+- **Phase 1 stores nothing here.** Photos are device-only; a row exists in this table only in Phase 2, and only when the photo is public or backup is enabled. The owner's grid/day views read from local storage.
+- `date` is the *intended* day (the user's current calendar date at capture), **not** the upload timestamp, and is the grouping key for the grid. A photo shot at 11:58 PM and synced after midnight still belongs to the 11:58 PM day.
+- `created_at` is the capture instant (UTC) and is the *ordering* key within a day. Grouping is always by `date`, ordering by `(created_at ASC, id ASC)`, so restores never mix days or reorder.
+- `storage_path` format: `{user_id}/{date}/{photo_id}.webp` - mirrors the Storage bucket structure.
+- `is_private` defaults true. A photo is in the cloud iff `is_private = false` (shared) **or** the user enabled backup. See the project doc's Cloud Sync, Backup & Privacy Model.
 
 ---
 
@@ -189,19 +191,21 @@ All tables have RLS enabled. Anonymous users (`is_anonymous = true`) have the sa
 
 ## Storage
 
-**Bucket:** `photos`
+**Bucket:** `photos` (private) - **Phase 2 only**; empty in Phase 1.
 
 ```
 photos/
 └── {user_id}/
     └── {date}/             e.g. 2026-05-31/
-        ├── {photo_id}.jpg
-        └── {photo_id}.jpg
+        ├── {photo_id}.webp
+        └── {photo_id}.webp
 ```
 
 **Storage RLS:**
 - Users can upload, read, and delete only within their own `{user_id}/` prefix.
 - Storage policy mirrors the DB `photos` RLS - consistent access model at both layers.
+- The bucket is private; friends view shared photos through short-lived signed URLs.
+- A file is uploaded only when the photo is public or backup is enabled; unpublishing a photo with backup off deletes it from here.
 
 ---
 

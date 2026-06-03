@@ -90,12 +90,28 @@ async function getPhotosPresenceForDates(dates: string[]): Promise<Set<string>> 
   return present;
 }
 
+// Total number of photos stored across the given dates.
+async function countPhotosForDates(dates: string[]): Promise<number> {
+  const pairs = await AsyncStorage.multiGet(dates.map(photoKey));
+  let total = 0;
+  for (const [, val] of pairs) {
+    if (!val) continue;
+    try {
+      total += JSON.parse(val).length;
+    } catch {
+      // Corrupt entry — ignore
+    }
+  }
+  return total;
+}
+
 export const localStore = {
   getPhotos,
   savePhoto,
   updatePhoto,
   deletePhoto,
   getPhotosPresenceForDates,
+  countPhotosForDates,
   getColorCache,
   cacheColors,
   getCachedColor,

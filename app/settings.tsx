@@ -15,6 +15,7 @@ import { useThemedStyles } from '@/hooks/useThemedStyles';
 import { useSettings } from '@/store/useSettings';
 import { getStorageInfo, clearCache, formatBytes, StorageInfo } from '@/lib/storageInfo';
 import { requestNotificationPermission } from '@/lib/notifications';
+import { ChevronLeft } from '@/lib/icons';
 import { TimePicker } from '@/components/ui/TimePicker';
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
@@ -201,7 +202,10 @@ export default function SettingsScreen() {
 
   return (
     <AppScreen>
-      <ScreenHeader wordmark="Settings" />
+      <ScreenHeader
+        title="Settings"
+        left={{ icon: ChevronLeft, accessibilityLabel: 'Back', onPress: () => router.back() }}
+      />
 
       <ScrollView
         style={s.scroll}
