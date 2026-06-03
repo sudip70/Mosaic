@@ -105,7 +105,7 @@ Over time, these photos build into a **personal grid**: a living, colorful diary
 | Color Grid | Full profile grid - color per day, tap to explore |
 | Streak Counter | Personal streak tracked locally |
 | Anonymous Auth | `signInAnonymously()` on first launch - no credentials, real Supabase session |
-| Cloud Storage | Photos stored in Supabase Storage under `{user_id}/{date}/` from day one |
+| Local Storage | Photos stored on-device only - no cloud upload in Phase 1 (see Cloud Sync, Backup & Privacy Model) |
 | Single Notification | One gentle morning reminder, opt-in |
 
 #### Phase 1 Success Criteria
@@ -168,6 +168,63 @@ Over time, these photos build into a **personal grid**: a living, colorful diary
 | Notices (reactions) | - | ✅ |
 | Same-day compare view | - | ✅ |
 | Login / Signup screens | - | ✅ |
+| Local-only storage (private photos) | ✅ | ✅ |
+| Cloud upload for shared photos | - | ✅ |
+| Opt-in full backup + multi-device restore | - | ✅ |
+
+---
+
+### Cloud Sync, Backup & Privacy Model
+
+This is the core of how photos move (or don't move) between the device and the cloud.
+
+#### Principle: the cloud is opt-in, never automatic
+
+- **Phase 1 is local-only.** A captured photo is written to the device and nothing else. There is no upload-on-capture, no sync queue for captures, and no DB row for a private photo. The owner's grid, day view, and Today screen read entirely from local storage. This makes "private by default" a physical guarantee (the bytes never leave the phone), keeps cloud cost near zero, and removes a whole class of auth/RLS failures from the capture path.
+- **Phase 2 adds two independent cloud paths, both opt-in:**
+  1. **Sharing** - making a photo public uploads it so friends can read it. Making it private again removes it.
+  2. **Backup** - an explicit "Back up my images" toggle. When enabled, all photos upload (kept private, owner-only) so a new device can restore them. When disabled, the device is the only copy.
+
+#### The single rule
+
+> A photo exists in the cloud **if and only if** `backup is ON` **OR** `is_public = true`.
+
+Consequences:
+- **Unpublish with backup OFF** -> delete the file from Storage and the row from the DB (preserves "private => not in cloud").
+- **Unpublish with backup ON** -> keep the file, just flip `is_private = true` so friends lose access but the backup copy remains.
+- Turning **backup OFF** removes every still-private photo from the cloud; public photos stay (they're shared).
+
+Backup is the user's conscious exception to local-only privacy, so it is always explicit and revocable.
+
+#### Timestamp & date model - keeping the grid consistent
+
+The grid is a calendar. When photos sync or restore across devices, each one must land on the **exact day** it was captured and in the **right order within that day**, regardless of when or where it was uploaded. Two distinct fields make this deterministic:
+
+| Field | Type | Meaning | Role |
+|---|---|---|---|
+| `date` | `text` `yyyy-MM-dd` | The **intended calendar day**, captured from the user's local date at shutter time | **Grouping key** - which grid tile the photo belongs to |
+| `created_at` | `timestamptz` (UTC) | The exact capture instant | **Ordering key** - position within a day |
+
+Rules that prevent the grid from mixing up:
+
+1. **`date` is set at capture from the user's local calendar date** - never derived from upload time or server time. A photo shot at 11:58 PM and synced at 12:30 AM still belongs to the 11:58 PM day, not the day it happened to upload.
+2. **Grouping is always by `date`, never by `created_at`.** Timezone differences on a new device can shift a UTC `created_at` across midnight, but `date` is a fixed string, so a restored photo never jumps tiles.
+3. **Within a day, sort by `created_at` ascending** (oldest first); the UI reverses to show newest-first. Identical for local, cloud, and merged data.
+4. **Tie-break by `id`** when two photos share a `created_at` (rapid burst), so ordering is byte-for-byte identical on every device.
+5. **`created_at` is stored as UTC** and only ever used for ordering/relative time, not for day placement.
+
+#### Merge / restore algorithm (local + cloud)
+
+When local and cloud sources are combined (background sync, or first launch after restore):
+
+```
+1. Union all photos by `id`            (dedupe - id is a stable UUID minted on capture)
+2. Group the union by `date`           (calendar bucket)
+3. Sort each day's list by (created_at ASC, id ASC)
+4. Reverse per-day for newest-first display
+```
+
+This is **idempotent** - running it any number of times yields the same grid. Because `id`, `date`, and `created_at` are all fixed at capture and travel with the photo, a device that restores from backup rebuilds a grid identical to the original, with no day mix-ups and stable intra-day ordering.
 
 ---
 
@@ -285,7 +342,7 @@ mosaic/
 | date | date | The day this photo belongs to |
 | color_id | uuid (FK → colors) | The color assigned on that day |
 | storage_path | text | Path in Supabase Storage bucket |
-| is_private | boolean (default: true) | Private by default - Phase 2 toggle |
+| is_private | boolean (default: true) | Private by default. A row only exists in the cloud when the photo is public or backup is on (Phase 2) |
 | created_at | timestamptz | Upload timestamp |
 
 ### `streaks` - Per-user streak tracking
@@ -319,18 +376,20 @@ mosaic/
 
 ---
 
-## 9. Supabase Storage Structure
+## 9. Supabase Storage Structure (Phase 2 only)
+
+The cloud bucket is **unused in Phase 1** (photos are device-only). It is populated in Phase 2 for shared photos and, if the user opts in, backup.
 
 ```
-Bucket: photos
+Bucket: photos (private)
 └── {user_id}/
     └── {date}/             ← e.g. 2026-05-31/
-        ├── {photo_id}.jpg
-        ├── {photo_id}.jpg
-        └── {photo_id}.jpg
+        ├── {photo_id}.webp
+        ├── {photo_id}.webp
+        └── {photo_id}.webp
 ```
 
-> Row-Level Security on the photos table ensures users can only read/write their own files. Phase 2 sharing is handled by the `is_private` flag.
+> The bucket is private. Storage RLS restricts each user to their own `{user_id}/` prefix; friend reads of shared photos go through short-lived signed URLs. A photo is uploaded here only when `is_public = true` or backup is enabled (see Cloud Sync, Backup & Privacy Model).
 
 ---
 
@@ -342,18 +401,19 @@ Bucket: photos
 3. Display color name + hex swatch on Today screen
 4. Color stored in Zustand for use across camera + grid
 
-### Photo Upload
+### Photo Capture (Phase 1 - local-only)
 1. User taps capture → expo-camera or image picker opens
-2. Photo uploaded to Supabase Storage at `{user_id}/{date}/{uuid}.jpg`
-3. Row inserted into `photos` table with `storage_path` + `color_id`
-4. Edge function fires → updates `streaks` table for this user
-5. Grid tile for today updates in real-time via Zustand
+2. Image is cropped/compressed to portrait 3:4 WebP
+3. File saved on-device at `{documentDirectory}/photos/{user_id}/{date}/{uuid}.webp`
+4. Metadata saved to local storage (`id`, `date`, `created_at`, `color_id`, `is_private = true`) - no DB row, no Storage upload
+5. Streak updated locally; grid tile for today updates via Zustand
+> Cloud upload happens only in Phase 2, and only for shared photos or when backup is enabled. See Cloud Sync, Backup & Privacy Model.
 
-### Grid Render
-1. Query `colors` table for all dates from account creation → today
-2. Query `photos` table to find which dates have photos
+### Grid Render (Phase 1)
+1. Build the date range from account creation → today
+2. Read the local color cache for tile colors and local photo presence per date
 3. Render grid - each tile shows color hex, filled vs empty state
-4. Tap tile → navigate to `day/[date].tsx` → load that day's photos
+4. Tap tile → select it → inline preview of that day's photos (grouped by `date`, ordered by `created_at`)
 
 ---
 
@@ -1034,7 +1094,7 @@ EXPO_PUBLIC_POSTHOG_KEY=your_posthog_key
 npx expo start --ios
 ```
 
-> **Phase 1 auth strategy:** Call `supabase.auth.signInAnonymously()` on first launch. Supabase creates a real session with a UUID - no credentials required. Photos, grid, and streaks all use this `user_id` from day one. When the user creates an account in Phase 2, they link their email to the same anonymous user and nothing migrates.
+> **Phase 1 auth strategy:** Call `supabase.auth.signInAnonymously()` on first launch. Supabase creates a real session with a UUID - no credentials required. Photos are stored locally tagged with this `user_id`; grid and streaks use it too. When the user creates an account in Phase 2, `linkIdentity()` attaches their email to the same anonymous user, so the `user_id` never changes and nothing migrates - any photos they later share or back up upload under that stable id.
 
 ---
 

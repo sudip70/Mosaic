@@ -4,7 +4,8 @@ export {
   Aperture,     // Today tab
   Grid2x2,      // Grid tab
   Users,        // Friends tab
-  Settings,     // Settings tab + camera settings
+  User,         // Profile tab
+  Settings,     // Settings (camera + profile)
   Camera,       // capture CTA
   X,            // close
   ChevronLeft,  // back

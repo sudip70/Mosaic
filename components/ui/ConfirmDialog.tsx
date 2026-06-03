@@ -107,16 +107,19 @@ const makeStyles = (c: Palette) => StyleSheet.create({
   dialog: {
     width: '100%', maxWidth: 340,
     backgroundColor: c.surface0, borderRadius: radius.r24,
-    paddingHorizontal: spacing.xl, paddingTop: spacing.x3, paddingBottom: spacing.xl,
-    alignItems: 'center', gap: spacing.sm,
+    paddingHorizontal: spacing.xxl, paddingTop: spacing.x3, paddingBottom: spacing.xl,
+    alignItems: 'center', gap: spacing.md,
     borderWidth: 1, borderColor: c.ink15, ...shadows.elev3,
   },
   iconWrap: {
     width: 56, height: 56, borderRadius: 28,
-    alignItems: 'center', justifyContent: 'center', marginBottom: spacing.sm,
+    alignItems: 'center', justifyContent: 'center', marginBottom: spacing.md,
   },
   iconText: { fontSize: 24, lineHeight: 24, textAlign: 'center' },
-  title: { fontFamily: fonts.serifR, fontSize: 22, lineHeight: 32, color: c.ink100, letterSpacing: -0.4, textAlign: 'center' },
+  title: {
+    fontFamily: fonts.serifR, fontSize: 22, lineHeight: 34, color: c.ink100,
+    letterSpacing: -0.4, textAlign: 'center', paddingVertical: 4,
+  },
   bodyRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5 },
   body: { fontFamily: fonts.sans, fontSize: 13, lineHeight: 20, color: c.ink60, textAlign: 'center', flexShrink: 1 },
   infoBtn: { fontSize: 15, lineHeight: 20 },

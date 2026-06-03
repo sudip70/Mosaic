@@ -30,6 +30,14 @@ async function processQueue() {
     const queue = await syncQueue.getQueue();
     if (queue.length === 0) return;
 
+    // RLS ties every row to the signed-in user, so always upload under the
+    // CURRENT session. When the session is unchanged this equals the original
+    // owner; when an anonymous session was recreated, it re-owns the orphaned
+    // item to the new user (this device) instead of failing the policy forever.
+    const { data: { session } } = await supabase.auth.getSession();
+    const uid = session?.user?.id;
+    if (!uid) return; // can't satisfy RLS without a session — retry next time
+
     for (const item of queue) {
       try {
         const fileInfo = await FileSystem.getInfoAsync(item.localUri, { size: true });
@@ -45,7 +53,7 @@ async function processQueue() {
         });
         const ext = item.localUri.endsWith('.webp') ? 'webp' : 'jpg';
         const contentType = ext === 'webp' ? 'image/webp' : 'image/jpeg';
-        const storagePath = `${item.userId}/${item.date}/${item.id}.${ext}`;
+        const storagePath = `${uid}/${item.date}/${item.id}.${ext}`;
 
         // upsert so a retried partial upload doesn't fail on duplicates
         const { error: storageError } = await supabase.storage
@@ -58,7 +66,7 @@ async function processQueue() {
           .upsert(
             {
               id: item.id,
-              user_id: item.userId,
+              user_id: uid,
               date: item.date,
               color_id: item.colorId,
               storage_path: storagePath,
@@ -71,6 +79,7 @@ async function processQueue() {
         await localStore.updatePhoto(item.date, item.id, {
           sync_status: 'synced',
           storage_path: storagePath,
+          user_id: uid,
         });
 
         await syncQueue.remove(item.id);

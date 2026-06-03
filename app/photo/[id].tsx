@@ -1,5 +1,7 @@
-import { useEffect, useState } from 'react';
-import { View, Image, Pressable, ActivityIndicator, StyleSheet } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import {
+  View, Image, Pressable, ActivityIndicator, StyleSheet, FlatList, useWindowDimensions,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
 import { format, parseISO } from 'date-fns';
@@ -14,23 +16,32 @@ import type { Photo } from '@/types';
 
 export default function PhotoViewer() {
   const { id, date } = useLocalSearchParams<{ id: string; date: string }>();
-  const fromStore = usePhotoStore((s) => (date ? s.photosByDate[date] : undefined));
+  const { width } = useWindowDimensions();
+  const storeList = usePhotoStore((s) => (date ? s.photosByDate[date] : undefined));
   const { download, share, remove, busy } = usePhotoActions();
 
-  const [photo, setPhoto] = useState<Photo | null>(
-    () => fromStore?.find((p) => p.id === id) ?? null
-  );
+  // The day's photos drive a swipeable pager; current index tracks which is shown.
+  const [photos, setPhotos] = useState<Photo[]>(() => storeList ?? []);
+  const [currentIndex, setCurrentIndex] = useState(() => {
+    const i = (storeList ?? []).findIndex((p) => p.id === id);
+    return i >= 0 ? i : 0;
+  });
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const listRef = useRef<FlatList<Photo>>(null);
 
-  // Fall back to local storage if the photo isn't in memory.
+  // Fall back to local storage if the store had no photos for this day.
   useEffect(() => {
-    if (photo || !date || !id) return;
+    if (photos.length || !date) return;
     localStore.getPhotos(date).then((list) => {
-      const found = list.find((p) => p.id === id);
-      if (found) setPhoto(found);
+      if (!list.length) return;
+      const i = list.findIndex((p) => p.id === id);
+      setPhotos(list);
+      setCurrentIndex(i >= 0 ? i : 0);
     });
-  }, [date, id]);
+  }, [date]);
+
+  const photo = photos[currentIndex] ?? null;
 
   function showToast(msg: string) {
     if (!msg) return;
@@ -51,16 +62,40 @@ export default function PhotoViewer() {
   }
 
   async function onConfirmDelete() {
-    if (!photo) return;
+    const target = photos[currentIndex];
+    if (!target) return;
     setConfirmDelete(false);
-    const res = await remove(photo);
-    if (res.ok) router.back();
-    else showToast(res.message);
+
+    const res = await remove(target);
+    if (!res.ok) {
+      showToast(res.message);
+      return;
+    }
+
+    const remaining = photos.filter((p) => p.id !== target.id);
+    // Last photo for the day — nothing left to show, so leave the viewer.
+    if (remaining.length === 0) {
+      router.back();
+      return;
+    }
+
+    // Slide to the adjacent photo: the next one, or the previous if we deleted the last.
+    const wasLast = currentIndex >= remaining.length;
+    const nextIndex = Math.min(currentIndex, remaining.length - 1);
+    setPhotos(remaining);
+    setCurrentIndex(nextIndex);
+    if (wasLast) {
+      requestAnimationFrame(() =>
+        listRef.current?.scrollToOffset({ offset: nextIndex * width, animated: true })
+      );
+    }
+    showToast(res.message);
   }
 
-  const stampTime = photo?.timestamp && photo.created_at
-    ? format(parseISO(photo.created_at), 'yyyy-MM-dd  HH:mm:ss')
-    : null;
+  function onMomentumEnd(e: { nativeEvent: { contentOffset: { x: number } } }) {
+    const i = Math.round(e.nativeEvent.contentOffset.x / width);
+    if (i !== currentIndex && i >= 0 && i < photos.length) setCurrentIndex(i);
+  }
 
   return (
     <View style={s.root}>
@@ -71,21 +106,33 @@ export default function PhotoViewer() {
             <X size={18} color="#fff" strokeWidth={ICON_STROKE} />
           </Pressable>
           {date && <AppText style={s.headerDate}>{format(parseISO(date), 'MMM d, yyyy')}</AppText>}
-          {/* Invisible spacer keeps the date centered opposite the close button */}
-          <View style={s.headerSpacer} />
+          {/* Count keeps the date centered and shows position within the day */}
+          {photos.length > 1 ? (
+            <View style={s.countPill}>
+              <AppText style={s.countText}>{currentIndex + 1}/{photos.length}</AppText>
+            </View>
+          ) : (
+            <View style={s.headerSpacer} />
+          )}
         </View>
 
-        {/* Image */}
+        {/* Swipeable photo pager */}
         <View style={s.imageWrap}>
-          {photo?.url ? (
-            <Image source={{ uri: photo.url }} style={s.image} resizeMode="contain" />
+          {photos.length > 0 ? (
+            <FlatList
+              ref={listRef}
+              data={photos}
+              keyExtractor={(p) => p.id}
+              horizontal
+              pagingEnabled
+              showsHorizontalScrollIndicator={false}
+              initialScrollIndex={currentIndex}
+              getItemLayout={(_, index) => ({ length: width, offset: width * index, index })}
+              onMomentumScrollEnd={onMomentumEnd}
+              renderItem={({ item }) => <PhotoPage photo={item} width={width} />}
+            />
           ) : (
             <ActivityIndicator color="#fff" />
-          )}
-          {stampTime && (
-            <View style={s.stamp} pointerEvents="none">
-              <AppText style={s.stampText}>{stampTime}</AppText>
-            </View>
           )}
         </View>
 
@@ -127,6 +174,26 @@ export default function PhotoViewer() {
   );
 }
 
+function PhotoPage({ photo, width }: { photo: Photo; width: number }) {
+  const stampTime = photo.timestamp && photo.created_at
+    ? format(parseISO(photo.created_at), 'yyyy-MM-dd  HH:mm:ss')
+    : null;
+  return (
+    <View style={[s.page, { width }]}>
+      {photo.url ? (
+        <Image source={{ uri: photo.url }} style={s.image} resizeMode="contain" />
+      ) : (
+        <ActivityIndicator color="#fff" />
+      )}
+      {stampTime && (
+        <View style={s.stamp} pointerEvents="none">
+          <AppText style={s.stampText}>{stampTime}</AppText>
+        </View>
+      )}
+    </View>
+  );
+}
+
 function Action({
   icon: Icon, label, onPress, disabled, danger,
 }: { icon: LucideIcon; label: string; onPress: () => void; disabled?: boolean; danger?: boolean }) {
@@ -161,8 +228,15 @@ const s = StyleSheet.create({
   },
   headerSpacer: { width: 36, height: 36 },
   headerDate: { fontFamily: fonts.sansMd, fontSize: 14, color: 'rgba(255,255,255,0.85)' },
+  countPill: {
+    minWidth: 36, height: 36, borderRadius: 18, paddingHorizontal: 10,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  countText: { fontFamily: fonts.sansSb, fontSize: 12, color: 'rgba(255,255,255,0.85)' },
 
-  imageWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  imageWrap: { flex: 1 },
+  page: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   image: { width: '100%', height: '100%' },
   stamp: { position: 'absolute', bottom: 16, right: 18 },
   stampText: {
@@ -184,11 +258,11 @@ const s = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   actionIconDanger: { backgroundColor: 'rgba(198,40,40,0.22)' },
-  actionLabel: { fontFamily: fonts.sansMd, fontSize: 12, color: 'rgba(255,255,255,0.85)' },
+  actionLabel: { fontFamily: fonts.sansMd, fontSize: 12, color: 'rgba(255,255,255,0.85)', textAlign: 'center' },
   actionLabelDanger: { color: '#FF6B6B' },
 
   toast: {
-    position: 'absolute', bottom: 120, alignSelf: 'center',
+    position: 'absolute', bottom: 130, alignSelf: 'center',
     backgroundColor: 'rgba(22,20,19,0.95)', borderRadius: radius.full,
     paddingHorizontal: 18, paddingVertical: 10,
     borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)',

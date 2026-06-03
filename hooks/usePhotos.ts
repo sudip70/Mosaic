@@ -1,7 +1,5 @@
 import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase';
 import { localStore } from '@/lib/localStore';
-import { getPhotoUrl } from '@/lib/storage';
 import { usePhotoStore } from '@/store/usePhotoStore';
 import type { Photo } from '@/types';
 
@@ -11,77 +9,28 @@ import type { Photo } from '@/types';
 const EMPTY_PHOTOS: Photo[] = [];
 
 // Most-recent first.
-const byNewest = (a: Photo, b: Photo) => b.created_at.localeCompare(a.created_at);
+const byNewest = (a: Photo, b: Photo) =>
+  b.created_at.localeCompare(a.created_at) || b.id.localeCompare(a.id);
 
-export function usePhotos(date: string, userId: string) {
+// Phase 1 is local-only: a day's photos come entirely from device storage.
+// Cloud reads (own backup restore, friends' shared photos) arrive in Phase 2.
+export function usePhotos(date: string, _userId: string) {
   const [loading, setLoading] = useState(true);
   const photos = usePhotoStore((s) => s.photosByDate[date] ?? EMPTY_PHOTOS);
   const setPhotos = usePhotoStore((s) => s.setPhotos);
 
   useEffect(() => {
+    let active = true;
     async function load() {
-      // 1. Show local data immediately — works offline, zero wait
       const local = await localStore.getPhotos(date);
-      if (local.length > 0) {
+      if (active) {
         setPhotos(date, [...local].sort(byNewest));
         setLoading(false);
       }
-
-      // 2. Fetch from Supabase and merge in background — skip if no auth yet
-      if (!userId) {
-        setLoading(false);
-        return;
-      }
-
-      try {
-        const { data } = await supabase
-          .from('photos')
-          .select('*')
-          .eq('date', date)
-          .eq('user_id', userId)
-          .order('created_at', { ascending: true });
-
-        if (!data || data.length === 0) {
-          setLoading(false);
-          return;
-        }
-
-        const withUrls = await Promise.all(
-          data.map(async (p: Photo) => {
-            const cached = local.find((l) => l.id === p.id);
-            return {
-              ...p,
-              local_uri: cached?.local_uri,
-              // timestamp is local-only metadata (no DB column) — carry it from cache
-              timestamp: cached?.timestamp ?? p.timestamp,
-              sync_status: 'synced' as const,
-              // Prefer local file — avoids network round-trip for display
-              url: cached?.local_uri ?? (await getPhotoUrl(p.storage_path)),
-            };
-          })
-        );
-
-        // Keep any pending-only items (not yet in Supabase)
-        const pendingOnly = local.filter(
-          (l) => l.sync_status === 'pending' && !data.find((d) => d.id === l.id)
-        );
-
-        const merged = [...withUrls, ...pendingOnly].sort(byNewest);
-        setPhotos(date, merged);
-
-        // Update local cache with synced status
-        for (const photo of withUrls) {
-          await localStore.savePhoto(date, photo);
-        }
-      } catch {
-        // Offline — already showing local data above
-      }
-
-      setLoading(false);
     }
-
     load();
-  }, [date, userId]);
+    return () => { active = false; };
+  }, [date]);
 
   return { photos, loading };
 }

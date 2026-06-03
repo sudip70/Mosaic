@@ -5,7 +5,9 @@ export interface Color {
   hex: string;
 }
 
-export type SyncStatus = 'pending' | 'synced' | 'failed';
+// 'local' = Phase 1 device-only photo (never uploaded). 'pending' | 'synced' |
+// 'failed' describe the Phase 2 cloud lifecycle (sharing / backup).
+export type SyncStatus = 'local' | 'pending' | 'synced' | 'failed';
 
 export interface Photo {
   id: string;

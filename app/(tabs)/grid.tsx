@@ -1,5 +1,5 @@
-import { View, ScrollView, Pressable, StyleSheet } from 'react-native';
-import { useCallback, useMemo } from 'react';
+import { View, ScrollView, Pressable, Image, StyleSheet } from 'react-native';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { router, useFocusEffect } from 'expo-router';
 import { format, parseISO, getMonth } from 'date-fns';
 import Svg, { Circle } from 'react-native-svg';
@@ -15,8 +15,9 @@ import { useAnalytics } from '@/hooks/useAnalytics';
 import { useSettings } from '@/store/useSettings';
 import { useTheme } from '@/hooks/useTheme';
 import { useThemedStyles } from '@/hooks/useThemedStyles';
+import { localStore } from '@/lib/localStore';
 import { fonts, shadows, radius, spacing, type Palette } from '@/lib/theme';
-import type { GridDay } from '@/types';
+import type { GridDay, Photo } from '@/types';
 
 const TILE_SIZE = { Comfortable: 30 } as const;
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -24,7 +25,9 @@ const PIP_COUNT = 14;
 
 // ─── Compact grid ─────────────────────────────────────────────────────────────
 
-function CompactGrid({ days }: { days: GridDay[] }) {
+function CompactGrid({
+  days, selectedDate, onSelect,
+}: { days: GridDay[]; selectedDate: string | null; onSelect: (date: string) => void }) {
   const { colors } = useTheme();
   const st = useThemedStyles(makeStyles);
   return (
@@ -37,8 +40,9 @@ function CompactGrid({ days }: { days: GridDay[] }) {
             { backgroundColor: day.hex },
             !day.hasPhotos && st.tileEmpty,
             day.isToday && [st.tileToday, { borderColor: colors.ink100 }],
+            day.date === selectedDate && st.compactTileSelected,
           ]}
-          onPress={() => router.push(`/day/${day.date}`)}
+          onPress={() => onSelect(day.date)}
           accessibilityRole="button"
           accessibilityLabel={`${day.date}${day.hasPhotos ? ', has photos' : ''}`}
         />
@@ -94,6 +98,51 @@ function StreakRing({ current, longest }: { current: number; longest: number }) 
   );
 }
 
+// ─── Selected-day preview ─────────────────────────────────────────────────────
+
+function DayPreview({
+  day, photos, onOpen, onPhoto,
+}: {
+  day: GridDay;
+  photos: Photo[];
+  onOpen: () => void;
+  onPhoto: (id: string) => void;
+}) {
+  const st = useThemedStyles(makeStyles);
+  return (
+    <View style={st.previewWrap}>
+      <View style={st.previewHead}>
+        <View style={st.previewHeadLeft}>
+          <View style={[st.previewSwatch, { backgroundColor: day.hex }]} />
+          <View style={{ flexShrink: 1 }}>
+            <AppText style={st.previewDate}>{format(parseISO(day.date), 'EEEE, MMM d')}</AppText>
+            <AppText style={st.previewName}>{day.name || 'No colour'}</AppText>
+          </View>
+        </View>
+        {photos.length > 0 && (
+          <Pressable onPress={onOpen} hitSlop={8} accessibilityRole="button" accessibilityLabel="View day">
+            <AppText style={st.previewLink}>View day ›</AppText>
+          </Pressable>
+        )}
+      </View>
+
+      {photos.length > 0 ? (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={st.previewStrip}>
+          {photos.map((p) => (
+            <Pressable key={p.id} onPress={() => onPhoto(p.id)} accessibilityRole="button" accessibilityLabel="Open photo">
+              <Image source={{ uri: p.url }} style={st.previewPhoto} resizeMode="cover" />
+            </Pressable>
+          ))}
+        </ScrollView>
+      ) : (
+        <View style={st.previewEmpty}>
+          <AppText style={st.previewEmptyText}>No photos this day</AppText>
+        </View>
+      )}
+    </View>
+  );
+}
+
 export default function GridScreen() {
   const { user } = useAuth();
   const { trackScreen } = useAnalytics();
@@ -105,12 +154,32 @@ export default function GridScreen() {
   const startDate = user?.created_at?.slice(0, 10) ?? new Date().toISOString().slice(0, 10);
   const { days, reload } = useGrid(user?.id ?? '', startDate);
 
+  // Selected tile drives the inline day preview. Defaults to the latest day
+  // that has photos, falling back to the most recent day.
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [dayPhotos, setDayPhotos] = useState<Photo[]>([]);
+
+  const defaultDate = useMemo(() => {
+    for (let i = days.length - 1; i >= 0; i--) if (days[i].hasPhotos) return days[i].date;
+    return days.length ? days[days.length - 1].date : null;
+  }, [days]);
+  const activeDate = selectedDate ?? defaultDate;
+  const activeDay = useMemo(() => days.find((d) => d.date === activeDate) ?? null, [days, activeDate]);
+
+  const loadDayPhotos = useCallback(() => {
+    if (!activeDate) { setDayPhotos([]); return; }
+    localStore.getPhotos(activeDate).then(setDayPhotos);
+  }, [activeDate]);
+
+  useEffect(() => { loadDayPhotos(); }, [loadDayPhotos]);
+
   // Re-read photo presence each time the tab regains focus — picks up new captures.
   useFocusEffect(
     useCallback(() => {
       trackScreen('grid');
       reload();
-    }, [reload])
+      loadDayPhotos();
+    }, [reload, loadDayPhotos])
   );
 
   const visibleMonths = useMemo(() => getVisibleMonths(days), [days]);
@@ -134,7 +203,7 @@ export default function GridScreen() {
           </View>
 
           {gridDensity === 'Compact' ? (
-            <CompactGrid days={days} />
+            <CompactGrid days={days} selectedDate={activeDate} onSelect={setSelectedDate} />
           ) : (
             <>
               <View style={st.grid}>
@@ -146,8 +215,9 @@ export default function GridScreen() {
                       { width: TILE_SIZE.Comfortable, height: TILE_SIZE.Comfortable, backgroundColor: day.hex },
                       !day.hasPhotos && st.tileEmpty,
                       day.isToday && st.tileToday,
+                      day.date === activeDate && st.tileSelected,
                     ]}
-                    onPress={() => router.push(`/day/${day.date}`)}
+                    onPress={() => setSelectedDate(day.date)}
                     accessibilityRole="button"
                     accessibilityLabel={`${day.date}${day.hasPhotos ? ', has photos' : ''}`}
                   />
@@ -184,6 +254,15 @@ export default function GridScreen() {
             </View>
           </Pressable>
         )}
+
+        {activeDay && (
+          <DayPreview
+            day={activeDay}
+            photos={dayPhotos}
+            onOpen={() => router.push(`/day/${activeDay.date}`)}
+            onPhoto={(id) => router.push({ pathname: '/photo/[id]', params: { id, date: activeDay.date } })}
+          />
+        )}
       </ScrollView>
     </AppScreen>
   );
@@ -216,9 +295,31 @@ const makeStyles = (c: Palette) => StyleSheet.create({
   tile: { borderRadius: 10 },
   tileEmpty: { opacity: 0.25 },
   tileToday: { borderWidth: 2.5, borderColor: c.ink100 },
+  tileSelected: { borderWidth: 2.5, borderColor: c.accent },
 
   compactGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 3 },
   compactTile: { width: 16, height: 16, borderRadius: 4 },
+  compactTileSelected: { borderWidth: 1.5, borderColor: c.accent },
+
+  // Selected-day preview
+  previewWrap: { gap: spacing.md },
+  previewHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md },
+  previewHeadLeft: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, flexShrink: 1 },
+  previewSwatch: { width: 30, height: 30, borderRadius: 9, borderWidth: 1, borderColor: c.ink15 },
+  previewDate: { fontFamily: fonts.sansSb, fontSize: 14, color: c.ink100, letterSpacing: -0.1 },
+  previewName: { fontFamily: fonts.sans, fontSize: 12, color: c.ink30, marginTop: 1 },
+  previewLink: { fontFamily: fonts.sansSb, fontSize: 13, color: c.accent },
+  previewStrip: { gap: spacing.md, paddingVertical: 2, paddingRight: spacing.xl },
+  // Same framing as the day-detail photo cells
+  previewPhoto: {
+    width: 132, height: 176, borderRadius: radius.r16, backgroundColor: c.surface2,
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.5)', ...shadows.elev1,
+  },
+  previewEmpty: {
+    height: 176, borderRadius: radius.r16, borderWidth: 1, borderColor: c.ink15, borderStyle: 'dashed',
+    alignItems: 'center', justifyContent: 'center', backgroundColor: c.surface0,
+  },
+  previewEmptyText: { fontFamily: fonts.sans, fontSize: 13, color: c.ink30 },
 
   monthRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: spacing.md, paddingHorizontal: 2 },
   mChip: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: radius.r8 },
