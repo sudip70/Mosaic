@@ -191,7 +191,7 @@ All tables have RLS enabled. Anonymous users (`is_anonymous = true`) have the sa
 
 ## Storage
 
-**Bucket:** `photos` (private) — **Phase 2 only**; empty in Phase 1.
+**Bucket:** `photos` (private) - **Phase 2 only**; empty in Phase 1.
 
 ```
 photos/

@@ -13,10 +13,12 @@ export function useGrid(_userId: string, startDate: string) {
 
   const build = useCallback(async () => {
     const todayStr = today();
-    const allDates = eachDayOfInterval({
-      start: parseISO(startDate),
-      end: parseISO(todayStr),
-    }).map((d) => format(d, 'yyyy-MM-dd'));
+    const end = parseISO(todayStr);
+    // Clamp the start so a future created_at (clock skew / TZ) can't make
+    // start > end, which would throw a RangeError from eachDayOfInterval.
+    const rawStart = parseISO(startDate);
+    const start = rawStart > end ? end : rawStart;
+    const allDates = eachDayOfInterval({ start, end }).map((d) => format(d, 'yyyy-MM-dd'));
 
     // 1. Build from local data first — instant, works offline
     const colorCache = await localStore.getColorCache();

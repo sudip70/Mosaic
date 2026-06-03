@@ -3,7 +3,7 @@
 A daily-colour photo journal. Each day you get one colour; photograph it wherever
 you find it, and your captures build into a personal mosaic grid over time.
 
-Built with **Expo (SDK 52) + React Native + TypeScript**, backed by **Supabase**.
+Built with **Expo (SDK 54) + React Native + TypeScript**, backed by **Supabase**.
 
 ---
 

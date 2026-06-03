@@ -261,62 +261,77 @@ This is **idempotent** - running it any number of times yields the same grid. Be
 ```
 mosaic/
 ├── app/                        ← All screens (Expo Router)
-│   ├── (auth)/                 ← [Phase 2 only]
-│   │   ├── _layout.tsx         ← Redirects to tabs if already logged in
-│   │   ├── welcome.tsx         ← First launch / intro screen
-│   │   ├── login.tsx           ← Email + magic link or password
-│   │   └── signup.tsx          ← Create account (minimal - just email)
+│   ├── (auth)/                 ← [Phase 2 only - not reachable in Phase 1]
+│   │   ├── _layout.tsx
+│   │   ├── welcome.tsx
+│   │   ├── login.tsx           ← Email magic link
+│   │   └── signup.tsx
 │   ├── (tabs)/
+│   │   ├── _layout.tsx         ← Custom bottom tab bar
 │   │   ├── index.tsx           ← Today screen (main daily view)
-│   │   ├── grid.tsx            ← Your full color grid
-│   │   └── friends.tsx         ← Friends & sharing [Phase 2]
+│   │   ├── grid.tsx            ← Color grid + selected-day preview
+│   │   ├── friends.tsx         ← Friends & sharing [Phase 2 placeholder]
+│   │   └── profile.tsx         ← Profile + stats (settings gear → /settings)
 │   ├── day/[date].tsx          ← Day detail - all photos for a day
-│   ├── camera.tsx              ← Camera / upload screen
-│   └── _layout.tsx             ← Root layout, auth guard
+│   ├── photo/[id].tsx          ← Full-screen swipeable photo viewer
+│   ├── camera.tsx              ← Capture screen (local-only in Phase 1)
+│   ├── settings.tsx            ← Settings (pushed screen, opened from Profile)
+│   ├── onboarding.tsx          ← First-launch intro
+│   ├── privacy.tsx             ← Privacy policy
+│   └── _layout.tsx             ← Root layout (fonts, auth, onboarding gate)
 │
-├── components/
-│   ├── ui/                     ← Reusable primitives
-│   │   ├── Button.tsx
-│   │   ├── ColorSwatch.tsx
-│   │   ├── PhotoTile.tsx
-│   │   ├── DayTile.tsx
-│   │   ├── StreakBadge.tsx
-│   │   ├── EmptyState.tsx
-│   │   └── Typography.tsx
-│   ├── layout/                 ← Structural wrappers
-│   │   ├── Screen.tsx          ← Safe area + scroll wrapper
-│   │   └── Section.tsx         ← Padded content block
-│   └── features/               ← Feature-specific (use ui/ internally)
-│       ├── PhotoGrid.tsx
-│       ├── DayGallery.tsx
-│       └── PhotoCapture.tsx
+├── components/ui/              ← Reusable primitives (composed by screens)
+│   ├── AppScreen.tsx           ← Safe-area + themed background wrapper
+│   ├── AppText.tsx             ← Typography primitive (variant + theme colour)
+│   ├── Card.tsx                ← Surface card
+│   ├── ColorHero.tsx           ← Daily colour swatch card (contrast-aware text)
+│   ├── ConfirmDialog.tsx       ← Themed confirm dialog + info popup
+│   ├── IconButton.tsx          ← Circular header button
+│   ├── PrimaryButton.tsx       ← Pill CTA with coloured icon
+│   ├── ScreenHeader.tsx        ← Uniform top nav (wordmark / title modes)
+│   └── TimePicker.tsx          ← Looping drum-roll reminder time picker
 │
 ├── hooks/
-│   ├── useToday.ts             ← Today's color + date
-│   ├── usePhotos.ts            ← Photos for a given date
-│   ├── useGrid.ts              ← Full grid data (colors + photo presence)
-│   ├── useStreak.ts            ← Current + longest streak
-│   ├── useUpload.ts            ← Photo upload with loading/error state
+│   ├── useToday.ts             ← Today's colour + date (deduped fetch)
+│   ├── useDateColor.ts         ← Colour for any past date
+│   ├── usePhotos.ts            ← A day's photos (local-only in Phase 1)
+│   ├── usePhotoActions.ts      ← Download / share / delete a photo
+│   ├── useGrid.ts              ← Grid data (local presence + colour palette)
+│   ├── useStreak.ts            ← Current + longest streak (read)
+│   ├── useUpload.ts            ← Capture → compress → save locally
+│   ├── useNotifications.ts     ← Sync the daily reminder to settings
 │   ├── useAnalytics.ts         ← Logging wrapper (Sentry + PostHog)
-│   └── useAuth.ts              ← Auth state [Phase 2]
+│   ├── useTheme.ts             ← Resolve light/dark palette
+│   ├── useThemedStyles.ts      ← Memoised themed StyleSheet
+│   ├── useAuth.ts              ← Auth state (anonymous in Phase 1)
+│   └── useSync.ts              ← [Dormant - revived for Phase 2 cloud]
 │
-├── store/
-│   ├── useColorStore.ts        ← Today's color, color history
-│   ├── usePhotoStore.ts        ← Photos by date, upload state
-│   └── useStreakStore.ts       ← Streak count + last active date
+├── store/                      ← Zustand stores
+│   ├── useColorStore.ts        ← Today's colour
+│   ├── usePhotoStore.ts        ← Photos by date (in-memory)
+│   ├── useStreakStore.ts       ← Streak (persisted)
+│   ├── useSettings.ts          ← App settings (persisted)
+│   ├── useCameraSettings.ts    ← Camera prefs (persisted)
+│   ├── useAppStore.ts          ← Onboarding flag
+│   └── useAuthStore.ts         ← Session singleton
 │
 ├── lib/
 │   ├── supabase.ts             ← Supabase client init
 │   ├── analytics.ts            ← Sentry + PostHog init
-│   ├── colors.ts               ← Color palette + daily assignment logic
-│   ├── storage.ts              ← Photo upload/download helpers
-│   └── dates.ts                ← Date formatting utilities
+│   ├── notifications.ts        ← Daily reminder scheduling
+│   ├── localStore.ts           ← AsyncStorage photo metadata + colour cache
+│   ├── dates.ts                ← Date helpers
+│   ├── theme.ts                ← Palette, type scale, contrast helpers
+│   ├── icons.ts                ← Curated Lucide icon set
+│   ├── reportError.ts          ← Single handled-error entry point
+│   ├── storageInfo.ts          ← On-device storage usage + clear cache
+│   ├── constants.ts            ← AsyncStorage keys
+│   ├── storage.ts              ← [Dormant - signed URLs, Phase 2 cloud]
+│   └── syncQueue.ts            ← [Dormant - offline upload queue, Phase 2]
 │
-├── types/
-│   └── index.ts                ← All TypeScript interfaces
-│
-├── assets/                     ← Fonts, icons, images
-└── supabase/                   ← DB migrations, edge functions
+├── types/index.ts             ← Shared TypeScript interfaces
+├── assets/                    ← Fonts, icons, images
+└── supabase/                  ← DB migration + colour seed
 ```
 
 ---
@@ -557,6 +572,13 @@ export function Typography({ variant = 'body', children, ...rest }: TypographyPr
 
 Screens are dumb - they render. Hooks are smart - they fetch, compute, and manage state.
 
+> **Note:** The snippets below are simplified illustrations of intent. The real,
+> current implementations in `hooks/` are the source of truth. In particular,
+> **Phase 1 reads photos from the device only** - `usePhotos` and `useGrid` do
+> not query the cloud for photos (only the public `colors` palette is fetched),
+> and `useUpload` saves locally without uploading. See the Cloud Sync, Backup &
+> Privacy Model for when the cloud comes into play (Phase 2).
+
 ### useToday
 
 ```ts
@@ -620,44 +642,56 @@ export function usePhotos(date: string, userId: string) {
 }
 ```
 
-### useUpload
+### useUpload (Phase 1 - local-only)
+
+The capture flow compresses to a portrait 3:4 WebP, writes it to the device, and
+updates local state. There is **no network call** - nothing is uploaded.
 
 ```ts
-// hooks/useUpload.ts
+// hooks/useUpload.ts (simplified)
 import { useState } from 'react';
-import { supabase } from '@/lib/supabase';
+import * as FileSystem from 'expo-file-system/legacy';
+import * as ImageManipulator from 'expo-image-manipulator';
+import { randomUUID } from 'expo-crypto';
+import { localStore } from '@/lib/localStore';
+import { usePhotoStore } from '@/store/usePhotoStore';
+import { useStreakStore } from '@/store/useStreakStore';
 import { useAnalytics } from './useAnalytics';
-import * as FileSystem from 'expo-file-system';
-import { decode } from 'base64-arraybuffer';
 
 export function useUpload() {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const addPhoto = usePhotoStore((s) => s.addPhoto);
+  const incrementStreak = useStreakStore((s) => s.increment);
   const { track } = useAnalytics();
 
-  async function uploadPhoto(uri: string, userId: string, date: string, colorId: string) {
+  async function uploadPhoto(uri: string, userId: string, date: string, colorId: string, stamped = false) {
     setUploading(true);
     setError(null);
     try {
-      const base64 = await FileSystem.readAsStringAsync(uri, {
-        encoding: FileSystem.EncodingType.Base64,
-      });
-      const photoId = crypto.randomUUID();
-      const path = `${userId}/${date}/${photoId}.jpg`;
+      // Crop to portrait 3:4 + resize to 1080×1440 + encode WebP (~10–20× smaller).
+      const compressed = await compressPhoto(uri);
 
-      await supabase.storage.from('photos').upload(path, decode(base64),
-        { contentType: 'image/jpeg' }
-      );
+      const photoId = randomUUID();
+      const localUri = `${FileSystem.documentDirectory}photos/${userId}/${date}/${photoId}.webp`;
+      // ...ensure the directory exists, then copy the file to localUri...
+      await FileSystem.copyAsync({ from: compressed, to: localUri });
 
-      await supabase.from('photos').insert({
-        id: photoId, user_id: userId, date,
-        color_id: colorId, storage_path: path,
-      });
+      const photo = {
+        id: photoId, user_id: userId, date, color_id: colorId,
+        storage_path: '', local_uri: localUri, url: localUri,
+        sync_status: 'local' as const, is_private: true,
+        created_at: new Date().toISOString(), timestamp: stamped,
+      };
 
-      track('photo_uploaded', { date }); // non-invasive log
+      await localStore.savePhoto(date, photo); // persist metadata on device
+      addPhoto(date, photo);                    // optimistic UI
+      incrementStreak(date);                    // idempotent per day
+
+      track('photo_uploaded', { date });
       return { success: true };
     } catch (e: any) {
-      setError(e.message);
+      setError(e.message ?? 'Could not save photo');
       return { success: false };
     } finally {
       setUploading(false);

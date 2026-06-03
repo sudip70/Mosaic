@@ -13,6 +13,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useColorStore } from '@/store/useColorStore';
 import { useCameraSettings } from '@/store/useCameraSettings';
 import { useTheme } from '@/hooks/useTheme';
+import { reportError } from '@/lib/reportError';
 import { today } from '@/lib/dates';
 import { fonts, radius, type Palette } from '@/lib/theme';
 import { X, Settings, Plus, Zap, RotateCcw, ICON_STROKE } from '@/lib/icons';
@@ -48,10 +49,14 @@ export default function CameraScreen() {
 
   const handleShutter = useCallback(async () => {
     if (!cameraRef.current || !canCapture) return;
-    const photo = await cameraRef.current.takePictureAsync({ quality: 0.8 });
-    if (!photo?.uri) return;
-    setSessionShots((prev) => [photo.uri, ...prev]);
-    await uploadPhoto(photo.uri, user!.id, today(), todayColor!.id, timestamp);
+    try {
+      const photo = await cameraRef.current.takePictureAsync({ quality: 0.8 });
+      if (!photo?.uri) return;
+      setSessionShots((prev) => [photo.uri, ...prev]);
+      await uploadPhoto(photo.uri, user!.id, today(), todayColor!.id, timestamp);
+    } catch (e) {
+      reportError(e, { scope: 'takePicture' });
+    }
   }, [canCapture, user, todayColor, uploadPhoto, timestamp]);
 
   const handleLibrary = useCallback(async () => {
