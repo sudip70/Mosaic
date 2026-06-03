@@ -168,7 +168,9 @@ export default function GridScreen() {
 
   const loadDayPhotos = useCallback(() => {
     if (!activeDate) { setDayPhotos([]); return; }
-    localStore.getPhotos(activeDate).then(setDayPhotos);
+    localStore.getPhotos(activeDate).then((photos) =>
+      setDayPhotos([...photos].sort((a, b) => b.created_at.localeCompare(a.created_at) || b.id.localeCompare(a.id)))
+    );
   }, [activeDate]);
 
   useEffect(() => { loadDayPhotos(); }, [loadDayPhotos]);

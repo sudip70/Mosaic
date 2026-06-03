@@ -1,6 +1,8 @@
 import { useRef, useState, useEffect, useCallback, useMemo } from 'react';
 import { View, Pressable, ActivityIndicator, StyleSheet, Image, Switch } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import { useSharedValue, runOnJS } from 'react-native-reanimated';
 import { CameraView, CameraType, FlashMode, useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import { Accelerometer } from 'expo-sensors';
@@ -27,8 +29,44 @@ export default function CameraScreen() {
 
   const [facing, setFacing] = useState<CameraType>('back');
   const [flash, setFlash] = useState<FlashMode>('off');
+  const [selectedLens, setSelectedLens] = useState<string | undefined>(undefined);
+  // `zoom` drives the CameraView prop (JS-side); `zoomSV` mirrors it on the UI
+  // thread so the pinch gesture stays continuous without rebuilding each frame.
+  const [zoom, setZoom] = useState(0);
+  const zoomSV = useSharedValue(0);
+  const startZoom = useSharedValue(0);
   // Thumbnails captured in this session — drives the strip + counter.
   const [sessionShots, setSessionShots] = useState<string[]>([]);
+
+  // expo-camera matches selectedLens by localizedName ("Back Wide Camera"), not by device type
+  // string. Exclude virtual/compound devices ("Back Dual Wide Camera", "Back Triple Camera")
+  // which sort before "Back Wide Camera" alphabetically and show ultrawide at zoom=0.
+  const pickWide = useCallback((lenses: string[]) => {
+    const wide = lenses.find(l => /wide/i.test(l) && !/ultra|dual|triple/i.test(l)) ?? lenses[0];
+    if (wide) setSelectedLens(wide);
+  }, []);
+
+  const handleLensesChanged = useCallback(({ lenses }: { lenses: string[] }) => {
+    pickWide(lenses);
+  }, [pickWide]);
+
+  // Safety-net: if onAvailableLensesChanged fired before the listener attached,
+  // onCameraReady gives us a second chance to select the correct lens.
+  const handleCameraReady = useCallback(async () => {
+    if (selectedLens || !cameraRef.current) return;
+    const lenses = await cameraRef.current.getAvailableLensesAsync();
+    if (lenses.length) pickWide(lenses);
+  }, [selectedLens, pickWide]);
+
+  // Built once — reads/writes shared values only, so it survives the per-frame
+  // setZoom re-renders that keep the CameraView prop in sync.
+  const pinchGesture = useMemo(() => Gesture.Pinch()
+    .onStart(() => { startZoom.value = zoomSV.value; })
+    .onUpdate((e) => {
+      const next = Math.min(Math.max(startZoom.value + (e.scale - 1) * 0.35, 0), 1);
+      zoomSV.value = next;
+      runOnJS(setZoom)(next);
+    }), []);
 
   // Camera-only preferences (persisted) + the settings popup visibility.
   const { timestamp, grid, leveling, toggle } = useCameraSettings();
@@ -50,10 +88,10 @@ export default function CameraScreen() {
   const handleShutter = useCallback(async () => {
     if (!cameraRef.current || !canCapture) return;
     try {
-      const photo = await cameraRef.current.takePictureAsync({ quality: 0.8 });
+      const photo = await cameraRef.current.takePictureAsync({ quality: 0.8, exif: true });
       if (!photo?.uri) return;
       setSessionShots((prev) => [photo.uri, ...prev]);
-      await uploadPhoto(photo.uri, user!.id, today(), todayColor!.id, timestamp);
+      await uploadPhoto(photo.uri, user!.id, today(), todayColor!.id, timestamp, photo.exif);
     } catch (e) {
       reportError(e, { scope: 'takePicture' });
     }
@@ -64,11 +102,12 @@ export default function CameraScreen() {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       quality: 0.8,
+      exif: true,
     });
     if (!result.canceled) {
-      const uri = result.assets[0].uri;
-      setSessionShots((prev) => [uri, ...prev]);
-      await uploadPhoto(uri, user!.id, today(), todayColor!.id, timestamp);
+      const asset = result.assets[0];
+      setSessionShots((prev) => [asset.uri, ...prev]);
+      await uploadPhoto(asset.uri, user!.id, today(), todayColor!.id, timestamp, asset.exif ?? undefined);
     }
   }, [canCapture, user, todayColor, uploadPhoto, timestamp]);
 
@@ -101,8 +140,6 @@ export default function CameraScreen() {
   // ── Live finder ─────────────────────────────────────────────────────────────
   return (
     <View style={s.dark}>
-      <CameraView ref={cameraRef} style={StyleSheet.absoluteFill} facing={facing} flash={flash} />
-
       <SafeAreaView style={s.overlay} edges={['top', 'bottom']}>
         {/* Tap-away backdrop for the settings popup */}
         {showSettings && (
@@ -136,11 +173,19 @@ export default function CameraScreen() {
           </Pressable>
         </View>
 
-        {/* Spacer above — centres the finder between the top bar and controls */}
-        <View style={s.spacer} />
-
-        {/* Finder — locked to 4:3 so what you see is what gets saved */}
-        <View style={s.finderMid}>
+        {/* Finder — fills space between top bar and controls */}
+        <GestureDetector gesture={pinchGesture}>
+          <View style={s.finderMid}>
+          <CameraView
+            ref={cameraRef}
+            style={StyleSheet.absoluteFill}
+            facing={facing}
+            flash={flash}
+            selectedLens={selectedLens}
+            zoom={zoom}
+            onAvailableLensesChanged={handleLensesChanged}
+            onCameraReady={handleCameraReady}
+          />
           {grid && <GridOverlay />}
           {leveling && <LevelIndicator />}
           {timestamp && <TimestampOverlay />}
@@ -149,10 +194,8 @@ export default function CameraScreen() {
               <AppText style={ov.errorText}>{uploadError}</AppText>
             </View>
           )}
-        </View>
-
-        {/* Spacer below */}
-        <View style={s.spacer} />
+          </View>
+        </GestureDetector>
 
         {/* Controls */}
         <View style={s.controls}>
@@ -203,7 +246,7 @@ export default function CameraScreen() {
 
             <Pressable
               style={s.sideBtn}
-              onPress={() => setFacing((f) => (f === 'back' ? 'front' : 'back'))}
+              onPress={() => { setFacing((f) => (f === 'back' ? 'front' : 'back')); setSelectedLens(undefined); setZoom(0); zoomSV.value = 0; }}
               accessibilityLabel="Flip camera"
             >
               <RotateCcw size={19} color={mutedIcon} strokeWidth={ICON_STROKE} />
@@ -384,7 +427,7 @@ const makeStyles = (c: Palette, isDark: boolean) => {
     permCancel: { fontFamily: fonts.sansMd, fontSize: 13, color: c.ink60, marginTop: 4 },
 
     // Top bar
-    topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: 8 },
+    topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 8 },
     closeBtn: {
       width: 36, height: 36, borderRadius: 18, backgroundColor: glassBg,
       borderWidth: 1, borderColor: glassBorder, alignItems: 'center', justifyContent: 'center',
@@ -424,20 +467,15 @@ const makeStyles = (c: Palette, isDark: boolean) => {
     panelRowBorder: { borderBottomWidth: 1, borderBottomColor: isDark ? 'rgba(255,255,255,0.08)' : c.ink15 },
     panelLabel: { fontFamily: fonts.sansMd, fontSize: 14, color: c.ink100 },
 
-    // Finder — full-width portrait 3:4 capture area. Only top & bottom lines mark
-    // the crop bounds; no side borders, so the preview runs edge to edge like iOS.
+    // Finder — fills all space between the top bar and controls.
     finderMid: {
-      width: '100%', aspectRatio: 3 / 4,
+      flex: 1,
       alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
-      borderTopWidth: 1, borderBottomWidth: 1,
-      borderColor: isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.3)',
     },
-    // Solid canvas fills above & below the finder, hiding the feed outside the 4:3 crop
-    spacer: { flex: 1, backgroundColor: chromeBg },
 
     // Controls — same solid tone as the mask, joined seamlessly
     controls: {
-      backgroundColor: chromeBg, paddingHorizontal: 24, paddingTop: 18, paddingBottom: 24, gap: 16,
+      backgroundColor: chromeBg, paddingHorizontal: 24, paddingVertical: 8, gap: 16,
     },
     thumbs: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 8 },
     thumbStrip: { flexDirection: 'row', gap: 8, alignItems: 'center' },
