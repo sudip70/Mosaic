@@ -246,7 +246,106 @@ function MosaicPage({ c }: { c: Palette }) {
   );
 }
 
-// ─── Page 5: Reminder ─────────────────────────────────────────────────────────
+// ─── Page 5: Streaks & Friends ───────────────────────────────────────────────
+
+const DAYS        = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+const ACTIVE_DAYS = [0, 1, 2, 3, 4, 5]; // Mon–Sat lit; Sunday still to come
+
+const FRIEND_AVATARS = [
+  { color: '#5B8DB8', initial: 'S' },
+  { color: '#6BAF6B', initial: 'M' },
+  { color: '#D4A843', initial: 'J' },
+];
+
+function StreakDot({ idx, active, c }: { idx: number; active: boolean; c: Palette }) {
+  const scale = useSharedValue(0);
+  useEffect(() => {
+    scale.value = withDelay(idx * 110, withSpring(1, { damping: 14, stiffness: 200 }));
+  }, []);
+  const aStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+  return (
+    <Animated.View style={[pg.streakDot, { backgroundColor: active ? c.accent : c.accent15 }, aStyle]} />
+  );
+}
+
+function FriendAvatar({ color, initial, delay, c }: { color: string; initial: string; delay: number; c: Palette }) {
+  const s = useSharedValue(0);
+  useEffect(() => {
+    s.value = withDelay(delay, withSpring(1, { damping: 15, stiffness: 180 }));
+  }, []);
+  const aStyle = useAnimatedStyle(() => ({ transform: [{ scale: s.value }], opacity: s.value }));
+  return (
+    <Animated.View style={[pg.avatar, { backgroundColor: color, borderColor: c.surface0 }, aStyle]}>
+      <AppText style={pg.avatarInitial}>{initial}</AppText>
+    </Animated.View>
+  );
+}
+
+function StreakPage({ c }: { c: Palette }) {
+  const [count, setCount]  = useState(1);
+  const flamePulse         = useSharedValue(1);
+
+  useEffect(() => {
+    const id = setInterval(() => setCount(n => (n >= 21 ? 1 : n + 1)), 140);
+    flamePulse.value = withRepeat(
+      withSequence(
+        withTiming(1.14, { duration: 700, easing: Easing.inOut(Easing.ease) }),
+        withTiming(0.94, { duration: 700, easing: Easing.inOut(Easing.ease) }),
+      ),
+      -1, true,
+    );
+    return () => clearInterval(id);
+  }, []);
+
+  const flameStyle = useAnimatedStyle(() => ({ transform: [{ scale: flamePulse.value }] }));
+
+  return (
+    <View style={pg.page}>
+      <View style={[pg.visual, { flex: 3, alignItems: 'center', justifyContent: 'center', gap: spacing.xl }]}>
+
+        {/* Flame + counter */}
+        <View style={{ alignItems: 'center', gap: 4 }}>
+          <Animated.View style={flameStyle}>
+            <AppText style={pg.flameEmoji}>🔥</AppText>
+          </Animated.View>
+          <AppText style={[pg.streakCount, { color: c.ink100 }]}>{count}</AppText>
+          <AppText style={[pg.streakLabel, { color: c.ink30 }]}>day streak</AppText>
+        </View>
+
+        {/* Day dots */}
+        <View style={pg.dayRow}>
+          {DAYS.map((d, i) => (
+            <View key={i} style={{ alignItems: 'center', gap: 5 }}>
+              <StreakDot idx={i} active={ACTIVE_DAYS.includes(i)} c={c} />
+              <AppText style={[pg.dayLabel, { color: c.ink30 }]}>{d}</AppText>
+            </View>
+          ))}
+        </View>
+
+        {/* Friend avatars */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+          {FRIEND_AVATARS.map((av, i) => (
+            <FriendAvatar key={i} color={av.color} initial={av.initial} delay={900 + i * 110} c={c} />
+          ))}
+          <AppText style={[pg.friendsNote, { color: c.ink60 }]}>3 friends on a streak</AppText>
+        </View>
+      </View>
+
+      <View style={[pg.copy, { flex: 2 }]}>
+        <View style={pg.eyebrow}>
+          <View style={[pg.eyebrowDot, { backgroundColor: c.accent }]} />
+          <AppText style={[pg.tag, { color: c.accent }]}>Stay consistent</AppText>
+        </View>
+        <AppText style={[pg.headline, { color: c.ink100 }]}>{"Build streaks.\nBring friends."}</AppText>
+        <AppText style={[pg.body, { color: c.ink60 }]}>
+          Every photo keeps the streak alive. Miss a day and it resets — but your friends will notice.
+        </AppText>
+      </View>
+    </View>
+  );
+}
+
+// ─── Page 6: Reminder ─────────────────────────────────────────────────────────
 
 interface NotifCardData {
   title: string; sub: string;
@@ -371,7 +470,7 @@ export default function OnboardingScreen() {
     await finish();
   }
 
-  const isReminder = page === 4;
+  const isReminder = page === 5;
 
   return (
     <View style={[pg.screen, { backgroundColor: c.canvas }]}>
@@ -401,13 +500,14 @@ export default function OnboardingScreen() {
         <ColorPage    c={c} />
         <PhotoPage    c={c} />
         <MosaicPage   c={c} />
+        <StreakPage   c={c} />
         <ReminderPage c={c} time={time} onChangeTime={setTime} />
       </ScrollView>
 
       {/* Bottom nav */}
       <View style={[pg.nav, { paddingBottom: Math.max(insets.bottom, 16) + 6 }]}>
         <View style={pg.dots}>
-          {Array.from({ length: 5 }).map((_, i) => (
+          {Array.from({ length: 6 }).map((_, i) => (
             <ProgressDot key={i} active={i === page} accent={c.accent} idle={c.ink15} />
           ))}
         </View>
@@ -508,6 +608,21 @@ const pg = StyleSheet.create({
   },
   timeVal:  { fontFamily: fonts.sansSb, fontSize: 18, letterSpacing: -0.3 },
   tapHint:  { fontFamily: fonts.sans, fontSize: 11 },
+
+  // Page 5 — streaks
+  flameEmoji:   { fontSize: 54, textAlign: 'center' },
+  streakCount:  { fontFamily: fonts.sansSb, fontSize: 54, letterSpacing: -2, lineHeight: 58 },
+  streakLabel:  { fontFamily: fonts.sans, fontSize: 12 },
+  dayRow:       { flexDirection: 'row', gap: 10 },
+  streakDot:    { width: 30, height: 30, borderRadius: 15 },
+  dayLabel:     { fontFamily: fonts.sansSb, fontSize: 9, letterSpacing: 0.4, textTransform: 'uppercase' },
+  avatar: {
+    width: 34, height: 34, borderRadius: 17,
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 2,
+  },
+  avatarInitial: { fontFamily: fonts.sansSb, fontSize: 12, color: '#fff' },
+  friendsNote:   { fontFamily: fonts.sans, fontSize: 12 },
 
   // Progress dots
   dot:  { height: 7, borderRadius: 3.5 },
