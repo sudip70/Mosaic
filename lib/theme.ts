@@ -87,11 +87,12 @@ export const shadows = {
 } as const;
 
 export const fonts = {
-  serif:  'Fraunces_300Light_Italic',
-  serifR: 'Fraunces_400Regular_Italic',
+  serif:  'DMSans_400Regular',   // formerly Fraunces light — now DM Sans regular
+  serifR: 'DMSans_600SemiBold',  // formerly Fraunces regular — now DM Sans semibold
   sans:   'DMSans_400Regular',
   sansMd: 'DMSans_500Medium',
   sansSb: 'DMSans_600SemiBold',
+  caveat: 'Caveat_400Regular',   // handwriting — used for polaroid dates
 } as const;
 
 // ─── Spacing scale ───────────────────────────────────────────────────────────
@@ -124,10 +125,10 @@ export const layout = {
 // Font/size only — colour is applied by AppText from the active palette so text
 // adapts to light/dark. Use <AppText variant="..."> rather than re-declaring.
 export const type = {
-  hero:      { fontFamily: fonts.serif,  fontSize: 54, lineHeight: 52, letterSpacing: -1 },
-  display:   { fontFamily: fonts.serifR, fontSize: 38, lineHeight: 38, letterSpacing: -1.2 },
-  serifLg:   { fontFamily: fonts.serifR, fontSize: 30, lineHeight: 30, letterSpacing: -0.6 },
-  wordmark:  { fontFamily: fonts.serifR, fontSize: 24, lineHeight: 24, letterSpacing: -0.3 },
+  hero:      { fontFamily: fonts.serifR, fontSize: 54, lineHeight: 56, letterSpacing: -0.5 },
+  display:   { fontFamily: fonts.serifR, fontSize: 38, lineHeight: 42, letterSpacing: -0.3 },
+  serifLg:   { fontFamily: fonts.serifR, fontSize: 30, lineHeight: 34, letterSpacing: -0.2 },
+  wordmark:  { fontFamily: fonts.serifR, fontSize: 24, lineHeight: 28, letterSpacing: -0.2 },
   title:     { fontFamily: fonts.sansSb, fontSize: 16 },
   body:      { fontFamily: fonts.sans,   fontSize: 14 },
   bodyMd:    { fontFamily: fonts.sansMd, fontSize: 13 },

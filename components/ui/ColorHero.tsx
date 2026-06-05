@@ -21,7 +21,7 @@ interface ColorHeroProps {
 
 /**
  * The signature colour card — a saturated swatch with the colour's name set
- * in large Fraunces italic, over a surface footer showing the hex + a date.
+ * in large DM Sans bold, over a surface footer showing the hex + a date.
  * Shared by the Today screen and the Day-detail screen.
  */
 export function ColorHero({
@@ -86,7 +86,7 @@ const makeStyles = (c: Palette) => StyleSheet.create({
   },
   chipText: { fontFamily: fonts.sansSb, fontSize: 10, color: 'rgba(255,255,255,0.78)', letterSpacing: 0.4 },
   name: {
-    fontFamily: fonts.serif, color: '#fff', letterSpacing: -1,
+    fontFamily: fonts.serifR, color: '#fff', letterSpacing: -0.3,
     textShadowColor: 'rgba(0,0,0,0.12)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 16,
   },
   foot: {
