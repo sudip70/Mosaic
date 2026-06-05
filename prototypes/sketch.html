@@ -1,0 +1,1800 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mosaic — Conceptual Sketch Direction</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;1,9..144,300;1,9..144,400;1,9..144,700;1,9..144,900&family=Caveat:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ─── Design tokens ─────────────────────────────────────────────── */
+:root {
+  --paper:      #F3EDE1;
+  --paper-2:    #EBE4D6;
+  --paper-3:    #E2D9C9;
+  --ink:        #1C1814;
+  --ink-70:     #4A433C;
+  --ink-40:     #8C837A;
+  --ink-20:     #C4BDB4;
+  --accent:     #C4604A;
+  --accent-2:   #3B6E50;
+  --ff-display: 'Fraunces', Georgia, serif;
+  --ff-hand:    'Caveat', cursive;
+  --ff-body:    'DM Sans', system-ui, sans-serif;
+}
+
+/* ─── Base reset ─────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { -webkit-font-smoothing: antialiased; }
+
+body {
+  background: var(--paper-3);
+  font-family: var(--ff-body);
+  min-height: 100vh;
+}
+
+/* Paper grain overlay — sits on top of everything */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 10000;
+  opacity: 0.5;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+  background-size: 200px 200px;
+  mix-blend-mode: multiply;
+}
+
+/* ─── SVG pattern defs (crosshatch & dots) ───────────────────────── */
+/* Used as CSS background-image values */
+
+/* ─── Gallery wrapper ────────────────────────────────────────────── */
+.gallery {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ─── Gallery header ─────────────────────────────────────────────── */
+.gallery-header {
+  background: var(--paper);
+  border-bottom: 2px solid var(--ink);
+  padding: 36px 56px 28px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 40px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Subtle grid in header background */
+.gallery-header::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(var(--ink-20) 1px, transparent 1px),
+    linear-gradient(90deg, var(--ink-20) 1px, transparent 1px);
+  background-size: 32px 32px;
+  opacity: 0.25;
+  pointer-events: none;
+}
+
+.header-left { position: relative; z-index: 1; }
+
+.header-eyebrow {
+  font-family: var(--ff-body);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--ink-40);
+  margin-bottom: 10px;
+}
+
+.header-title {
+  font-family: var(--ff-display);
+  font-style: italic;
+  font-weight: 900;
+  font-size: 68px;
+  letter-spacing: -3px;
+  line-height: 0.92;
+  color: var(--ink);
+}
+
+.header-title .accent { color: var(--accent); }
+
+.header-annotation {
+  font-family: var(--ff-hand);
+  font-size: 17px;
+  color: var(--ink-40);
+  margin-top: 14px;
+  max-width: 340px;
+  line-height: 1.5;
+}
+
+.header-right {
+  position: relative;
+  z-index: 1;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.header-badges {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border: 1.5px solid var(--ink);
+  border-radius: 2px;
+  font-family: var(--ff-body);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+.badge-fill { background: var(--ink); color: var(--paper); }
+.badge-accent { background: var(--accent); border-color: var(--accent); color: white; }
+
+.header-note {
+  font-family: var(--ff-hand);
+  font-size: 14px;
+  color: var(--ink-40);
+  line-height: 1.5;
+}
+
+/* ─── Screens strip ──────────────────────────────────────────────── */
+.screens-strip {
+  flex: 1;
+  display: flex;
+  align-items: flex-start;
+  gap: 52px;
+  padding: 52px 56px 64px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--ink-20) transparent;
+}
+
+.screens-strip::-webkit-scrollbar { height: 6px; }
+.screens-strip::-webkit-scrollbar-thumb { background: var(--ink-20); border-radius: 3px; }
+
+/* ─── Phone frame ────────────────────────────────────────────────── */
+.phone-wrap {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  align-items: center;
+}
+
+.phone-meta {
+  align-self: flex-start;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.phone-num {
+  font-family: var(--ff-hand);
+  font-size: 12px;
+  color: var(--ink-40);
+  letter-spacing: 0.3px;
+}
+
+.phone-name {
+  font-family: var(--ff-body);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+.phone-frame {
+  width: 375px;
+  height: 812px;
+  border: 2px solid var(--ink);
+  border-radius: 46px;
+  overflow: hidden;
+  background: var(--paper);
+  position: relative;
+  box-shadow: 5px 7px 0 var(--ink);
+}
+
+/* Dynamic island / notch */
+.phone-frame::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 120px;
+  height: 34px;
+  background: var(--ink);
+  border-radius: 0 0 18px 18px;
+  z-index: 50;
+}
+
+/* ─── Shared screen primitives ───────────────────────────────────── */
+.screen {
+  width: 100%;
+  height: 100%;
+  background: var(--paper);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Status bar */
+.s-status {
+  height: 50px;
+  padding: 28px 22px 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.s-status-time {
+  font-family: var(--ff-body);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.s-status-icons {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+}
+
+.s-status-bar-icon {
+  width: 18px;
+  height: 9px;
+  border: 1.5px solid var(--ink);
+  border-radius: 1.5px;
+  position: relative;
+  overflow: hidden;
+}
+
+.s-status-bar-icon::after {
+  content: '';
+  position: absolute;
+  inset: 0 2px;
+  right: 4px;
+  background: var(--ink);
+}
+
+/* Top nav */
+.s-nav {
+  padding: 6px 20px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1.5px solid var(--ink);
+  flex-shrink: 0;
+  gap: 8px;
+}
+
+.s-wordmark {
+  font-family: var(--ff-display);
+  font-style: italic;
+  font-weight: 400;
+  font-size: 22px;
+  letter-spacing: -0.4px;
+  color: var(--ink);
+  line-height: 1;
+}
+
+.s-nav-title {
+  font-family: var(--ff-display);
+  font-style: italic;
+  font-weight: 700;
+  font-size: 19px;
+  letter-spacing: -0.3px;
+  color: var(--ink);
+}
+
+.s-icon-btn {
+  width: 34px;
+  height: 34px;
+  border: 1.5px solid var(--ink);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.s-icon-btn svg {
+  width: 15px;
+  height: 15px;
+  stroke: var(--ink);
+  fill: none;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Content scroll area */
+.s-content {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+/* Tab bar */
+.s-tabs {
+  display: flex;
+  border-top: 1.5px solid var(--ink);
+  flex-shrink: 0;
+}
+
+.s-tab {
+  flex: 1;
+  padding: 9px 0 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.s-tab.active { background: var(--ink); }
+
+.s-tab svg {
+  width: 20px;
+  height: 20px;
+  stroke: var(--ink);
+  fill: none;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.s-tab.active svg { stroke: var(--paper); }
+
+.s-tab-lbl {
+  font-size: 8px;
+  font-weight: 600;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: var(--ink-40);
+  font-family: var(--ff-body);
+}
+
+.s-tab.active .s-tab-lbl { color: var(--paper); }
+
+/* Dividers */
+.ink-rule    { height: 1.5px; background: var(--ink); flex-shrink: 0; }
+.dashed-rule {
+  height: 1px; flex-shrink: 0;
+  background: repeating-linear-gradient(90deg, var(--ink-20) 0, var(--ink-20) 5px, transparent 5px, transparent 9px);
+}
+
+/* Crosshatch fill patterns */
+.hatch {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8'%3E%3Cline x1='0' y1='8' x2='8' y2='0' stroke='%231C1814' stroke-width='0.65' opacity='0.22'/%3E%3C/svg%3E");
+}
+
+.hatch-x {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8'%3E%3Cline x1='0' y1='8' x2='8' y2='0' stroke='%231C1814' stroke-width='0.65' opacity='0.2'/%3E%3Cline x1='0' y1='0' x2='8' y2='8' stroke='%231C1814' stroke-width='0.65' opacity='0.12'/%3E%3C/svg%3E");
+}
+
+/* Tag / overline */
+.tag {
+  font-family: var(--ff-body);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 1.6px;
+  text-transform: uppercase;
+  color: var(--ink-40);
+}
+
+/* Annotation (Caveat) */
+.annot {
+  font-family: var(--ff-hand);
+  font-size: 14px;
+  color: var(--ink-40);
+  line-height: 1.3;
+}
+
+.annot-sm {
+  font-family: var(--ff-hand);
+  font-size: 12px;
+  color: var(--ink-40);
+}
+
+.annot-ink {
+  font-family: var(--ff-hand);
+  font-size: 15px;
+  color: var(--ink);
+  font-weight: 600;
+}
+
+/* Big stat number */
+.stat-num {
+  font-family: var(--ff-display);
+  font-style: italic;
+  font-weight: 900;
+  font-size: 52px;
+  letter-spacing: -2.5px;
+  line-height: 1;
+  color: var(--ink);
+}
+
+/* Ink-bordered box */
+.ink-box {
+  border: 1.5px solid var(--ink);
+  border-radius: 3px;
+  background: var(--paper);
+}
+
+/* CTA button */
+.cta-btn {
+  background: var(--ink);
+  border: none;
+  color: var(--paper);
+  font-family: var(--ff-display);
+  font-style: italic;
+  font-size: 19px;
+  font-weight: 400;
+  letter-spacing: -0.2px;
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  border-radius: 3px;
+}
+
+.cta-circle {
+  width: 36px; height: 36px;
+  border: 1.5px solid rgba(255,255,255,0.35);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+
+.cta-circle svg {
+  width: 14px; height: 14px;
+  stroke: var(--paper); fill: none;
+  stroke-width: 2; stroke-linecap: round;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   SCREEN 1 — TODAY
+═══════════════════════════════════════════════════════════════════ */
+.today .colour-hero {
+  position: relative;
+  margin: 14px 18px 0;
+  height: 148px;
+  background: var(--accent);
+  border: 1.5px solid var(--ink);
+  border-radius: 4px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 14px 16px 12px;
+}
+
+/* Crosshatch at top-right corner to give sketch feel */
+.today .colour-hero::before {
+  content: '';
+  position: absolute;
+  top: 0; right: 0;
+  width: 80px; height: 80px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8'%3E%3Cline x1='0' y1='8' x2='8' y2='0' stroke='%231C1814' stroke-width='0.8' opacity='0.18'/%3E%3C/svg%3E");
+  pointer-events: none;
+}
+
+.today .hero-eyebrow {
+  font-family: var(--ff-body);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 1.8px;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.7);
+  margin-bottom: 4px;
+}
+
+.today .hero-name {
+  font-family: var(--ff-display);
+  font-style: italic;
+  font-weight: 900;
+  font-size: 46px;
+  letter-spacing: -2px;
+  line-height: 0.95;
+  color: #fff;
+}
+
+.today .hero-hex {
+  font-family: var(--ff-hand);
+  font-size: 14px;
+  color: rgba(255,255,255,0.65);
+  margin-top: 5px;
+}
+
+/* Little hand-drawn leaf SVG in the hero corner */
+.today .hero-sketch {
+  position: absolute;
+  top: 14px; right: 14px;
+  opacity: 0.28;
+}
+
+.today .stats-row {
+  display: flex;
+  gap: 10px;
+  padding: 12px 18px 0;
+}
+
+.today .stat-box {
+  flex: 1;
+  border: 1.5px solid var(--ink);
+  border-radius: 3px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Hatch bg on inactive stat box */
+.today .stat-box.hatch-bg::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8'%3E%3Cline x1='0' y1='8' x2='8' y2='0' stroke='%231C1814' stroke-width='0.6' opacity='0.1'/%3E%3C/svg%3E");
+  pointer-events: none;
+}
+
+.today .captures-section {
+  padding: 14px 18px 0;
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.today .captures-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.today .captures-strip {
+  display: flex;
+  gap: 10px;
+}
+
+.today .capture-thumb {
+  flex: 1;
+  aspect-ratio: 1;
+  border: 1.5px solid var(--ink);
+  border-radius: 3px;
+  overflow: hidden;
+  position: relative;
+}
+
+.today .capture-thumb.empty {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8'%3E%3Cline x1='0' y1='8' x2='8' y2='0' stroke='%231C1814' stroke-width='0.7' opacity='0.2'/%3E%3C/svg%3E");
+}
+
+/* Simulated photo fills using CSS gradients */
+.today .capture-thumb.p1 { background: linear-gradient(135deg, #8CA89A 0%, #6B8B7A 50%, #C4604A 100%); }
+.today .capture-thumb.p2 { background: linear-gradient(160deg, #C4604A 0%, #D4826A 60%, #B89080 100%); }
+.today .capture-thumb.p3 { background: linear-gradient(120deg, #D4A880 0%, #C4604A 60%, #8A5038 100%); }
+
+.today .cta-row {
+  padding: 12px 18px 14px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   SCREEN 2 — GRID
+═══════════════════════════════════════════════════════════════════ */
+.grid-screen .grid-header {
+  padding: 12px 20px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1.5px solid var(--ink);
+}
+
+.grid-screen .year-title {
+  font-family: var(--ff-display);
+  font-style: italic;
+  font-weight: 900;
+  font-size: 36px;
+  letter-spacing: -1.5px;
+  color: var(--ink);
+  line-height: 1;
+}
+
+.grid-screen .streak-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
+}
+
+.grid-screen .streak-big {
+  font-family: var(--ff-display);
+  font-style: italic;
+  font-weight: 900;
+  font-size: 28px;
+  letter-spacing: -1.5px;
+  color: var(--ink);
+  line-height: 1;
+}
+
+.grid-screen .mosaic-area {
+  flex: 1;
+  overflow: hidden;
+  padding: 12px 18px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.grid-screen .month-row {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+}
+
+.grid-screen .month-lbl {
+  font-family: var(--ff-hand);
+  font-size: 11px;
+  color: var(--ink-40);
+  width: 24px;
+  flex-shrink: 0;
+}
+
+.grid-screen .month-tiles {
+  display: flex;
+  gap: 3px;
+  flex-wrap: wrap;
+  flex: 1;
+}
+
+.grid-screen .tile {
+  width: 18px;
+  height: 18px;
+  border: 1px solid var(--ink);
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.grid-screen .tile.empty {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='6' height='6'%3E%3Cline x1='0' y1='6' x2='6' y2='0' stroke='%231C1814' stroke-width='0.5' opacity='0.18'/%3E%3C/svg%3E");
+}
+
+.grid-screen .tile.today-tile {
+  box-shadow: 0 0 0 2px var(--ink);
+}
+
+.grid-screen .day-preview {
+  border-top: 1.5px solid var(--ink);
+  padding: 12px 18px;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.grid-screen .day-preview-swatch {
+  width: 44px;
+  height: 44px;
+  border: 1.5px solid var(--ink);
+  border-radius: 3px;
+  background: var(--accent);
+  flex-shrink: 0;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   SCREEN 3 — DAY DETAIL
+═══════════════════════════════════════════════════════════════════ */
+.day-screen .day-hero {
+  margin: 0 18px 0;
+  margin-top: 12px;
+  border: 1.5px solid var(--ink);
+  border-radius: 4px;
+  overflow: hidden;
+  height: 178px;
+  background: var(--accent);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 14px 16px;
+  flex-shrink: 0;
+}
+
+.day-screen .day-hero::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 80px;
+  background: linear-gradient(transparent, rgba(28,24,20,0.3));
+  pointer-events: none;
+}
+
+.day-screen .day-hero-name {
+  font-family: var(--ff-display);
+  font-style: italic;
+  font-weight: 900;
+  font-size: 44px;
+  letter-spacing: -2px;
+  color: #fff;
+  line-height: 0.95;
+  position: relative;
+  z-index: 1;
+}
+
+.day-screen .day-hero-meta {
+  font-family: var(--ff-hand);
+  font-size: 14px;
+  color: rgba(255,255,255,0.7);
+  margin-top: 4px;
+  position: relative;
+  z-index: 1;
+}
+
+/* Botanical sketch in hero */
+.day-screen .hero-flora {
+  position: absolute;
+  top: 16px; right: 16px;
+  opacity: 0.25;
+}
+
+.day-screen .photos-section {
+  padding: 14px 18px;
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.day-screen .photos-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.day-screen .photo-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: auto auto;
+  gap: 8px;
+  flex: 1;
+  overflow: hidden;
+}
+
+.day-screen .photo-cell {
+  border: 1.5px solid var(--ink);
+  border-radius: 3px;
+  overflow: hidden;
+  position: relative;
+}
+
+.day-screen .photo-cell.large {
+  grid-column: 1 / -1;
+  height: 160px;
+}
+
+.day-screen .photo-cell.small { height: 100px; }
+
+.day-screen .photo-cell.p1 { background: linear-gradient(135deg, #C4604A 0%, #D4826A 50%, #8A5038 100%); }
+.day-screen .photo-cell.p2 { background: linear-gradient(160deg, #D4A880 0%, #C4604A 100%); }
+.day-screen .photo-cell.p3 { background: linear-gradient(140deg, #C4604A 0%, #E8A090 60%, #D47060 100%); }
+
+.day-screen .photo-time {
+  position: absolute;
+  bottom: 6px; left: 8px;
+  font-family: var(--ff-hand);
+  font-size: 12px;
+  color: rgba(255,255,255,0.85);
+  background: rgba(0,0,0,0.28);
+  padding: 1px 5px;
+  border-radius: 2px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   SCREEN 4 — PROFILE
+═══════════════════════════════════════════════════════════════════ */
+.profile-screen .user-section {
+  padding: 16px 20px 14px;
+  border-bottom: 1.5px solid var(--ink);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.profile-screen .avatar {
+  width: 52px; height: 52px;
+  border: 2px solid var(--ink);
+  border-radius: 50%;
+  background: var(--paper-2);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.profile-screen .avatar::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8'%3E%3Cline x1='0' y1='8' x2='8' y2='0' stroke='%231C1814' stroke-width='0.6' opacity='0.15'/%3E%3C/svg%3E");
+}
+
+.profile-screen .avatar svg {
+  width: 24px; height: 24px;
+  stroke: var(--ink-40); fill: none;
+  stroke-width: 1.6; stroke-linecap: round;
+  position: relative; z-index: 1;
+}
+
+.profile-screen .user-name {
+  font-family: var(--ff-display);
+  font-style: italic;
+  font-weight: 700;
+  font-size: 22px;
+  letter-spacing: -0.5px;
+  color: var(--ink);
+}
+
+.profile-screen .user-sub {
+  font-family: var(--ff-hand);
+  font-size: 13px;
+  color: var(--ink-40);
+  margin-top: 2px;
+}
+
+.profile-screen .stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  padding: 14px 18px;
+  flex-shrink: 0;
+}
+
+.profile-screen .stat-card {
+  border: 1.5px solid var(--ink);
+  border-radius: 3px;
+  padding: 12px 14px;
+  position: relative;
+  overflow: hidden;
+}
+
+.profile-screen .stat-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8'%3E%3Cline x1='0' y1='8' x2='8' y2='0' stroke='%231C1814' stroke-width='0.5' opacity='0.08'/%3E%3C/svg%3E");
+  pointer-events: none;
+}
+
+.profile-screen .stat-big {
+  font-family: var(--ff-display);
+  font-style: italic;
+  font-weight: 900;
+  font-size: 48px;
+  letter-spacing: -2.5px;
+  line-height: 1;
+  color: var(--ink);
+  position: relative;
+  z-index: 1;
+}
+
+.profile-screen .stat-label {
+  font-family: var(--ff-hand);
+  font-size: 13px;
+  color: var(--ink-40);
+  margin-top: 3px;
+  position: relative;
+  z-index: 1;
+}
+
+.profile-screen .streak-bar-section {
+  padding: 0 18px 14px;
+  flex-shrink: 0;
+}
+
+.profile-screen .streak-row {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.profile-screen .streak-tick {
+  width: 14px;
+  height: 14px;
+  border: 1px solid var(--ink);
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.profile-screen .streak-tick.done {
+  background: var(--ink);
+}
+
+.profile-screen .streak-tick.today {
+  background: var(--accent);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent);
+}
+
+.profile-screen .phase2-teaser {
+  margin: 0 18px 14px;
+  border: 1.5px dashed var(--ink-20);
+  border-radius: 3px;
+  padding: 16px;
+  background: var(--paper-2);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   SCREEN 5 — FRIENDS
+═══════════════════════════════════════════════════════════════════ */
+.friends-screen .friends-hero {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px 28px;
+  gap: 18px;
+}
+
+.friends-screen .friends-illustration {
+  width: 180px;
+  height: 180px;
+  position: relative;
+}
+
+.friends-screen .friend-circle {
+  position: absolute;
+  width: 56px; height: 56px;
+  border: 2px solid var(--ink);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--paper);
+}
+
+.friends-screen .friend-circle::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='6' height='6'%3E%3Cline x1='0' y1='6' x2='6' y2='0' stroke='%231C1814' stroke-width='0.5' opacity='0.12'/%3E%3C/svg%3E");
+}
+
+.friends-screen .friend-circle svg {
+  width: 22px; height: 22px;
+  stroke: var(--ink-40); fill: none;
+  stroke-width: 1.5; stroke-linecap: round;
+  position: relative; z-index: 1;
+}
+
+.friends-screen .friend-circle.c1 { top: 60px; left: 0; background: rgba(91,141,184,0.2); }
+.friends-screen .friend-circle.c2 { top: 0; left: 62px; background: rgba(107,175,107,0.2); }
+.friends-screen .friend-circle.c3 { top: 60px; left: 124px; background: rgba(212,168,67,0.2); }
+
+.friends-screen .connector {
+  position: absolute;
+  background: none;
+  stroke: var(--ink-20);
+  stroke-dasharray: 4 3;
+}
+
+.friends-screen .friends-text {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.friends-screen .coming-tag {
+  display: inline-block;
+  border: 1.5px solid var(--ink-20);
+  padding: 3px 10px;
+  border-radius: 2px;
+  font-family: var(--ff-body);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--ink-40);
+  align-self: center;
+}
+
+.friends-screen .friends-headline {
+  font-family: var(--ff-display);
+  font-style: italic;
+  font-weight: 700;
+  font-size: 26px;
+  letter-spacing: -0.8px;
+  color: var(--ink);
+  line-height: 1.15;
+}
+
+.friends-screen .friends-body {
+  font-family: var(--ff-body);
+  font-size: 12px;
+  color: var(--ink-40);
+  line-height: 1.6;
+}
+
+.friends-screen .avatar-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+}
+
+.friends-screen .mini-avatar {
+  width: 36px; height: 36px;
+  border: 1.5px solid var(--ink-20);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--paper-2);
+}
+
+.friends-screen .mini-avatar svg {
+  width: 16px; height: 16px;
+  stroke: var(--ink-40); fill: none;
+  stroke-width: 1.5; stroke-linecap: round;
+}
+
+.friends-screen .outline-btn {
+  border: 1.5px solid var(--ink);
+  border-radius: 3px;
+  padding: 11px 18px;
+  background: transparent;
+  color: var(--ink);
+  font-family: var(--ff-display);
+  font-style: italic;
+  font-size: 16px;
+  display: flex; align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   SCREEN 6 — SETTINGS
+═══════════════════════════════════════════════════════════════════ */
+.settings-screen .s-content-inner {
+  padding: 14px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  flex: 1;
+  overflow: hidden;
+}
+
+.settings-screen .settings-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.settings-screen .section-head {
+  font-family: var(--ff-body);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 1.8px;
+  text-transform: uppercase;
+  color: var(--ink-40);
+  margin-bottom: 6px;
+  padding-left: 2px;
+}
+
+.settings-screen .setting-row {
+  border: 1.5px solid var(--ink);
+  padding: 11px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  background: var(--paper);
+}
+
+.settings-screen .setting-row:not(:last-child) {
+  border-bottom: none;
+}
+
+.settings-screen .setting-row:first-of-type { border-radius: 3px 3px 0 0; }
+.settings-screen .setting-row:last-of-type  { border-radius: 0 0 3px 3px; border-bottom: 1.5px solid var(--ink); }
+.settings-screen .setting-row:only-of-type  { border-radius: 3px; border-bottom: 1.5px solid var(--ink); }
+
+.settings-screen .setting-label {
+  font-family: var(--ff-body);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.settings-screen .setting-value {
+  font-family: var(--ff-hand);
+  font-size: 13px;
+  color: var(--ink-40);
+}
+
+.sketch-toggle {
+  width: 36px; height: 20px;
+  border: 1.5px solid var(--ink);
+  border-radius: 10px;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.sketch-toggle::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 14px; height: 14px;
+  border: 1.5px solid var(--ink);
+  border-radius: 50%;
+  background: var(--ink);
+}
+
+.sketch-toggle.off::after { left: 2px; right: auto; background: var(--paper); }
+
+.settings-screen .progress-bar-wrap {
+  margin-top: 8px;
+  height: 12px;
+  border: 1.5px solid var(--ink);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.settings-screen .progress-fill {
+  height: 100%;
+  background: var(--ink);
+  width: 58%;
+}
+</style>
+</head>
+<body>
+<div class="gallery">
+
+  <!-- ─── Header ─────────────────────────────────────────────── -->
+  <header class="gallery-header">
+    <div class="header-left">
+      <p class="header-eyebrow">Design Prototype · Direction 01</p>
+      <h1 class="header-title">Mosaic<br><span class="accent">Sketch.</span></h1>
+      <p class="header-annotation">Pencil lines · crosshatch fills · Caveat annotations · ink borders — no shadows, no blur, all character.</p>
+    </div>
+    <div class="header-right">
+      <div class="header-badges">
+        <span class="badge badge-fill">HTML / CSS</span>
+        <span class="badge badge-accent">6 Screens</span>
+        <span class="badge">No app changes</span>
+      </div>
+      <p class="header-note">← scroll to see all screens<br>Fraunces · Caveat · DM Sans</p>
+    </div>
+  </header>
+
+  <!-- ─── Screens strip ─────────────────────────────────────── -->
+  <div class="screens-strip">
+
+    <!-- ═══ Screen 1: Today ═══════════════════════════════════ -->
+    <div class="phone-wrap">
+      <div class="phone-meta">
+        <span class="phone-num">01 / 06</span>
+        <span class="phone-name">Today</span>
+      </div>
+      <div class="phone-frame">
+        <div class="screen today">
+          <div class="s-status">
+            <span class="s-status-time">9:41</span>
+            <div class="s-status-icons">
+              <svg width="16" height="12" viewBox="0 0 16 12" fill="none" stroke="var(--ink)" stroke-width="1.5"><rect x="1" y="3" width="12" height="8" rx="1.5"/><path d="M14 6v3"/></svg>
+            </div>
+          </div>
+          <div class="s-nav">
+            <span class="s-wordmark">mosaic</span>
+            <div class="s-icon-btn">
+              <svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+            </div>
+          </div>
+
+          <div class="s-content">
+            <!-- date row -->
+            <div style="padding: 10px 18px 0; display:flex; align-items:center; justify-content:space-between;">
+              <span class="tag">Thursday · 5 June 2025</span>
+              <span class="annot-sm" style="color:var(--accent)">↓ today's colour</span>
+            </div>
+
+            <!-- colour hero -->
+            <div style="padding: 6px 18px 0;">
+              <div class="today colour-hero" style="margin:0; position:relative;">
+                <svg class="hero-sketch" width="64" height="64" viewBox="0 0 64 64" fill="none" stroke="white" stroke-width="1.2">
+                  <path d="M32 8 C32 8 20 20 20 34 C20 46 26 56 32 56 C38 56 44 46 44 34 C44 20 32 8 32 8Z"/>
+                  <path d="M32 20 L32 56"/>
+                  <path d="M20 34 C24 30 28 28 32 30"/>
+                  <path d="M44 34 C40 30 36 28 32 30"/>
+                  <path d="M14 44 C20 38 26 36 32 38" stroke-dasharray="3 2"/>
+                </svg>
+                <span class="hero-eyebrow">Today's colour</span>
+                <span class="hero-name">Coral.</span>
+                <span class="hero-hex">↗ #C4604A · warm orange-red</span>
+              </div>
+            </div>
+
+            <!-- stats row -->
+            <div class="today stats-row" style="padding-top:10px;">
+              <div class="today stat-box">
+                <span class="tag">Streak</span>
+                <div style="display:flex;align-items:baseline;gap:5px;">
+                  <span class="stat-num">12</span>
+                  <span style="font-size:20px;line-height:1">🔥</span>
+                </div>
+                <span class="annot-sm">days in a row</span>
+              </div>
+              <div class="today stat-box hatch-bg">
+                <span class="tag">Today</span>
+                <span class="stat-num">3</span>
+                <span class="annot-sm">photos captured</span>
+              </div>
+            </div>
+
+            <!-- recent captures -->
+            <div class="today captures-section">
+              <div class="today captures-header">
+                <span class="tag">Recent captures</span>
+                <span class="annot-sm" style="cursor:pointer">view all →</span>
+              </div>
+              <div class="today captures-strip">
+                <div class="today capture-thumb p1"></div>
+                <div class="today capture-thumb p2"></div>
+                <div class="today capture-thumb p3"></div>
+              </div>
+              <span class="annot" style="color:var(--ink-40);font-size:12px;">↑ tap any photo to view it full-size</span>
+            </div>
+
+            <!-- CTA -->
+            <div class="today cta-row">
+              <button class="cta-btn">
+                Capture now
+                <div class="cta-circle">
+                  <svg viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                </div>
+              </button>
+            </div>
+          </div>
+
+          <!-- tab bar -->
+          <div class="s-tabs">
+            <div class="s-tab active">
+              <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 12l3 3"/><circle cx="12" cy="12" r="3"/></svg>
+              <span class="s-tab-lbl">Today</span>
+            </div>
+            <div class="s-tab">
+              <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+              <span class="s-tab-lbl">Grid</span>
+            </div>
+            <div class="s-tab">
+              <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+              <span class="s-tab-lbl">Friends</span>
+            </div>
+            <div class="s-tab">
+              <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              <span class="s-tab-lbl">Profile</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ Screen 2: Grid ════════════════════════════════════ -->
+    <div class="phone-wrap">
+      <div class="phone-meta">
+        <span class="phone-num">02 / 06</span>
+        <span class="phone-name">Grid / Mosaic</span>
+      </div>
+      <div class="phone-frame">
+        <div class="screen grid-screen">
+          <div class="s-status">
+            <span class="s-status-time">9:41</span>
+            <div class="s-status-icons"><div class="s-status-bar-icon"></div></div>
+          </div>
+
+          <div class="grid-screen grid-header">
+            <div>
+              <div class="grid-screen year-title">2025</div>
+              <span class="annot-sm">your colour diary</span>
+            </div>
+            <div class="grid-screen streak-badge">
+              <div class="grid-screen streak-big">12🔥</div>
+              <span class="annot-sm">current streak</span>
+            </div>
+          </div>
+
+          <div class="s-content">
+            <div class="grid-screen mosaic-area">
+              <!-- Month rows — generate 12 months -->
+              <script>
+              (function(){
+                var months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+                var colors=['#C4604A','#5B8DB8','#6BAF6B','#D4A843','#A0668A','#4A9B8F','#D4826A','#8BBAD4','#95C795','#E4C178','#C095B1','#7ABDB5'];
+                var today=5; // June 5
+                var container = document.currentScript.parentElement;
+                months.forEach(function(m,mi){
+                  var days = [31,28,31,30,31,30,31,31,30,31,30,31][mi];
+                  var captured = mi < 5 ? days : (mi===5 ? today : 0);
+                  var row = document.createElement('div');
+                  row.className='grid-screen month-row';
+                  var lbl = document.createElement('span');
+                  lbl.className='grid-screen month-lbl';
+                  lbl.textContent=m;
+                  row.appendChild(lbl);
+                  var tiles = document.createElement('div');
+                  tiles.className='grid-screen month-tiles';
+                  for(var d=0;d<days;d++){
+                    var t=document.createElement('div');
+                    t.className='grid-screen tile';
+                    if(d<captured){
+                      t.style.background=colors[mi];
+                      t.style.borderColor=colors[mi];
+                    } else {
+                      t.classList.add('empty');
+                    }
+                    if(mi===5 && d===today-1) t.classList.add('today-tile');
+                    tiles.appendChild(t);
+                  }
+                  row.appendChild(tiles);
+                  container.appendChild(row);
+                });
+              })();
+              </script>
+            </div>
+
+            <!-- Selected day preview -->
+            <div class="grid-screen day-preview">
+              <div class="grid-screen day-preview-swatch"></div>
+              <div style="flex:1;">
+                <div style="font-family:var(--ff-display);font-style:italic;font-weight:700;font-size:17px;letter-spacing:-0.4px;color:var(--ink)">June 5</div>
+                <div class="annot-sm" style="margin-top:2px;">Coral · #C4604A · 3 photos</div>
+              </div>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ink-40)" stroke-width="1.8" stroke-linecap="round"><path d="M9 18l6-6-6-6"/></svg>
+            </div>
+          </div>
+
+          <div class="s-tabs">
+            <div class="s-tab">
+              <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
+              <span class="s-tab-lbl">Today</span>
+            </div>
+            <div class="s-tab active">
+              <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+              <span class="s-tab-lbl">Grid</span>
+            </div>
+            <div class="s-tab">
+              <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+              <span class="s-tab-lbl">Friends</span>
+            </div>
+            <div class="s-tab">
+              <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              <span class="s-tab-lbl">Profile</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ Screen 3: Day Detail ══════════════════════════════ -->
+    <div class="phone-wrap">
+      <div class="phone-meta">
+        <span class="phone-num">03 / 06</span>
+        <span class="phone-name">Day Detail</span>
+      </div>
+      <div class="phone-frame">
+        <div class="screen day-screen">
+          <div class="s-status">
+            <span class="s-status-time">9:41</span>
+            <div class="s-status-icons"><div class="s-status-bar-icon"></div></div>
+          </div>
+          <div class="s-nav">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <div class="s-icon-btn">
+                <svg viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+              </div>
+              <span class="s-nav-title">June 5</span>
+            </div>
+            <div style="display:flex;gap:8px;">
+              <div class="s-icon-btn">
+                <svg viewBox="0 0 24 24"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8M16 6l-4-4-4 4M12 2v13"/></svg>
+              </div>
+            </div>
+          </div>
+
+          <div class="s-content">
+            <!-- Hero -->
+            <div style="padding:12px 18px 0; flex-shrink:0;">
+              <div class="day-screen day-hero" style="margin:0;">
+                <!-- Botanical sketch SVG -->
+                <svg class="hero-flora" width="72" height="72" viewBox="0 0 72 72" fill="none" stroke="white" stroke-width="1.1">
+                  <path d="M36 12 C36 12 24 24 24 40 C24 52 30 62 36 62 C42 62 48 52 48 40 C48 24 36 12 36 12Z"/>
+                  <path d="M36 24 L36 62"/>
+                  <path d="M24 40 C28 35 32 33 36 35"/>
+                  <path d="M48 40 C44 35 40 33 36 35"/>
+                  <path d="M20 28 C24 26 28 26 30 28" stroke-dasharray="2 2"/>
+                  <path d="M52 28 C48 26 44 26 42 28" stroke-dasharray="2 2"/>
+                  <circle cx="36" cy="22" r="3"/>
+                </svg>
+                <span class="hero-eyebrow">Colour of the day</span>
+                <span class="day-hero-name">Coral.</span>
+                <span class="day-hero-meta">↗ #C4604A · Thursday</span>
+              </div>
+            </div>
+
+            <!-- Photos -->
+            <div class="day-screen photos-section">
+              <div class="day-screen photos-label">
+                <span class="tag">3 captures</span>
+                <span class="annot-sm">Thursday · 5 June 2025</span>
+              </div>
+              <div class="day-screen photo-grid">
+                <div class="day-screen photo-cell large p1">
+                  <span class="day-screen photo-time">09:14</span>
+                </div>
+                <div class="day-screen photo-cell small p2">
+                  <span class="day-screen photo-time">11:32</span>
+                </div>
+                <div class="day-screen photo-cell small p3">
+                  <span class="day-screen photo-time">14:07</span>
+                </div>
+              </div>
+              <span class="annot" style="font-size:12px;color:var(--ink-40);">↑ tap a photo to view or share</span>
+            </div>
+          </div>
+
+          <div class="s-tabs">
+            <div class="s-tab active">
+              <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
+              <span class="s-tab-lbl">Today</span>
+            </div>
+            <div class="s-tab">
+              <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+              <span class="s-tab-lbl">Grid</span>
+            </div>
+            <div class="s-tab">
+              <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+              <span class="s-tab-lbl">Friends</span>
+            </div>
+            <div class="s-tab">
+              <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              <span class="s-tab-lbl">Profile</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ Screen 4: Profile ═════════════════════════════════ -->
+    <div class="phone-wrap">
+      <div class="phone-meta">
+        <span class="phone-num">04 / 06</span>
+        <span class="phone-name">Profile</span>
+      </div>
+      <div class="phone-frame">
+        <div class="screen profile-screen">
+          <div class="s-status">
+            <span class="s-status-time">9:41</span>
+            <div class="s-status-icons"><div class="s-status-bar-icon"></div></div>
+          </div>
+          <div class="s-nav">
+            <span class="s-wordmark">mosaic</span>
+            <div class="s-icon-btn">
+              <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            </div>
+          </div>
+
+          <div class="s-content">
+            <div class="profile-screen user-section">
+              <div class="profile-screen avatar">
+                <svg viewBox="0 0 24 24" fill="none" stroke="var(--ink-40)" stroke-width="1.6" stroke-linecap="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              </div>
+              <div>
+                <div class="profile-screen user-name">Sudip S.</div>
+                <div class="profile-screen user-sub">member since Jan 2025 · ↓ your numbers</div>
+              </div>
+            </div>
+
+            <div class="profile-screen stats-grid">
+              <div class="profile-screen stat-card">
+                <div class="profile-screen stat-big">12<span style="font-size:24px">🔥</span></div>
+                <div class="profile-screen stat-label">current streak</div>
+              </div>
+              <div class="profile-screen stat-card">
+                <div class="profile-screen stat-big">47</div>
+                <div class="profile-screen stat-label">best streak ever</div>
+              </div>
+              <div class="profile-screen stat-card">
+                <div class="profile-screen stat-big">89</div>
+                <div class="profile-screen stat-label">days captured</div>
+              </div>
+              <div class="profile-screen stat-card">
+                <div class="profile-screen stat-big">267</div>
+                <div class="profile-screen stat-label">total photos</div>
+              </div>
+            </div>
+
+            <!-- Streak tick marks -->
+            <div class="profile-screen streak-bar-section">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+                <span class="tag">Last 30 days</span>
+                <span class="annot-sm">89 / 365</span>
+              </div>
+              <div class="profile-screen streak-row">
+                <script>
+                (function(){
+                  var c=document.currentScript.parentElement;
+                  for(var i=0;i<30;i++){
+                    var t=document.createElement('div');
+                    t.className='profile-screen streak-tick';
+                    if(i<12) t.classList.add('done');
+                    if(i===11) t.classList.add('today');
+                    c.appendChild(t);
+                  }
+                })();
+                </script>
+              </div>
+              <span class="annot-sm" style="margin-top:6px;display:block;">↑ 276 more days to go this year</span>
+            </div>
+
+            <!-- Phase 2 teaser -->
+            <div class="profile-screen phase2-teaser">
+              <span class="tag">Phase 2 · Coming soon</span>
+              <span class="annot" style="font-size:13px;color:var(--ink-40);">Public profile, friend follows, and shared colour archives are on the way.</span>
+              <span class="annot-sm" style="color:var(--accent);">→ We'll let you know</span>
+            </div>
+          </div>
+
+          <div class="s-tabs">
+            <div class="s-tab">
+              <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
+              <span class="s-tab-lbl">Today</span>
+            </div>
+            <div class="s-tab">
+              <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+              <span class="s-tab-lbl">Grid</span>
+            </div>
+            <div class="s-tab">
+              <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+              <span class="s-tab-lbl">Friends</span>
+            </div>
+            <div class="s-tab active">
+              <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              <span class="s-tab-lbl">Profile</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ Screen 5: Friends ═════════════════════════════════ -->
+    <div class="phone-wrap">
+      <div class="phone-meta">
+        <span class="phone-num">05 / 06</span>
+        <span class="phone-name">Friends</span>
+      </div>
+      <div class="phone-frame">
+        <div class="screen friends-screen">
+          <div class="s-status">
+            <span class="s-status-time">9:41</span>
+            <div class="s-status-icons"><div class="s-status-bar-icon"></div></div>
+          </div>
+          <div class="s-nav">
+            <span class="s-wordmark">friends</span>
+          </div>
+
+          <div class="s-content">
+            <div class="friends-screen friends-hero">
+
+              <!-- SVG illustration: 3 people with connecting dotted lines -->
+              <svg width="220" height="180" viewBox="0 0 220 180" fill="none" stroke="var(--ink)" stroke-width="1.4" stroke-linecap="round">
+                <!-- Connecting lines (dotted) -->
+                <line x1="55" y1="60" x2="110" y2="90" stroke="var(--ink-20)" stroke-dasharray="4 3" stroke-width="1"/>
+                <line x1="165" y1="60" x2="110" y2="90" stroke="var(--ink-20)" stroke-dasharray="4 3" stroke-width="1"/>
+                <line x1="55" y1="60" x2="165" y2="60" stroke="var(--ink-20)" stroke-dasharray="4 3" stroke-width="1"/>
+                <!-- Colour dot annotations -->
+                <circle cx="82" cy="42" r="6" fill="#C4604A" stroke="#C4604A"/>
+                <circle cx="145" cy="38" r="6" fill="#5B8DB8" stroke="#5B8DB8"/>
+                <circle cx="110" cy="72" r="6" fill="#6BAF6B" stroke="#6BAF6B"/>
+
+                <!-- Person 1 (left) -->
+                <circle cx="55" cy="28" r="13" stroke="var(--ink)"/>
+                <!-- Head detail: face lines -->
+                <path d="M50 26 Q55 29 60 26" stroke-width="1"/>
+                <!-- Body -->
+                <path d="M35 65 Q35 50 55 50 Q75 50 75 65"/>
+                <line x1="55" y1="41" x2="55" y2="50"/>
+
+                <!-- Person 2 (right) -->
+                <circle cx="165" cy="28" r="13" stroke="var(--ink)"/>
+                <path d="M160 26 Q165 29 170 26" stroke-width="1"/>
+                <path d="M145 65 Q145 50 165 50 Q185 50 185 65"/>
+                <line x1="165" y1="41" x2="165" y2="50"/>
+
+                <!-- Person 3 (center, lower) -->
+                <circle cx="110" cy="105" r="13"/>
+                <path d="M105 103 Q110 106 115 103" stroke-width="1"/>
+                <path d="M90 142 Q90 127 110 127 Q130 127 130 142"/>
+                <line x1="110" y1="118" x2="110" y2="127"/>
+
+                <!-- Annotation arrows -->
+                <path d="M72 42 L82 42" stroke="var(--ink-40)" stroke-dasharray="2 2" stroke-width="0.8"/>
+                <path d="M148 38 L145 38" stroke="var(--ink-40)" stroke-dasharray="2 2" stroke-width="0.8"/>
+                <path d="M116 72 L124 68" stroke="var(--ink-40)" stroke-dasharray="2 2" stroke-width="0.8"/>
+              </svg>
+
+              <div class="friends-screen friends-text">
+                <span class="friends-screen coming-tag">Phase 2 · Coming soon</span>
+                <p class="friends-screen friends-headline">See what your<br>friends are seeing.</p>
+                <p class="friends-screen friends-body">
+                  Each day your friends find a colour too.<br>
+                  Same prompt, completely different worlds.
+                </p>
+              </div>
+
+              <div class="friends-screen avatar-row">
+                <div class="friends-screen mini-avatar">
+                  <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                </div>
+                <div class="friends-screen mini-avatar">
+                  <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                </div>
+                <div class="friends-screen mini-avatar">
+                  <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                </div>
+                <span class="annot" style="font-size:12px;">+ 12 on waitlist</span>
+              </div>
+
+              <button class="friends-screen outline-btn" style="width:calc(100% - 0px);">
+                Join the waitlist
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" stroke-width="2" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="s-tabs">
+            <div class="s-tab">
+              <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
+              <span class="s-tab-lbl">Today</span>
+            </div>
+            <div class="s-tab">
+              <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+              <span class="s-tab-lbl">Grid</span>
+            </div>
+            <div class="s-tab active">
+              <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+              <span class="s-tab-lbl">Friends</span>
+            </div>
+            <div class="s-tab">
+              <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              <span class="s-tab-lbl">Profile</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ Screen 6: Settings ════════════════════════════════ -->
+    <div class="phone-wrap">
+      <div class="phone-meta">
+        <span class="phone-num">06 / 06</span>
+        <span class="phone-name">Settings</span>
+      </div>
+      <div class="phone-frame">
+        <div class="screen settings-screen">
+          <div class="s-status">
+            <span class="s-status-time">9:41</span>
+            <div class="s-status-icons"><div class="s-status-bar-icon"></div></div>
+          </div>
+          <div class="s-nav">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <div class="s-icon-btn">
+                <svg viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+              </div>
+              <span class="s-nav-title">Settings</span>
+            </div>
+          </div>
+
+          <div class="s-content">
+            <div class="settings-screen s-content-inner">
+
+              <div class="settings-screen settings-section">
+                <p class="settings-screen section-head">Notifications</p>
+                <div class="settings-screen setting-row">
+                  <span class="settings-screen setting-label">Morning reminder</span>
+                  <div class="sketch-toggle"></div>
+                </div>
+                <div class="settings-screen setting-row">
+                  <div>
+                    <div class="settings-screen setting-label">Reminder time</div>
+                    <div class="settings-screen setting-value">8:30 AM</div>
+                  </div>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink-40)" stroke-width="1.8" stroke-linecap="round"><path d="M9 18l6-6-6-6"/></svg>
+                </div>
+              </div>
+
+              <div class="settings-screen settings-section">
+                <p class="settings-screen section-head">Appearance</p>
+                <div class="settings-screen setting-row">
+                  <span class="settings-screen setting-label">Theme</span>
+                  <span class="settings-screen setting-value">System</span>
+                </div>
+                <div class="settings-screen setting-row">
+                  <span class="settings-screen setting-label">Grid density</span>
+                  <span class="settings-screen setting-value">Comfortable</span>
+                </div>
+              </div>
+
+              <div class="settings-screen settings-section">
+                <p class="settings-screen section-head">Storage</p>
+                <div class="settings-screen setting-row" style="flex-direction:column;align-items:flex-start;gap:8px;">
+                  <div style="display:flex;justify-content:space-between;width:100%;">
+                    <span class="settings-screen setting-label">Photo library</span>
+                    <span class="settings-screen setting-value">267 photos · 2.1 GB</span>
+                  </div>
+                  <div class="settings-screen progress-bar-wrap" style="width:100%;">
+                    <div class="settings-screen progress-fill"></div>
+                  </div>
+                </div>
+                <div class="settings-screen setting-row">
+                  <span class="settings-screen setting-label">Clear cache</span>
+                  <span style="font-family:var(--ff-hand);font-size:13px;color:var(--accent);">124 MB →</span>
+                </div>
+              </div>
+
+              <div class="settings-screen settings-section">
+                <p class="settings-screen section-head">About</p>
+                <div class="settings-screen setting-row">
+                  <span class="settings-screen setting-label">Privacy policy</span>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--ink-40)" stroke-width="1.8" stroke-linecap="round"><path d="M9 18l6-6-6-6"/></svg>
+                </div>
+                <div class="settings-screen setting-row">
+                  <span class="settings-screen setting-label">Version</span>
+                  <span class="settings-screen setting-value">1.0.0</span>
+                </div>
+              </div>
+
+              <span class="annot" style="text-align:center;color:var(--ink-40);font-size:13px;margin-top:auto;">made with care · mosaic 2025</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /screens-strip -->
+</div><!-- /gallery -->
+</body>
+</html>
