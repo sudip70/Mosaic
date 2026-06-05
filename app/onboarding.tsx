@@ -648,7 +648,7 @@ export default function OnboardingScreen() {
 
   return (
     <View style={[pg.screen, { backgroundColor: c.canvas }]}>
-      {/* Skip chip — visible on pages 0–3 */}
+      {/* Skip chip — visible on every page except the final reminder (0–4) */}
       {!isReminder && (
         <Pressable
           style={[pg.skipBtn, { top: insets.top + 14 }]}
@@ -667,7 +667,6 @@ export default function OnboardingScreen() {
         pagingEnabled
         showsHorizontalScrollIndicator={false}
         onMomentumScrollEnd={onMomentumEnd}
-        scrollEventThrottle={16}
         style={{ flex: 1 }}
       >
         <WelcomePage  c={c} />
@@ -795,7 +794,6 @@ const pg = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
     borderWidth: 2,
   },
-  avatarInitial: { fontFamily: fonts.sansSb, fontSize: 12, color: '#fff' }, // kept for safety
   friendsNote:   { fontFamily: fonts.sans, fontSize: 12 },
 
   // Progress dots
