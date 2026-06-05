@@ -17,7 +17,7 @@ import { ONBOARDING_KEY } from '@/lib/constants';
 import { useAppStore } from '@/store/useAppStore';
 import { useSettings } from '@/store/useSettings';
 import { requestNotificationPermission, scheduleReminder } from '@/lib/notifications';
-import { Camera, ArrowRight, ICON_STROKE } from '@/lib/icons';
+import { Camera, ArrowRight, User, ICON_STROKE } from '@/lib/icons';
 import { Bell } from 'lucide-react-native';
 
 const { width: SW } = Dimensions.get('window');
@@ -252,9 +252,9 @@ const DAYS        = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 const ACTIVE_DAYS = [0, 1, 2, 3, 4, 5]; // Mon–Sat lit; Sunday still to come
 
 const FRIEND_AVATARS = [
-  { color: '#5B8DB8', initial: 'S' },
-  { color: '#6BAF6B', initial: 'M' },
-  { color: '#D4A843', initial: 'J' },
+  { color: '#5B8DB8' },
+  { color: '#6BAF6B' },
+  { color: '#D4A843' },
 ];
 
 function StreakDot({ idx, active, c }: { idx: number; active: boolean; c: Palette }) {
@@ -268,7 +268,7 @@ function StreakDot({ idx, active, c }: { idx: number; active: boolean; c: Palett
   );
 }
 
-function FriendAvatar({ color, initial, delay, c }: { color: string; initial: string; delay: number; c: Palette }) {
+function FriendAvatar({ color, delay, c }: { color: string; delay: number; c: Palette }) {
   const s = useSharedValue(0);
   useEffect(() => {
     s.value = withDelay(delay, withSpring(1, { damping: 15, stiffness: 180 }));
@@ -276,7 +276,7 @@ function FriendAvatar({ color, initial, delay, c }: { color: string; initial: st
   const aStyle = useAnimatedStyle(() => ({ transform: [{ scale: s.value }], opacity: s.value }));
   return (
     <Animated.View style={[pg.avatar, { backgroundColor: color, borderColor: c.surface0 }, aStyle]}>
-      <AppText style={pg.avatarInitial}>{initial}</AppText>
+      <User size={17} color="rgba(255,255,255,0.92)" strokeWidth={2} />
     </Animated.View>
   );
 }
@@ -325,7 +325,7 @@ function StreakPage({ c }: { c: Palette }) {
         {/* Friend avatars */}
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
           {FRIEND_AVATARS.map((av, i) => (
-            <FriendAvatar key={i} color={av.color} initial={av.initial} delay={900 + i * 110} c={c} />
+            <FriendAvatar key={i} color={av.color} delay={900 + i * 110} c={c} />
           ))}
           <AppText style={[pg.friendsNote, { color: c.ink60 }]}>3 friends on a streak</AppText>
         </View>
@@ -621,7 +621,7 @@ const pg = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
     borderWidth: 2,
   },
-  avatarInitial: { fontFamily: fonts.sansSb, fontSize: 12, color: '#fff' },
+  avatarInitial: { fontFamily: fonts.sansSb, fontSize: 12, color: '#fff' }, // kept for safety
   friendsNote:   { fontFamily: fonts.sans, fontSize: 12 },
 
   // Progress dots
