@@ -558,7 +558,7 @@ const pg = StyleSheet.create({
   skipText: { fontFamily: fonts.sansMd, fontSize: 13 },
 
   // Per-page layout — 60 / 40 split, consistent across all pages
-  page:   { width: SW, flex: 1 },
+  page:   { width: SW, flex: 1, paddingTop: 64 },
   visual: { flex: 3, overflow: 'hidden' },
   copy:   { flex: 2, paddingHorizontal: spacing.xl, paddingTop: spacing.lg, gap: spacing.md },
 
