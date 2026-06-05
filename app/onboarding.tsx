@@ -19,6 +19,10 @@ import { useSettings } from '@/store/useSettings';
 import { requestNotificationPermission, scheduleReminder } from '@/lib/notifications';
 import { Camera, ArrowRight, User, ICON_STROKE } from '@/lib/icons';
 import { Bell } from 'lucide-react-native';
+import Svg, {
+  Path, Rect, Circle, Ellipse, Defs,
+  LinearGradient, Stop,
+} from 'react-native-svg';
 
 const { width: SW } = Dimensions.get('window');
 
@@ -32,20 +36,146 @@ const GRID_W   = 210;
 const TILE_S   = (GRID_W - GRID_GAP * (GRID_N - 1)) / GRID_N;
 const MOSAIC_COLORS = Array.from({ length: GRID_N * GRID_N }, (_, i) => PALETTE[i % PALETTE.length]);
 
+// ─── Polaroid scenes (SVG illustrations) ─────────────────────────────────────
+
+function MountainScene({ size }: { size: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 100 100">
+      <Defs>
+        <LinearGradient id="mSky" x1="0" y1="0" x2="0" y2="1">
+          <Stop offset="0" stopColor="#E08870" />
+          <Stop offset="1" stopColor="#C86040" />
+        </LinearGradient>
+      </Defs>
+      <Rect width="100" height="100" fill="url(#mSky)" />
+      {/* Sun */}
+      <Circle cx="74" cy="38" r="10" fill="#F0A870" opacity={0.65} />
+      {/* Back range */}
+      <Path d="M0 74 L14 48 L24 60 L40 34 L56 54 L70 30 L84 50 L94 38 L100 44 L100 100 L0 100Z"
+            fill="#B04838" />
+      {/* Front range */}
+      <Path d="M0 100 L0 84 L18 62 L32 78 L50 50 L66 72 L82 52 L96 66 L100 60 L100 100Z"
+            fill="#7A2E1E" />
+    </Svg>
+  );
+}
+
+function CityScene({ size }: { size: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 100 100">
+      <Defs>
+        <LinearGradient id="cSky" x1="0" y1="0" x2="0" y2="1">
+          <Stop offset="0" stopColor="#1A3050" />
+          <Stop offset="1" stopColor="#2C5878" />
+        </LinearGradient>
+      </Defs>
+      <Rect width="100" height="100" fill="url(#cSky)" />
+      {/* Stars */}
+      <Circle cx="12" cy="10" r="0.9" fill="#fff" opacity={0.85} />
+      <Circle cx="28" cy="6"  r="0.7" fill="#fff" opacity={0.70} />
+      <Circle cx="50" cy="13" r="1.0" fill="#fff" opacity={0.80} />
+      <Circle cx="38" cy="21" r="0.6" fill="#fff" opacity={0.60} />
+      <Circle cx="64" cy="8"  r="0.8" fill="#fff" opacity={0.75} />
+      {/* Moon */}
+      <Circle cx="82" cy="16" r="7" fill="#C8D8EA" />
+      {/* Buildings — back layer */}
+      <Rect x="0"  y="54" width="13" height="46" fill="#112038" />
+      <Rect x="15" y="40" width="10" height="60" fill="#0E1C32" />
+      <Rect x="27" y="58" width="12" height="42" fill="#112038" />
+      <Rect x="41" y="36" width="15" height="64" fill="#0E1C32" />
+      <Rect x="58" y="48" width="11" height="52" fill="#112038" />
+      <Rect x="71" y="44" width="13" height="56" fill="#0E1C32" />
+      <Rect x="86" y="56" width="14" height="44" fill="#112038" />
+      {/* Lit windows */}
+      <Rect x="3"  y="62" width="2" height="2" fill="#7AB0CC" opacity={0.9} />
+      <Rect x="3"  y="68" width="2" height="2" fill="#7AB0CC" opacity={0.7} />
+      <Rect x="7"  y="60" width="2" height="2" fill="#7AB0CC" opacity={0.8} />
+      <Rect x="17" y="48" width="2" height="2" fill="#7AB0CC" opacity={0.9} />
+      <Rect x="17" y="56" width="2" height="2" fill="#7AB0CC" opacity={0.6} />
+      <Rect x="44" y="44" width="2" height="2" fill="#7AB0CC" opacity={0.85}/>
+      <Rect x="44" y="52" width="2" height="2" fill="#7AB0CC" opacity={0.7} />
+      <Rect x="50" y="48" width="2" height="2" fill="#7AB0CC" opacity={0.8} />
+      <Rect x="74" y="54" width="2" height="2" fill="#7AB0CC" opacity={0.75}/>
+      <Rect x="74" y="62" width="2" height="2" fill="#7AB0CC" opacity={0.6} />
+    </Svg>
+  );
+}
+
+function HillsScene({ size }: { size: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 100 100">
+      <Defs>
+        <LinearGradient id="hSky" x1="0" y1="0" x2="0" y2="1">
+          <Stop offset="0" stopColor="#CCE8C4" />
+          <Stop offset="1" stopColor="#B4D8A8" />
+        </LinearGradient>
+      </Defs>
+      <Rect width="100" height="100" fill="url(#hSky)" />
+      {/* Cloud */}
+      <Ellipse cx="34" cy="22" rx="16" ry="7"  fill="#fff" opacity={0.70} />
+      <Ellipse cx="46" cy="18" rx="12" ry="6"  fill="#fff" opacity={0.75} />
+      <Ellipse cx="22" cy="24" rx="9"  ry="5"  fill="#fff" opacity={0.65} />
+      {/* Back hills */}
+      <Path d="M0 72 Q26 52 52 66 Q76 80 100 62 L100 100 L0 100Z" fill="#5A9858" />
+      {/* Mid hills */}
+      <Path d="M0 82 Q22 64 46 76 Q68 88 88 70 Q94 65 100 72 L100 100 L0 100Z" fill="#3C7C3A" />
+      {/* Foreground */}
+      <Path d="M0 93 Q32 84 62 90 Q82 94 100 88 L100 100 L0 100Z" fill="#2C6230" />
+      {/* Tree */}
+      <Rect x="70" y="62" width="3" height="11" fill="#2A5228" />
+      <Path d="M63 62 L71.5 46 L80 62Z" fill="#2A5228" />
+      <Path d="M65 56 L71.5 42 L78 56Z" fill="#3A7038" />
+    </Svg>
+  );
+}
+
+function DesertScene({ size }: { size: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 100 100">
+      <Defs>
+        <LinearGradient id="dSky" x1="0" y1="0" x2="0" y2="1">
+          <Stop offset="0" stopColor="#ECD8A0" />
+          <Stop offset="1" stopColor="#DFBF60" />
+        </LinearGradient>
+      </Defs>
+      <Rect width="100" height="100" fill="url(#dSky)" />
+      {/* Sun */}
+      <Circle cx="24" cy="30" r="15" fill="#F0B820" opacity={0.88} />
+      {/* Heat shimmer */}
+      <Rect x="0" y="64" width="100" height="2" fill="#C8A030" opacity={0.25} />
+      {/* Back dune */}
+      <Path d="M0 70 Q28 52 58 64 Q80 72 100 62 L100 100 L0 100Z" fill="#C29030" />
+      {/* Front dune */}
+      <Path d="M0 86 Q26 70 52 80 Q78 90 100 76 L100 100 L0 100Z" fill="#9A7020" />
+      {/* Shadow pocket */}
+      <Path d="M52 80 Q60 83 70 80 Q65 90 55 87Z" fill="#7A5818" opacity={0.4} />
+    </Svg>
+  );
+}
+
 // ─── Polaroid frames (page 1) ─────────────────────────────────────────────────
+
+type SceneKey = 'mountains' | 'city' | 'hills' | 'desert';
+
+const SCENES: Record<SceneKey, (size: number) => React.ReactElement> = {
+  mountains: (s) => <MountainScene size={s} />,
+  city:      (s) => <CityScene     size={s} />,
+  hills:     (s) => <HillsScene    size={s} />,
+  desert:    (s) => <DesertScene   size={s} />,
+};
 
 interface PolaroidCfg {
   left: number; top: number; width: number; rot: number;
-  topColor: string; botColor: string;
+  scene: SceneKey;
   date: string;
   amp: number; dur: number; delay: number;
 }
 
 const POLAROIDS: PolaroidCfg[] = [
-  { left: -22,       top: 8,   width: 168, rot: -8, topColor: '#C4604A', botColor: '#8E3D2C', date: 'jun 5',  amp: 11, dur: 3200, delay: 0   },
-  { left: SW - 164,  top: 0,   width: 150, rot:  6, topColor: '#5B8DB8', botColor: '#35607E', date: 'jun 3',  amp: 15, dur: 2800, delay: 350 },
-  { left: SW * 0.13, top: 168, width: 154, rot: -4, topColor: '#6BAF6B', botColor: '#3D7A3D', date: 'may 31', amp:  9, dur: 3500, delay: 200 },
-  { left: SW * 0.50, top: 98,  width: 134, rot:  9, topColor: '#D4A843', botColor: '#987825', date: 'jun 1',  amp: 13, dur: 3100, delay: 580 },
+  { left: -22,       top: 8,   width: 168, rot: -8, scene: 'mountains', date: 'jun 5',  amp: 11, dur: 3200, delay: 0   },
+  { left: SW - 164,  top: 0,   width: 150, rot:  6, scene: 'city',      date: 'jun 3',  amp: 15, dur: 2800, delay: 350 },
+  { left: SW * 0.13, top: 168, width: 154, rot: -4, scene: 'hills',     date: 'may 31', amp:  9, dur: 3500, delay: 200 },
+  { left: SW * 0.50, top: 98,  width: 134, rot:  9, scene: 'desert',    date: 'jun 1',  amp: 13, dur: 3100, delay: 580 },
 ];
 
 const POLAROID_BORDER = 8;
@@ -94,14 +224,12 @@ function PolaroidFrame({ cfg }: { cfg: PolaroidCfg }) {
         elevation: 10,
       }, aStyle]}
     >
-      {/* Photo area — two-tone to suggest depth */}
+      {/* SVG scene illustration */}
       <View style={{ width: photoW, height: photoW, overflow: 'hidden' }}>
-        <View style={{ flex: 1, backgroundColor: cfg.topColor }} />
-        <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '30%', backgroundColor: cfg.botColor }} />
-        <View style={{ position: 'absolute', top: 0,    left: 0, right: 0, height: '18%', backgroundColor: 'rgba(255,255,255,0.07)' }} />
+        {SCENES[cfg.scene](photoW)}
       </View>
 
-      {/* Date caption in handwriting font */}
+      {/* Handwritten date caption */}
       <View style={{ height: POLAROID_CAP, alignItems: 'center', justifyContent: 'center' }}>
         <AppText style={{ fontFamily: fonts.caveat, fontSize: 15, color: '#3A3430', letterSpacing: 0.3 }}>
           {cfg.date}
