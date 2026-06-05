@@ -566,8 +566,8 @@ const pg = StyleSheet.create({
   eyebrowDot: { width: 6, height: 6, borderRadius: 3 },
   tag:        { fontFamily: fonts.sansSb, fontSize: 10, letterSpacing: 1.1, textTransform: 'uppercase' },
 
-  headline:       { fontFamily: fonts.serifR, fontSize: 32, lineHeight: 38, letterSpacing: -0.7 },
-  headlineAccent: { fontFamily: fonts.serif,  fontSize: 32, lineHeight: 38, letterSpacing: -0.7 },
+  headline:       { fontFamily: fonts.serifR, fontSize: 32, lineHeight: 38, letterSpacing: -0.3 },
+  headlineAccent: { fontFamily: fonts.serifR, fontSize: 32, lineHeight: 38, letterSpacing: -0.3 },
   body:           { fontFamily: fonts.sans, fontSize: 13, lineHeight: 20 },
 
   // Page 2 — swatch

@@ -5,10 +5,6 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFonts } from 'expo-font';
 import {
-  Fraunces_300Light_Italic,
-  Fraunces_400Regular_Italic,
-} from '@expo-google-fonts/fraunces';
-import {
   DMSans_400Regular,
   DMSans_500Medium,
   DMSans_600SemiBold,
@@ -26,8 +22,6 @@ initAnalytics();
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
-    Fraunces_300Light_Italic,
-    Fraunces_400Regular_Italic,
     DMSans_400Regular,
     DMSans_500Medium,
     DMSans_600SemiBold,
