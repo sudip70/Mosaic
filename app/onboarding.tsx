@@ -45,7 +45,7 @@ const ORBS: OrbCfg[] = [
   { color: '#4A9B8F', size: 78,  left: -24,      top: 168, amp: 16, dur: 2900, delay: 920 },
 ];
 
-function FloatingOrb({ color, size, left, top, amp, dur, delay }: OrbCfg) {
+function FloatingOrb({ color, size, left, top, amp, dur, delay, isDark }: OrbCfg & { isDark: boolean }) {
   const y = useSharedValue(0);
   useEffect(() => {
     y.value = withDelay(delay, withRepeat(
@@ -60,18 +60,18 @@ function FloatingOrb({ color, size, left, top, amp, dur, delay }: OrbCfg) {
   return (
     <Animated.View
       pointerEvents="none"
-      style={[{ position: 'absolute', left, top, width: size, height: size, borderRadius: size / 2, backgroundColor: color, opacity: 0.22 }, aStyle]}
+      style={[{ position: 'absolute', left, top, width: size, height: size, borderRadius: size / 2, backgroundColor: color, opacity: isDark ? 0.42 : 0.22 }, aStyle]}
     />
   );
 }
 
 // ─── Page 1: Welcome ──────────────────────────────────────────────────────────
 
-function WelcomePage({ c }: { c: Palette }) {
+function WelcomePage({ c, isDark }: { c: Palette; isDark: boolean }) {
   return (
     <View style={pg.page}>
       <View style={[pg.visual, { flex: 2 }]}>
-        {ORBS.map((o, i) => <FloatingOrb key={i} {...o} />)}
+        {ORBS.map((o, i) => <FloatingOrb key={i} {...o} isDark={isDark} />)}
       </View>
       <View style={[pg.copy, { flex: 3 }]}>
         <View style={pg.eyebrow}>
@@ -435,7 +435,7 @@ function ProgressDot({ active, accent, idle }: { active: boolean; accent: string
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
 export default function OnboardingScreen() {
-  const { colors: c }      = useTheme();
+  const { colors: c, isDark } = useTheme();
   const insets             = useSafeAreaInsets();
   const setOnboarded       = useAppStore((s) => s.setOnboarded);
   const setMorningReminder = useSettings((s) => s.setMorningReminder);
@@ -496,7 +496,7 @@ export default function OnboardingScreen() {
         scrollEventThrottle={16}
         style={{ flex: 1 }}
       >
-        <WelcomePage  c={c} />
+        <WelcomePage  c={c} isDark={isDark} />
         <ColorPage    c={c} />
         <PhotoPage    c={c} />
         <MosaicPage   c={c} />
@@ -515,8 +515,8 @@ export default function OnboardingScreen() {
         {!isReminder ? (
           <Pressable onPress={advance} accessibilityRole="button" accessibilityLabel="Continue">
             {({ pressed }) => (
-              <View style={[pg.cta, { backgroundColor: c.ink100 }, pressed && pg.ctaPressed]}>
-                <AppText style={pg.ctaLabel}>Continue</AppText>
+              <View style={[pg.cta, { backgroundColor: isDark ? c.surface2 : c.ink100 }, pressed && pg.ctaPressed]}>
+                <AppText style={[pg.ctaLabel, { color: isDark ? c.ink100 : '#fff' }]}>Continue</AppText>
                 <View style={[pg.ctaArrow, { backgroundColor: c.accent }]}>
                   <ArrowRight size={18} color="#fff" strokeWidth={ICON_STROKE} />
                 </View>
