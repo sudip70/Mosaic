@@ -32,46 +32,92 @@ const GRID_W   = 210;
 const TILE_S   = (GRID_W - GRID_GAP * (GRID_N - 1)) / GRID_N;
 const MOSAIC_COLORS = Array.from({ length: GRID_N * GRID_N }, (_, i) => PALETTE[i % PALETTE.length]);
 
-// ─── Floating orb (page 1) ────────────────────────────────────────────────────
+// ─── Polaroid frames (page 1) ─────────────────────────────────────────────────
 
-interface OrbCfg { color: string; size: number; left: number; top: number; amp: number; dur: number; delay: number }
+interface PolaroidCfg {
+  left: number; top: number; width: number; rot: number;
+  topColor: string; botColor: string;
+  date: string;
+  amp: number; dur: number; delay: number;
+}
 
-const ORBS: OrbCfg[] = [
-  { color: '#C4604A', size: 150, left: -50,      top: 0,   amp: 16, dur: 3200, delay: 0   },
-  { color: '#5B8DB8', size: 90,  left: SW * 0.52, top: 0,   amp: 22, dur: 2800, delay: 350 },
-  { color: '#6BAF6B', size: 62,  left: SW - 72,  top: 62,  amp: 14, dur: 3600, delay: 750 },
-  { color: '#D4A843', size: 112, left: SW * 0.27, top: 108, amp: 19, dur: 3000, delay: 180 },
-  { color: '#A0668A', size: 52,  left: SW - 58,  top: 160, amp: 12, dur: 4000, delay: 550 },
-  { color: '#4A9B8F', size: 78,  left: -24,      top: 168, amp: 16, dur: 2900, delay: 920 },
+const POLAROIDS: PolaroidCfg[] = [
+  { left: -22,       top: 8,   width: 168, rot: -8, topColor: '#C4604A', botColor: '#8E3D2C', date: 'jun 5',  amp: 11, dur: 3200, delay: 0   },
+  { left: SW - 164,  top: 0,   width: 150, rot:  6, topColor: '#5B8DB8', botColor: '#35607E', date: 'jun 3',  amp: 15, dur: 2800, delay: 350 },
+  { left: SW * 0.13, top: 168, width: 154, rot: -4, topColor: '#6BAF6B', botColor: '#3D7A3D', date: 'may 31', amp:  9, dur: 3500, delay: 200 },
+  { left: SW * 0.50, top: 98,  width: 134, rot:  9, topColor: '#D4A843', botColor: '#987825', date: 'jun 1',  amp: 13, dur: 3100, delay: 580 },
 ];
 
-function FloatingOrb({ color, size, left, top, amp, dur, delay, isDark }: OrbCfg & { isDark: boolean }) {
-  const y = useSharedValue(0);
+const POLAROID_BORDER = 8;
+const POLAROID_CAP    = 40;
+
+function PolaroidFrame({ cfg }: { cfg: PolaroidCfg }) {
+  const y    = useSharedValue(0);
+  const rock = useSharedValue(0);
+
   useEffect(() => {
-    y.value = withDelay(delay, withRepeat(
+    y.value = withDelay(cfg.delay, withRepeat(
       withSequence(
-        withTiming(-amp, { duration: dur, easing: Easing.inOut(Easing.ease) }),
-        withTiming( amp, { duration: dur, easing: Easing.inOut(Easing.ease) }),
+        withTiming(-cfg.amp, { duration: cfg.dur,       easing: Easing.inOut(Easing.ease) }),
+        withTiming( cfg.amp, { duration: cfg.dur,       easing: Easing.inOut(Easing.ease) }),
+      ),
+      -1, true,
+    ));
+    rock.value = withDelay(cfg.delay + 280, withRepeat(
+      withSequence(
+        withTiming( 1.4, { duration: cfg.dur * 1.35, easing: Easing.inOut(Easing.ease) }),
+        withTiming(-1.4, { duration: cfg.dur * 1.35, easing: Easing.inOut(Easing.ease) }),
       ),
       -1, true,
     ));
   }, []);
-  const aStyle = useAnimatedStyle(() => ({ transform: [{ translateY: y.value }] }));
+
+  const aStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: y.value }, { rotate: `${cfg.rot + rock.value}deg` }],
+  }));
+
+  const photoW = cfg.width - POLAROID_BORDER * 2;
+
   return (
     <Animated.View
       pointerEvents="none"
-      style={[{ position: 'absolute', left, top, width: size, height: size, borderRadius: size / 2, backgroundColor: color, opacity: isDark ? 0.42 : 0.22 }, aStyle]}
-    />
+      style={[{
+        position: 'absolute', left: cfg.left, top: cfg.top,
+        width: cfg.width,
+        backgroundColor: '#fff',
+        paddingTop: POLAROID_BORDER,
+        paddingHorizontal: POLAROID_BORDER,
+        shadowColor: '#000',
+        shadowOffset: { width: 2, height: 6 },
+        shadowOpacity: 0.45,
+        shadowRadius: 14,
+        elevation: 10,
+      }, aStyle]}
+    >
+      {/* Photo area — two-tone to suggest depth */}
+      <View style={{ width: photoW, height: photoW, overflow: 'hidden' }}>
+        <View style={{ flex: 1, backgroundColor: cfg.topColor }} />
+        <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '30%', backgroundColor: cfg.botColor }} />
+        <View style={{ position: 'absolute', top: 0,    left: 0, right: 0, height: '18%', backgroundColor: 'rgba(255,255,255,0.07)' }} />
+      </View>
+
+      {/* Date caption in handwriting font */}
+      <View style={{ height: POLAROID_CAP, alignItems: 'center', justifyContent: 'center' }}>
+        <AppText style={{ fontFamily: fonts.caveat, fontSize: 15, color: '#3A3430', letterSpacing: 0.3 }}>
+          {cfg.date}
+        </AppText>
+      </View>
+    </Animated.View>
   );
 }
 
 // ─── Page 1: Welcome ──────────────────────────────────────────────────────────
 
-function WelcomePage({ c, isDark }: { c: Palette; isDark: boolean }) {
+function WelcomePage({ c }: { c: Palette }) {
   return (
     <View style={pg.page}>
       <View style={pg.visual}>
-        {ORBS.map((o, i) => <FloatingOrb key={i} {...o} isDark={isDark} />)}
+        {POLAROIDS.map((p, i) => <PolaroidFrame key={i} cfg={p} />)}
       </View>
       <View style={pg.copy}>
         <View style={pg.eyebrow}>
@@ -496,7 +542,7 @@ export default function OnboardingScreen() {
         scrollEventThrottle={16}
         style={{ flex: 1 }}
       >
-        <WelcomePage  c={c} isDark={isDark} />
+        <WelcomePage  c={c} />
         <ColorPage    c={c} />
         <PhotoPage    c={c} />
         <MosaicPage   c={c} />

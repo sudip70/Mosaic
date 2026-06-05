@@ -92,6 +92,8 @@ export const fonts = {
   sans:   'DMSans_400Regular',
   sansMd: 'DMSans_500Medium',
   sansSb: 'DMSans_600SemiBold',
+  caveat: 'Caveat_400Regular',   // handwriting — used for polaroid dates
+  caveatBold: 'Caveat_700Bold',
 } as const;
 
 // ─── Spacing scale ───────────────────────────────────────────────────────────

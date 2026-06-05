@@ -9,6 +9,7 @@ import {
   DMSans_500Medium,
   DMSans_600SemiBold,
 } from '@expo-google-fonts/dm-sans';
+import { Caveat_400Regular, Caveat_700Bold } from '@expo-google-fonts/caveat';
 import { StatusBar } from 'expo-status-bar';
 import { useAuth } from '@/hooks/useAuth';
 import { useNotifications } from '@/hooks/useNotifications';
@@ -25,6 +26,8 @@ export default function RootLayout() {
     DMSans_400Regular,
     DMSans_500Medium,
     DMSans_600SemiBold,
+    Caveat_400Regular,
+    Caveat_700Bold,
   });
 
   const { loading } = useAuth();
