@@ -70,10 +70,10 @@ function FloatingOrb({ color, size, left, top, amp, dur, delay, isDark }: OrbCfg
 function WelcomePage({ c, isDark }: { c: Palette; isDark: boolean }) {
   return (
     <View style={pg.page}>
-      <View style={[pg.visual, { flex: 2 }]}>
+      <View style={pg.visual}>
         {ORBS.map((o, i) => <FloatingOrb key={i} {...o} isDark={isDark} />)}
       </View>
-      <View style={[pg.copy, { flex: 3 }]}>
+      <View style={pg.copy}>
         <View style={pg.eyebrow}>
           <View style={[pg.eyebrowDot, { backgroundColor: c.accent }]} />
           <AppText style={[pg.tag, { color: c.accent }]}>Welcome to Mosaic</AppText>
@@ -122,10 +122,10 @@ function ColorPage({ c }: { c: Palette }) {
 
   return (
     <View style={pg.page}>
-      <View style={[pg.visual, { flex: 3, alignItems: 'center', justifyContent: 'center' }]}>
+      <View style={[pg.visual, { alignItems: 'center', justifyContent: 'center' }]}>
         <Animated.View style={[pg.swatch, swatchStyle]} />
       </View>
-      <View style={[pg.copy, { flex: 2 }]}>
+      <View style={pg.copy}>
         <View style={pg.eyebrow}>
           <View style={[pg.eyebrowDot, { backgroundColor: c.accent }]} />
           <AppText style={[pg.tag, { color: c.accent }]}>Your daily colour</AppText>
@@ -168,7 +168,7 @@ function PhotoPage({ c }: { c: Palette }) {
 
   return (
     <View style={pg.page}>
-      <View style={[pg.visual, { flex: 2, alignItems: 'center', justifyContent: 'center' }]}>
+      <View style={[pg.visual, { alignItems: 'center', justifyContent: 'center' }]}>
         {/* Ring + camera stacked in a fixed container so ring pulses outward from centre */}
         <View style={{ width: 84, height: 84, alignItems: 'center', justifyContent: 'center' }}>
           <Animated.View style={[pg.shutterRing, { borderColor: c.accent }, ringStyle]} />
@@ -178,7 +178,7 @@ function PhotoPage({ c }: { c: Palette }) {
         </View>
         <AppText style={[pg.cameraHint, { color: c.ink30 }]}>as many shots as you like</AppText>
       </View>
-      <View style={[pg.copy, { flex: 3 }]}>
+      <View style={pg.copy}>
         <View style={pg.eyebrow}>
           <View style={[pg.eyebrowDot, { backgroundColor: c.accent }]} />
           <AppText style={[pg.tag, { color: c.accent }]}>Your camera</AppText>
@@ -225,14 +225,14 @@ function MosaicPage({ c }: { c: Palette }) {
   }, []);
   return (
     <View style={pg.page}>
-      <View style={[pg.visual, { flex: 3, alignItems: 'center', justifyContent: 'center' }]}>
+      <View style={[pg.visual, { alignItems: 'center', justifyContent: 'center' }]}>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', width: GRID_W + GRID_GAP }}>
           {MOSAIC_COLORS.map((color, i) => (
             <MosaicTile key={i} idx={i} color={color} prog={prog} />
           ))}
         </View>
       </View>
-      <View style={[pg.copy, { flex: 2 }]}>
+      <View style={pg.copy}>
         <View style={pg.eyebrow}>
           <View style={[pg.eyebrowDot, { backgroundColor: c.accent }]} />
           <AppText style={[pg.tag, { color: c.accent }]}>Your mosaic</AppText>
@@ -301,7 +301,7 @@ function StreakPage({ c }: { c: Palette }) {
 
   return (
     <View style={pg.page}>
-      <View style={[pg.visual, { flex: 3, alignItems: 'center', justifyContent: 'center', gap: spacing.xl }]}>
+      <View style={[pg.visual, { alignItems: 'center', justifyContent: 'center', gap: spacing.xl }]}>
 
         {/* Flame + counter */}
         <View style={{ alignItems: 'center', gap: 4 }}>
@@ -331,7 +331,7 @@ function StreakPage({ c }: { c: Palette }) {
         </View>
       </View>
 
-      <View style={[pg.copy, { flex: 2 }]}>
+      <View style={pg.copy}>
         <View style={pg.eyebrow}>
           <View style={[pg.eyebrowDot, { backgroundColor: c.accent }]} />
           <AppText style={[pg.tag, { color: c.accent }]}>Stay consistent</AppText>
@@ -397,10 +397,10 @@ function ReminderPage({ c, time, onChangeTime }: { c: Palette; time: string; onC
   const [pickerOpen, setPickerOpen] = useState(false);
   return (
     <View style={pg.page}>
-      <View style={[pg.visual, { flex: 3 }]}>
+      <View style={pg.visual}>
         {NOTIF_CARDS.map((card, i) => <FloatingCard key={i} card={card} c={c} />)}
       </View>
-      <View style={[pg.copy, { flex: 2 }]}>
+      <View style={pg.copy}>
         <View style={pg.eyebrow}>
           <View style={[pg.eyebrowDot, { backgroundColor: c.accent }]} />
           <AppText style={[pg.tag, { color: c.accent }]}>Stay on track</AppText>
@@ -557,10 +557,10 @@ const pg = StyleSheet.create({
   skipBtn:  { position: 'absolute', right: 20, zIndex: 10, paddingHorizontal: 4 },
   skipText: { fontFamily: fonts.sansMd, fontSize: 13 },
 
-  // Per-page layout
+  // Per-page layout — 60 / 40 split, consistent across all pages
   page:   { width: SW, flex: 1 },
-  visual: { overflow: 'hidden' },
-  copy:   { paddingHorizontal: spacing.xl, paddingTop: spacing.lg, gap: spacing.md },
+  visual: { flex: 3, overflow: 'hidden' },
+  copy:   { flex: 2, paddingHorizontal: spacing.xl, paddingTop: spacing.lg, gap: spacing.md },
 
   eyebrow:    { flexDirection: 'row', alignItems: 'center', gap: 6 },
   eyebrowDot: { width: 6, height: 6, borderRadius: 3 },
