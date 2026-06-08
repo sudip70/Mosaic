@@ -105,8 +105,13 @@ npx tsc --noEmit   # type-check
 - **Native modules:** `expo-camera`, `expo-media-library`, `expo-sensors`, and
   `expo-store-review` work in Expo Go for development, but a few features
   (e.g. store review prompts) only fully exercise in a **development build**.
-- **Offline-first:** photos are written to the device first, then synced to
-  Supabase via a retry queue - the app works without a connection.
+- **Local-only photos (Phase 1):** captured photos are stored on the device
+  only - they are not uploaded to the cloud in Phase 1. The cloud-sync path
+  (`hooks/useSync.ts` + `lib/syncQueue.ts` retry queue + Supabase Storage) is
+  scaffolded for Phase 2 but intentionally not wired up yet, so a lost or wiped
+  device means lost photos for now. The daily **colours** are still fetched from
+  Supabase (a public, server-seeded palette), so the app needs a connection for
+  a brand-new day's colour but works offline against cached colours otherwise.
 
 ---
 

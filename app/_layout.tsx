@@ -9,6 +9,10 @@ import {
   DMSans_500Medium,
   DMSans_600SemiBold,
 } from '@expo-google-fonts/dm-sans';
+import {
+  Fraunces_400Regular,
+  Fraunces_500Medium,
+} from '@expo-google-fonts/fraunces';
 import { Caveat_400Regular } from '@expo-google-fonts/caveat';
 import { StatusBar } from 'expo-status-bar';
 import { useAuth } from '@/hooks/useAuth';
@@ -26,6 +30,8 @@ export default function RootLayout() {
     DMSans_400Regular,
     DMSans_500Medium,
     DMSans_600SemiBold,
+    Fraunces_400Regular,
+    Fraunces_500Medium,
     Caveat_400Regular,
   });
 

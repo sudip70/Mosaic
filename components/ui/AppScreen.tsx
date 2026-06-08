@@ -27,7 +27,7 @@ export function AppScreen({
   contentContainerStyle,
 }: AppScreenProps) {
   const { colors } = useTheme();
-  const bg = background ?? colors.surface0;
+  const bg = background ?? colors.canvas;
   return (
     <SafeAreaView style={[s.safe, { backgroundColor: bg }]} edges={edges}>
       {scroll ? (

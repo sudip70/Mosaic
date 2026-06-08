@@ -11,42 +11,49 @@ export interface Palette {
   ink30: string;
   ink15: string;
   accent: string;
+  /** Foreground for content placed ON an accent fill (adapts per theme). */
+  onAccent: string;
   accentSoft: string;
   accent08: string;
   accent15: string;
   accent30: string;
 }
 
+// Accent is no longer orange — it's ink (near-black in light, near-paper in
+// dark). It carries the same role the brand colour used to, but reads as
+// "black in place of orange". `onAccent` is whatever sits legibly on top of it.
 export const lightColors: Palette = {
-  canvas:      '#F4EFE6',
-  surface0:    '#FEFCF8',
-  surface1:    '#F0EAE0',
-  surface2:    '#E8E1D6',
-  ink100:      '#1A1714',
-  ink60:       '#7A736C',
-  ink30:       '#B8B0A6',
-  ink15:       '#DDD8D0',
-  accent:      '#C4604A',
-  accentSoft:  '#F7EDE9',
-  accent08:    'rgba(196,96,74,0.08)',
-  accent15:    'rgba(196,96,74,0.15)',
-  accent30:    'rgba(196,96,74,0.30)',
+  canvas:      '#F2EEE3',
+  surface0:    '#FBF8F1',
+  surface1:    '#EAE5D7',
+  surface2:    '#DDD7C5',
+  ink100:      '#16120D',
+  ink60:       '#5A5247',
+  ink30:       '#8E867A',
+  ink15:       '#CFC8B7',
+  accent:      '#16120D',
+  onAccent:    '#FFFFFF',
+  accentSoft:  '#ECE7DB',
+  accent08:    'rgba(22,18,13,0.06)',
+  accent15:    'rgba(22,18,13,0.12)',
+  accent30:    'rgba(22,18,13,0.24)',
 };
 
 export const darkColors: Palette = {
-  canvas:      '#141110',
-  surface0:    '#1F1B17',
-  surface1:    '#272019',
-  surface2:    '#322A22',
-  ink100:      '#F4EFE6',
-  ink60:       '#A9A199',
-  ink30:       '#6E665E',
-  ink15:       '#39322B',
-  accent:      '#D2735A',
-  accentSoft:  '#2A1E19',
-  accent08:    'rgba(210,115,90,0.10)',
-  accent15:    'rgba(210,115,90,0.18)',
-  accent30:    'rgba(210,115,90,0.32)',
+  canvas:      '#0D0B08',
+  surface0:    '#16130E',
+  surface1:    '#201C14',
+  surface2:    '#2A251D',
+  ink100:      '#F2EEE3',
+  ink60:       '#9F978A',
+  ink30:       '#8A8276',
+  ink15:       '#342D23',
+  accent:      '#F2EEE3',
+  onAccent:    '#16120D',
+  accentSoft:  '#201C14',
+  accent08:    'rgba(242,238,227,0.08)',
+  accent15:    'rgba(242,238,227,0.14)',
+  accent30:    'rgba(242,238,227,0.28)',
 };
 
 // Back-compat default (light). Prefer the themed hooks in components.
@@ -87,12 +94,12 @@ export const shadows = {
 } as const;
 
 export const fonts = {
-  serif:  'DMSans_400Regular',   // formerly Fraunces light — now DM Sans regular
-  serifR: 'DMSans_600SemiBold',  // formerly Fraunces regular — now DM Sans semibold
+  serif:  'Fraunces_400Regular',  // editorial display — regular
+  serifR: 'Fraunces_500Medium',   // editorial display — medium (headings/wordmark)
   sans:   'DMSans_400Regular',
   sansMd: 'DMSans_500Medium',
   sansSb: 'DMSans_600SemiBold',
-  caveat: 'Caveat_400Regular',   // handwriting — used for polaroid dates
+  caveat: 'Caveat_400Regular',    // handwriting — used for polaroid dates
 } as const;
 
 // ─── Spacing scale ───────────────────────────────────────────────────────────
@@ -163,7 +170,7 @@ export function isLightColor(hex: string): boolean {
 export function inkOnColor(hex: string) {
   const light = isLightColor(hex);
   return {
-    strong:   light ? '#1A1714' : '#FFFFFF',
+    strong:   light ? '#16120D' : '#FFFFFF',
     soft:     light ? 'rgba(0,0,0,0.55)' : 'rgba(255,255,255,0.62)',
     chipBg:   light ? 'rgba(0,0,0,0.08)' : 'rgba(0,0,0,0.18)',
     chipBorder: light ? 'rgba(0,0,0,0.12)' : 'rgba(255,255,255,0.15)',

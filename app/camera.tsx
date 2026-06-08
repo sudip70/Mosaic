@@ -169,7 +169,7 @@ export default function CameraScreen() {
             accessibilityRole="button"
             accessibilityLabel="Camera settings"
           >
-            <Settings size={16} color={showSettings ? '#fff' : glassIcon} strokeWidth={ICON_STROKE} />
+            <Settings size={16} color={showSettings ? colors.onAccent : glassIcon} strokeWidth={ICON_STROKE} />
           </Pressable>
         </View>
 
@@ -423,7 +423,7 @@ const makeStyles = (c: Palette, isDark: boolean) => {
       backgroundColor: c.accent, borderRadius: radius.r16,
       paddingHorizontal: 28, paddingVertical: 14, marginTop: 8,
     },
-    permBtnText: { fontFamily: fonts.sansSb, fontSize: 15, color: '#fff' },
+    permBtnText: { fontFamily: fonts.sansSb, fontSize: 15, color: c.onAccent },
     permCancel: { fontFamily: fonts.sansMd, fontSize: 13, color: c.ink60, marginTop: 4 },
 
     // Top bar

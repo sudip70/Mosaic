@@ -7,7 +7,7 @@ import { useThemedStyles } from '@/hooks/useThemedStyles';
 
 interface ConfirmDialogProps {
   visible: boolean;
-  icon: string;
+  icon?: string;
   iconBg?: string;
   title: string;
   body: string;
@@ -58,9 +58,11 @@ export function ConfirmDialog({
         ) : (
           // Main confirm dialog
           <Pressable style={s.dialog} onPress={() => {}}>
-            <View style={[s.iconWrap, { backgroundColor: iconBg ?? colors.surface1 }]}>
-              <AppText style={s.iconText}>{icon}</AppText>
-            </View>
+            {icon ? (
+              <View style={[s.iconWrap, { backgroundColor: iconBg ?? colors.surface1 }]}>
+                <AppText style={s.iconText}>{icon}</AppText>
+              </View>
+            ) : null}
             <AppText style={s.title}>{title}</AppText>
             <View style={s.bodyRow}>
               <AppText style={s.body}>{body}</AppText>
@@ -139,7 +141,7 @@ const makeStyles = (c: Palette) => StyleSheet.create({
     alignSelf: 'stretch', borderRadius: radius.r12,
     paddingVertical: 12, alignItems: 'center',
   },
-  infoCardBtnText: { fontFamily: fonts.sansSb, fontSize: 14, color: '#fff' },
+  infoCardBtnText: { fontFamily: fonts.sansSb, fontSize: 14, color: c.onAccent },
 
   actions: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.lg, alignSelf: 'stretch' },
   btnWrap: { flex: 1 },

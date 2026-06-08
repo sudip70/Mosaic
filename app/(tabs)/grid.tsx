@@ -16,7 +16,8 @@ import { useSettings } from '@/store/useSettings';
 import { useTheme } from '@/hooks/useTheme';
 import { useThemedStyles } from '@/hooks/useThemedStyles';
 import { localStore } from '@/lib/localStore';
-import { fonts, shadows, radius, spacing, type Palette } from '@/lib/theme';
+import { fonts, shadows, radius, spacing, inkOnColor, type Palette } from '@/lib/theme';
+import { Camera, ICON_STROKE } from '@/lib/icons';
 import type { GridDay, Photo } from '@/types';
 
 const TILE_SIZE = { Comfortable: 30 } as const;
@@ -245,7 +246,7 @@ export default function GridScreen() {
           >
             <View style={st.nudge}>
               <View style={[st.nudgeIcon, { backgroundColor: todayColor.hex }]}>
-                <AppText style={{ fontSize: 18 }}>🎯</AppText>
+                <Camera size={18} color={inkOnColor(todayColor.hex).strong} strokeWidth={ICON_STROKE} />
               </View>
               <View>
                 <AppText style={st.nudgeTitle}>{todayColor.name} today</AppText>

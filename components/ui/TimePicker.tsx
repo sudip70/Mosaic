@@ -12,7 +12,8 @@ import Animated, {
 } from 'react-native-reanimated';
 import type { SharedValue } from 'react-native-reanimated';
 import { useTheme } from '@/hooks/useTheme';
-import { fonts, radius } from '@/lib/theme';
+import { usePressScale } from '@/hooks/usePressScale';
+import { fonts, radius, spacing } from '@/lib/theme';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -87,7 +88,7 @@ interface DialColumnProps {
 
 function DialColumn({
   items, selectedIndex, onChange, inkColor,
-  fontSize = 24, fontFamily = fonts.sansMd, flex = 2, loop = true,
+  fontSize = 26, fontFamily = fonts.serifR, flex = 2, loop = true,
 }: DialColumnProps) {
   const N      = items.length;
   const track  = loop ? [...items, ...items, ...items] : [...items];
@@ -167,6 +168,7 @@ export interface TimePickerProps {
 
 export function TimePicker({ visible, current, onSelect, onClose }: TimePickerProps) {
   const { colors } = useTheme();
+  const donePress = usePressScale(0.97);
   const init = parseTime(current);
   const [hourIdx, setHourIdx] = useState(init.h);
   const [minIdx,  setMinIdx]  = useState(init.m);
@@ -176,7 +178,6 @@ export function TimePicker({ visible, current, onSelect, onClose }: TimePickerPr
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      {/* Backdrop — tapping outside dismisses */}
       <View style={s.container}>
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
 
@@ -185,43 +186,32 @@ export function TimePicker({ visible, current, onSelect, onClose }: TimePickerPr
           {/* Live time preview */}
           <View style={s.preview}>
             <Text style={[s.previewTime, { color: colors.ink100 }]}>{hPart}</Text>
-            <Text style={[s.previewPeriod, { color: colors.accent }]}>{pPart}</Text>
+            <Text style={[s.previewPeriod, { color: colors.ink60 }]}>{pPart}</Text>
           </View>
 
           {/* Three dials */}
           <View style={s.dialsOuter}>
             <View style={s.dialsRow}>
-              <DialColumn
-                items={HOURS}
-                selectedIndex={hourIdx}
-                onChange={setHourIdx}
-                inkColor={colors.ink100}
-              />
+              <DialColumn items={HOURS} selectedIndex={hourIdx} onChange={setHourIdx} inkColor={colors.ink100} />
               <Text style={[s.colon, { color: colors.ink30 }]}>:</Text>
-              <DialColumn
-                items={MINUTES}
-                selectedIndex={minIdx}
-                onChange={setMinIdx}
-                inkColor={colors.ink100}
-              />
+              <DialColumn items={MINUTES} selectedIndex={minIdx} onChange={setMinIdx} inkColor={colors.ink100} />
               <View style={[s.sep, { backgroundColor: colors.ink15 }]} />
               <DialColumn
                 items={PERIODS}
                 selectedIndex={perIdx}
                 onChange={setPerIdx}
                 inkColor={colors.ink100}
-                fontSize={15}
+                fontSize={16}
                 fontFamily={fonts.sansSb}
                 flex={1}
                 loop={false}
               />
             </View>
 
-            {/* Centre selection band */}
+            {/* Centre selection band — hairline rules only, no fill */}
             <View
               pointerEvents="none"
               style={[s.selBand, {
-                backgroundColor: colors.accent08,
                 borderTopColor: colors.ink15,
                 borderBottomColor: colors.ink15,
               }]}
@@ -230,12 +220,15 @@ export function TimePicker({ visible, current, onSelect, onClose }: TimePickerPr
 
           {/* Done */}
           <Pressable
-            style={[s.doneBtn, { backgroundColor: colors.accent }]}
             onPress={() => { onSelect(formatTime(hourIdx, minIdx, perIdx)); onClose(); }}
+            onPressIn={donePress.onPressIn}
+            onPressOut={donePress.onPressOut}
             accessibilityRole="button"
             accessibilityLabel="Confirm reminder time"
           >
-            <Text style={s.doneBtnLabel}>Done</Text>
+            <Animated.View style={[s.doneBtn, { backgroundColor: colors.accent }, donePress.style]}>
+              <Text style={[s.doneBtnLabel, { color: colors.onAccent }]}>Done</Text>
+            </Animated.View>
           </Pressable>
 
         </View>
@@ -249,38 +242,33 @@ export function TimePicker({ visible, current, onSelect, onClose }: TimePickerPr
 const s = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.42)',
+    backgroundColor: 'rgba(13,11,8,0.55)',
     alignItems: 'center',
     justifyContent: 'center',
   },
 
   card: {
-    width: '80%',
-    maxWidth: 300,
-    borderRadius: 24,
+    width: '82%',
+    maxWidth: 320,
+    borderRadius: radius.r24,
     borderWidth: StyleSheet.hairlineWidth,
-    paddingHorizontal: 20,
-    paddingVertical: 18,
-    gap: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.16,
-    shadowRadius: 24,
-    elevation: 14,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.lg,
+    gap: spacing.md,
   },
 
   preview: {
     flexDirection: 'row', alignItems: 'baseline',
-    justifyContent: 'center', gap: 6,
+    justifyContent: 'center', gap: 8,
   },
-  previewTime:   { fontFamily: fonts.sansSb, fontSize: 34, letterSpacing: -0.5 },
-  previewPeriod: { fontFamily: fonts.sansSb, fontSize: 14, letterSpacing: 0.5 },
+  previewTime:   { fontFamily: fonts.serifR, fontSize: 44, letterSpacing: -1.4 },
+  previewPeriod: { fontFamily: fonts.sansSb, fontSize: 14, letterSpacing: 1.2, textTransform: 'uppercase' },
 
   item: { height: ITEM_H, alignItems: 'center', justifyContent: 'center' },
 
   dialsOuter: { position: 'relative', height: DIAL_H },
   dialsRow:   { flexDirection: 'row', height: DIAL_H, alignItems: 'center' },
-  colon:      { fontFamily: fonts.sansMd, fontSize: 20, paddingHorizontal: 2, marginBottom: 2 },
+  colon:      { fontFamily: fonts.serifR, fontSize: 22, paddingHorizontal: 2, marginBottom: 2 },
   sep:        { width: StyleSheet.hairlineWidth, height: DIAL_H * 0.38, marginHorizontal: 6 },
 
   selBand: {
@@ -293,11 +281,11 @@ const s = StyleSheet.create({
   },
 
   doneBtn: {
-    borderRadius: radius.r12,
-    paddingVertical: 12,
+    borderRadius: radius.r16,
+    paddingVertical: 14,
     alignItems: 'center',
   },
   doneBtnLabel: {
-    fontFamily: fonts.sansSb, fontSize: 14, color: '#fff', letterSpacing: 0.2,
+    fontFamily: fonts.sansSb, fontSize: 15, letterSpacing: 0.2,
   },
 });

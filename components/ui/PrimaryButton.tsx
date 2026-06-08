@@ -1,8 +1,10 @@
 import { Pressable, View, StyleSheet } from 'react-native';
+import Animated from 'react-native-reanimated';
 import { AppText } from './AppText';
 import { radius, fonts } from '@/lib/theme';
 import { ICON_STROKE, type LucideIcon } from '@/lib/icons';
 import { useTheme } from '@/hooks/useTheme';
+import { usePressScale } from '@/hooks/usePressScale';
 
 interface PrimaryButtonProps {
   label: string;
@@ -24,6 +26,7 @@ const DARK_PILL = '#1A1714';
  */
 export function PrimaryButton({ label, sublabel, icon: Icon, iconColor, onPress, disabled }: PrimaryButtonProps) {
   const { colors, isDark } = useTheme();
+  const press = usePressScale(0.97);
   const pillBg = isDark ? colors.surface2 : DARK_PILL;
   const borderColor = isDark ? colors.ink15 : 'rgba(255,255,255,0.06)';
   const iconBg = iconColor ?? colors.accent;
@@ -31,26 +34,29 @@ export function PrimaryButton({ label, sublabel, icon: Icon, iconColor, onPress,
   return (
     <Pressable
       onPress={onPress}
+      onPressIn={press.onPressIn}
+      onPressOut={press.onPressOut}
       disabled={disabled}
       accessibilityRole="button"
       accessibilityLabel={label}
       accessibilityState={{ disabled: !!disabled }}
     >
-      {({ pressed }) => (
-        // Visual container is a plain View — keeps the fill + row layout from
-        // being dropped by Pressable style resolution on the New Architecture.
-        <View style={[s.btn, { backgroundColor: pillBg, borderColor }, pressed && s.pressed, disabled && s.disabled]}>
+      {/* Visual container is a plain View — keeps the fill + row layout from
+          being dropped by Pressable style resolution on the New Architecture.
+          The Animated.View wrapper carries only the press-scale transform. */}
+      <Animated.View style={press.style}>
+        <View style={[s.btn, { backgroundColor: pillBg, borderColor }, disabled && s.disabled]}>
           <View style={s.copy}>
             <AppText style={s.label}>{label}</AppText>
             {sublabel && <AppText style={s.sub}>{sublabel}</AppText>}
           </View>
           {Icon && (
             <View style={[s.icon, { backgroundColor: iconBg, shadowColor: iconBg }]}>
-              <Icon size={20} color="#fff" strokeWidth={ICON_STROKE} />
+              <Icon size={20} color={iconColor ? '#fff' : colors.onAccent} strokeWidth={ICON_STROKE} />
             </View>
           )}
         </View>
-      )}
+      </Animated.View>
     </Pressable>
   );
 }
@@ -69,7 +75,6 @@ const s = StyleSheet.create({
     shadowRadius: 20,
     elevation: 8,
   },
-  pressed: { opacity: 0.9, transform: [{ scale: 0.985 }] },
   disabled: { opacity: 0.45 },
   copy: { flex: 1 },
   label: { fontFamily: fonts.sansSb, fontSize: 15, color: '#fff' },

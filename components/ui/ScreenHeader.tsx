@@ -58,7 +58,7 @@ const makeStyles = (c: Palette) => StyleSheet.create({
     paddingHorizontal: layout.navPadH,
     paddingTop: layout.navPadTop,
     paddingBottom: layout.navPadBottom,
-    backgroundColor: c.surface0,
+    backgroundColor: c.canvas,
   },
   slot: { width: layout.iconBtn },
   slotRight: { alignItems: 'flex-end' },

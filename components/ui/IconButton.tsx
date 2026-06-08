@@ -1,8 +1,10 @@
 import { Pressable, View, StyleSheet } from 'react-native';
+import Animated from 'react-native-reanimated';
 import { shadows, layout, type Palette } from '@/lib/theme';
 import { ICON_STROKE, type LucideIcon } from '@/lib/icons';
 import { useTheme } from '@/hooks/useTheme';
 import { useThemedStyles } from '@/hooks/useThemedStyles';
+import { usePressScale } from '@/hooks/usePressScale';
 
 interface IconButtonProps {
   icon: LucideIcon;
@@ -19,19 +21,25 @@ interface IconButtonProps {
 export function IconButton({ icon: Icon, onPress, accessibilityLabel, ghost }: IconButtonProps) {
   const { colors } = useTheme();
   const s = useThemedStyles(makeStyles);
+  const press = usePressScale(0.9);
   return (
     <Pressable
       onPress={onPress}
+      onPressIn={onPress ? press.onPressIn : undefined}
+      onPressOut={onPress ? press.onPressOut : undefined}
       disabled={!onPress}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
     >
       {({ pressed }) => (
         // Visual lives on a child View so the circular fill isn't dropped by
-        // Pressable style resolution on the New Architecture.
-        <View style={[s.btn, ghost && s.ghost, pressed && onPress && s.pressed]}>
-          <Icon size={18} color={colors.ink60} strokeWidth={ICON_STROKE} />
-        </View>
+        // Pressable style resolution on the New Architecture; the Animated.View
+        // carries only the press-scale transform.
+        <Animated.View style={press.style}>
+          <View style={[s.btn, ghost && s.ghost, pressed && onPress && s.pressed]}>
+            <Icon size={18} color={colors.ink60} strokeWidth={ICON_STROKE} />
+          </View>
+        </Animated.View>
       )}
     </Pressable>
   );

@@ -10,12 +10,14 @@ import { useAuth } from '@/hooks/useAuth';
 import { useStreak } from '@/hooks/useStreak';
 import { useGrid } from '@/hooks/useGrid';
 import { useAnalytics } from '@/hooks/useAnalytics';
+import { useTheme } from '@/hooks/useTheme';
 import { useThemedStyles } from '@/hooks/useThemedStyles';
 import { localStore } from '@/lib/localStore';
 import { Settings, User, ICON_STROKE } from '@/lib/icons';
 import { fonts, radius, shadows, spacing, type Palette } from '@/lib/theme';
 
 export default function ProfileScreen() {
+  const { colors } = useTheme();
   const s = useThemedStyles(makeStyles);
   const { trackScreen } = useAnalytics();
   const { user, isAnonymous } = useAuth();
@@ -54,7 +56,7 @@ export default function ProfileScreen() {
         {/* Identity */}
         <View style={s.identity}>
           <View style={s.avatar}>
-            <User size={36} color="#fff" strokeWidth={ICON_STROKE} />
+            <User size={36} color={colors.onAccent} strokeWidth={ICON_STROKE} />
           </View>
           <AppText variant="display" style={s.name}>You</AppText>
           <AppText style={s.sub}>

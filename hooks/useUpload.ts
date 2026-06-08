@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Image } from 'react-native';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as ImageManipulator from 'expo-image-manipulator';
 import * as Device from 'expo-device';
@@ -85,27 +86,56 @@ export function useUpload() {
 
 // ─── Compression ──────────────────────────────────────────────────────────────
 
+// Read dimensions without an extra decode. Image.getSize is a cheap metadata
+// read; if it can't handle the URI scheme we fall back to a no-op manipulate
+// pass (the previous behaviour), so capture never breaks.
+async function getDimensions(uri: string): Promise<{ width: number; height: number }> {
+  try {
+    return await new Promise<{ width: number; height: number }>((resolve, reject) =>
+      Image.getSize(uri, (width, height) => resolve({ width, height }), reject)
+    );
+  } catch {
+    const probe = await ImageManipulator.manipulateAsync(uri, []);
+    return { width: probe.width, height: probe.height };
+  }
+}
+
+// Output sizing. The previous detail loss came from downscaling to 1080px wide
+// — below what even a 3x phone screen needs (~1170px) to show a full-screen
+// photo sharply. 1620px keeps the image crisp with headroom while staying a
+// reasonable size; quality 0.85 is visually near-lossless for photographs, so
+// the resolution, not the JPEG quality, is what to protect.
+const TARGET_WIDTH = 1620;   // 3:4 portrait → 1620 × 2160
+const JPEG_QUALITY = 0.85;
+
 async function compressPhoto(uri: string, iosExif?: Record<string, any>): Promise<string> {
-  const { width, height } = await ImageManipulator.manipulateAsync(uri, []);
+  const { width, height } = await getDimensions(uri);
 
   const actions: ImageManipulator.Action[] = [];
   const currentRatio = width / height;
   const targetRatio = 3 / 4;
 
+  // 1. Centre-crop to 3:4 portrait. Track the resulting width so the resize
+  //    step below only ever scales down.
+  let croppedWidth = width;
   if (Math.abs(currentRatio - targetRatio) > 0.01) {
     if (currentRatio > targetRatio) {
-      const cropWidth = Math.round(height * targetRatio);
-      actions.push({ crop: { originX: Math.round((width - cropWidth) / 2), originY: 0, width: cropWidth, height } });
+      croppedWidth = Math.round(height * targetRatio);
+      actions.push({ crop: { originX: Math.round((width - croppedWidth) / 2), originY: 0, width: croppedWidth, height } });
     } else {
       const cropHeight = Math.round(width / targetRatio);
       actions.push({ crop: { originX: 0, originY: Math.round((height - cropHeight) / 2), width, height: cropHeight } });
     }
   }
 
-  actions.push({ resize: { width: 1080 } });
+  // 2. Downscale only when the crop is wider than the target. Enlarging a
+  //    smaller source just adds bytes without adding any real detail.
+  if (croppedWidth > TARGET_WIDTH) {
+    actions.push({ resize: { width: TARGET_WIDTH } });
+  }
 
   const result = await ImageManipulator.manipulateAsync(uri, actions, {
-    compress: 0.85,
+    compress: JPEG_QUALITY,
     format: ImageManipulator.SaveFormat.JPEG,
   });
 

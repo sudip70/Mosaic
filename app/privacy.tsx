@@ -69,17 +69,16 @@ export default function PrivacyScreen() {
           <P>
             On first launch, Mosaic creates an anonymous account for you. It is a
             random identifier with no email, phone number, or name attached. It
-            exists so your photos and streak can sync securely to your own private
-            cloud storage.
+            keeps your streak and settings tied to this install.
           </P>
         </Section>
 
         <Section title="Your photos">
           <P>
-            Photos you capture are saved on your device and uploaded to private
-            cloud storage tied to your anonymous account. They are protected so
-            that only your account can read them. We never look at, share, or use
-            your photos for any purpose.
+            Photos you capture are stored only on your device. In this version
+            they are not uploaded anywhere, so they never leave your phone. We
+            never look at, share, or use your photos for any purpose. Because
+            they live on the device, removing the app removes the photos too.
           </P>
         </Section>
 
