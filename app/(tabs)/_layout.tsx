@@ -71,7 +71,7 @@ export default function TabsLayout() {
 const makeStyles = (c: Palette) => StyleSheet.create({
   bar: {
     flexDirection: 'row',
-    backgroundColor: c.surface0,
+    backgroundColor: c.canvas,
     borderTopWidth: 1,
     borderTopColor: c.ink15,
     paddingHorizontal: 12,
@@ -95,5 +95,5 @@ const makeStyles = (c: Palette) => StyleSheet.create({
     color: c.ink30,
   },
   labelActive: { color: 'rgba(255,255,255,0.6)' },
-  dot: { width: 4, height: 4, borderRadius: 2, backgroundColor: c.accent, marginTop: 1 },
+  dot: { width: 4, height: 4, borderRadius: 2, backgroundColor: '#fff', marginTop: 1 },
 });

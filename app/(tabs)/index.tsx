@@ -160,7 +160,7 @@ const makeStyles = (c: Palette) => StyleSheet.create({
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.sm,
     paddingBottom: spacing.md,
-    backgroundColor: c.surface0,
+    backgroundColor: c.canvas,
   },
 
   heroFallback: {

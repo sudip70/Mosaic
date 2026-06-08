@@ -31,8 +31,6 @@ function SettingsCard({ children }: { children: React.ReactNode }) {
 }
 
 interface RowProps {
-  icon: string;
-  iconBg: string;
   label: string;
   sub?: string;
   right?: React.ReactNode;
@@ -41,7 +39,7 @@ interface RowProps {
   last?: boolean;
 }
 
-function Row({ icon, iconBg, label, sub, right, onPress, danger, last }: RowProps) {
+function Row({ label, sub, right, onPress, danger, last }: RowProps) {
   const s = useThemedStyles(makeStyles);
   return (
     <Pressable
@@ -55,14 +53,9 @@ function Row({ icon, iconBg, label, sub, right, onPress, danger, last }: RowProp
         // flexDirection:'row' gets dropped on the New Architecture, which
         // collapses the row to a column and stacks the right control below.
         <View style={[s.row, !last && s.rowBorder, pressed && onPress && s.rowPressed]}>
-          <View style={s.rowLeft}>
-            <View style={[s.rowIcon, { backgroundColor: iconBg }]}>
-              <Text style={s.rowIconText}>{icon}</Text>
-            </View>
-            <View style={s.rowCopy}>
-              <Text style={[s.rowLabel, danger && s.rowLabelDanger]}>{label}</Text>
-              {sub && <Text style={s.rowSub}>{sub}</Text>}
-            </View>
+          <View style={s.rowCopy}>
+            <Text style={[s.rowLabel, danger && s.rowLabelDanger]}>{label}</Text>
+            {sub && <Text style={s.rowSub}>{sub}</Text>}
           </View>
           {right && <View style={s.rowRight}>{right}</View>}
         </View>
@@ -106,7 +99,6 @@ function Phase2Section({ title, children }: { title: string; children: React.Rea
     <View style={s.phase2Wrap}>
       <View style={s.phase2Header}>
         <Text style={s.phase2HeaderText}>{title}</Text>
-        <Text style={s.lockIcon}>🔒</Text>
       </View>
       <View style={[s.card, s.phase2Card]}>
         {children}
@@ -115,18 +107,13 @@ function Phase2Section({ title, children }: { title: string; children: React.Rea
   );
 }
 
-function DisabledRow({ icon, iconBg, label, sub, last }: Omit<RowProps, 'onPress'>) {
+function DisabledRow({ label, sub, last }: { label: string; sub?: string; last?: boolean }) {
   const s = useThemedStyles(makeStyles);
   return (
     <View style={[s.row, !last && s.rowBorder, s.rowDisabled]}>
-      <View style={s.rowLeft}>
-        <View style={[s.rowIcon, { backgroundColor: iconBg }]}>
-          <Text style={s.rowIconText}>{icon}</Text>
-        </View>
-        <View style={s.rowCopy}>
-          <Text style={s.rowLabel}>{label}</Text>
-          {sub && <Text style={s.rowSub}>{sub}</Text>}
-        </View>
+      <View style={s.rowCopy}>
+        <Text style={s.rowLabel}>{label}</Text>
+        {sub && <Text style={s.rowSub}>{sub}</Text>}
       </View>
       <View style={s.rowRight}><Chevron /></View>
     </View>
@@ -134,7 +121,6 @@ function DisabledRow({ icon, iconBg, label, sub, last }: Omit<RowProps, 'onPress
 }
 
 // ─── Screen ──────────────────────────────────────────────────────────────────
-
 
 export default function SettingsScreen() {
   const { trackScreen } = useAnalytics();
@@ -147,6 +133,7 @@ export default function SettingsScreen() {
 
   const [storage, setStorage] = useState<StorageInfo | null>(null);
   const [showTimePicker, setShowTimePicker] = useState(false);
+  const [showClearCache, setShowClearCache] = useState(false);
 
   const loadStorage = useCallback(() => { getStorageInfo().then(setStorage); }, []);
 
@@ -177,15 +164,13 @@ export default function SettingsScreen() {
 
   async function shareApp() {
     await Share.share({
-      message: 'Check out Mosaic - a daily colour photo journal. One colour, one day, a year of your life.',
+      message: 'Mosaic, a daily colour photo journal. One colour, one day, a year of your life.',
     });
   }
 
   async function rateApp() {
     if (await StoreReview.hasAction()) await StoreReview.requestReview();
   }
-
-  const [showClearCache, setShowClearCache] = useState(false);
 
   async function confirmClearCache() {
     setShowClearCache(false);
@@ -220,20 +205,19 @@ export default function SettingsScreen() {
           <GroupLabel label="Notifications" />
           <SettingsCard>
             <Row
-              icon="🔔" iconBg="#FFF8EC"
               label="Daily reminder"
-              sub="One gentle nudge to find today's colour"
+              sub="One gentle nudge to find today’s colour"
               right={
                 <Switch
                   value={morningReminder}
                   onValueChange={handleReminderToggle}
                   trackColor={{ false: colors.surface2, true: colors.accent }}
                   thumbColor={colors.surface0}
+                  ios_backgroundColor={colors.surface2}
                 />
               }
             />
             <Row
-              icon="⏰" iconBg="#EDF4FF"
               label="Reminder time"
               sub={morningReminder ? 'When should we nudge you?' : 'Enable reminder first'}
               right={morningReminder ? <><ValChip label={reminderTime} /><Chevron /></> : null}
@@ -248,14 +232,12 @@ export default function SettingsScreen() {
           <GroupLabel label="Appearance" />
           <SettingsCard>
             <Row
-              icon="🌤" iconBg="#F5F0E8"
               label="Theme"
               sub="Match your device or set manually"
               right={<><ValChip label={theme} /><Chevron /></>}
               onPress={cycleTheme}
             />
             <Row
-              icon="▦" iconBg="#F0F4FF"
               label="Grid density"
               sub="How many tiles fit on screen"
               right={<><ValChip label={gridDensity} /><Chevron /></>}
@@ -269,11 +251,8 @@ export default function SettingsScreen() {
         <View style={s.group}>
           <GroupLabel label="Storage" />
           <SettingsCard>
-            {/* Photos on device — progress bar lives under the label, full width */}
+            {/* Photos on device — progress bar under the label, full width */}
             <View style={[s.storageRow, s.rowBorder]}>
-              <View style={[s.rowIcon, { backgroundColor: '#F5F0E8' }]}>
-                <Text style={s.rowIconText}>📦</Text>
-              </View>
               <View style={s.storageCopy}>
                 <Text style={s.rowLabel}>Photos on device</Text>
                 <View style={s.storageTrack}>
@@ -283,7 +262,6 @@ export default function SettingsScreen() {
               </View>
             </View>
             <Row
-              icon="🗑" iconBg="#FFF0EC"
               label="Clear cache"
               sub="Frees up space, photos stay safe"
               right={<><ValChip label={cacheUsed} /><Chevron /></>}
@@ -297,11 +275,11 @@ export default function SettingsScreen() {
         <View style={s.group}>
           <GroupLabel label="About" />
           <SettingsCard>
-            <Row icon="✦" iconBg="#F5F0E8" label="What is Mosaic?" sub="The story behind the app" right={<Chevron />} onPress={() => router.push('/onboarding')} />
-            <Row icon="🔒" iconBg="#EDF4FF" label="Privacy Policy" sub="How your data is handled" right={<Chevron />} onPress={() => router.push('/privacy')} />
-            <Row icon="⭐" iconBg="#FFF8EC" label="Rate Mosaic" sub="Enjoying it? Let us know" right={<Chevron />} onPress={rateApp} />
-            <Row icon="🌱" iconBg="#EDF7ED" label="Share with a friend" sub="Help someone find their colour" right={<Chevron />} onPress={shareApp} />
-            <Row icon="ℹ" iconBg="#F5F0E8" label="Version" sub="Up to date" right={<ValChip label="1.0.0" />} last />
+            <Row label="What is Mosaic?" sub="The story behind the app" right={<Chevron />} onPress={() => router.push('/onboarding')} />
+            <Row label="Privacy Policy" sub="How your data is handled" right={<Chevron />} onPress={() => router.push('/privacy')} />
+            <Row label="Rate Mosaic" sub="Enjoying it? Let us know" right={<Chevron />} onPress={rateApp} />
+            <Row label="Share with a friend" sub="Help someone find their colour" right={<Chevron />} onPress={shareApp} />
+            <Row label="Version" sub="Up to date" right={<ValChip label="1.0.0" />} last />
           </SettingsCard>
         </View>
 
@@ -310,29 +288,24 @@ export default function SettingsScreen() {
 
         {/* Phase 2 — Profile */}
         <Phase2Section title="Profile">
-          <DisabledRow icon="👤" iconBg="#F5F0E8" label="Name & avatar" sub="Your identity in Mosaic" />
-          <DisabledRow icon="@" iconBg="#EDF4FF" label="Username" sub="How friends find you" last />
+          <DisabledRow label="Name & avatar" sub="Your identity in Mosaic" />
+          <DisabledRow label="Username" sub="How friends find you" last />
         </Phase2Section>
 
         {/* Phase 2 — Privacy */}
         <Phase2Section title="Privacy">
-          <DisabledRow icon="🔐" iconBg="#F5F0E8" label="Who sees your grid" sub="Private by default" />
-          <DisabledRow icon="👥" iconBg="#EDF4FF" label="Friend requests" sub="Who can add you" last />
+          <DisabledRow label="Who sees your grid" sub="Private by default" />
+          <DisabledRow label="Friend requests" sub="Who can add you" last />
         </Phase2Section>
 
         {/* Phase 2 — Account */}
         <Phase2Section title="Account">
-          <DisabledRow icon="📧" iconBg="#F5F0E8" label="Email address" sub="your@email.com" />
-          <DisabledRow icon="🚪" iconBg="#FFF5F5" label="Sign out" last={false} sub={undefined} />
+          <DisabledRow label="Email address" sub="your@email.com" />
+          <DisabledRow label="Sign out" />
           <View style={[s.row, s.rowDisabled]}>
-            <View style={s.rowLeft}>
-              <View style={[s.rowIcon, { backgroundColor: '#FFEBEE' }]}>
-                <Text style={s.rowIconText}>⚠️</Text>
-              </View>
-              <View style={s.rowCopy}>
-                <Text style={[s.rowLabel, s.rowLabelDanger]}>Delete account</Text>
-                <Text style={s.rowSub}>Permanently removes all your data</Text>
-              </View>
+            <View style={s.rowCopy}>
+              <Text style={[s.rowLabel, s.rowLabelDanger]}>Delete account</Text>
+              <Text style={s.rowSub}>Permanently removes all your data</Text>
             </View>
           </View>
         </Phase2Section>
@@ -346,8 +319,6 @@ export default function SettingsScreen() {
 
       <ConfirmDialog
         visible={showClearCache}
-        icon="🗑"
-        iconBg="#FFF0EC"
         title="Clear cache?"
         body="Frees up space. Your photos stay safe."
         info="The cache holds temporary data to load the app faster. Your photos are stored separately, on this device and in the cloud, and are never touched by a cache clear."
@@ -396,12 +367,6 @@ const makeStyles = (c: Palette) => StyleSheet.create({
   rowBorder: { borderBottomWidth: 1, borderBottomColor: c.ink15 },
   rowPressed: { backgroundColor: c.surface1 },
   rowDisabled: { opacity: 0.38 },
-  rowLeft: { flexDirection: 'row', alignItems: 'center', gap: 13, flex: 1 },
-  rowIcon: {
-    width: 38, height: 38, borderRadius: 11,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  rowIconText: { fontSize: 17 },
   rowCopy: { flex: 1 },
   rowLabel: { fontFamily: fonts.sansMd, fontSize: 14, color: c.ink100, letterSpacing: -0.1 },
   rowLabelDanger: { color: '#C62828' },
@@ -449,11 +414,9 @@ const makeStyles = (c: Palette) => StyleSheet.create({
     fontFamily: fonts.sansSb, fontSize: 11, letterSpacing: 0.8,
     textTransform: 'uppercase', color: c.ink30,
   },
-  lockIcon: { fontSize: 12 },
   phase2Card: { borderRadius: 0, borderWidth: 0, shadowOpacity: 0 },
 
   footer: { alignItems: 'center', gap: 4, paddingTop: spacing.sm, paddingBottom: spacing.lg },
   footerLogo: { fontFamily: fonts.serifR, fontSize: 18, color: c.ink30, letterSpacing: -0.2 },
-  footerVer: { fontFamily: fonts.sansMd, fontSize: 10, color: c.ink15, letterSpacing: 0.6 },
-
+  footerVer: { fontFamily: fonts.sansMd, fontSize: 10, color: c.ink30, letterSpacing: 0.6 },
 });

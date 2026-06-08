@@ -529,7 +529,7 @@ interface NotifCardData {
 
 const NOTIF_CARDS: NotifCardData[] = [
   { title: 'A fresh colour today',       sub: 'Yours to find in the world around you.', top: 22,  left: 16,          width: 260, rot: -4, amp: 14, dur: 3100, delay: 0   },
-  { title: "Time for today's colour 🎨", sub: 'Your daily pick is ready.',              top: 80,  left: SW - 216,    width: 200, rot:  5, amp: 10, dur: 3600, delay: 500 },
+  { title: "Time for today's colour", sub: 'Your daily pick is ready.',                 top: 80,  left: SW - 216,    width: 200, rot:  5, amp: 10, dur: 3600, delay: 500 },
   { title: "Don't forget today's photo", sub: 'Your mosaic is waiting.',                top: 148, left: 28,          width: 240, rot:  2, amp: 18, dur: 2700, delay: 300 },
 ];
 
@@ -691,7 +691,7 @@ export default function OnboardingScreen() {
               <View style={[pg.cta, { backgroundColor: isDark ? c.surface2 : c.ink100 }, pressed && pg.ctaPressed]}>
                 <AppText style={[pg.ctaLabel, { color: isDark ? c.ink100 : '#fff' }]}>Continue</AppText>
                 <View style={[pg.ctaArrow, { backgroundColor: c.accent }]}>
-                  <ArrowRight size={18} color="#fff" strokeWidth={ICON_STROKE} />
+                  <ArrowRight size={18} color={c.onAccent} strokeWidth={ICON_STROKE} />
                 </View>
               </View>
             )}
@@ -700,10 +700,10 @@ export default function OnboardingScreen() {
           <View style={{ gap: 10 }}>
             <Pressable onPress={enableAndFinish} accessibilityRole="button" accessibilityLabel="Turn on reminders">
               {({ pressed }) => (
-                <View style={[pg.cta, { backgroundColor: c.accent }, pressed && pg.ctaPressed]}>
-                  <AppText style={pg.ctaLabel}>Turn on reminders</AppText>
-                  <View style={[pg.ctaArrow, { backgroundColor: 'rgba(255,255,255,0.18)' }]}>
-                    <Bell size={18} color="#fff" strokeWidth={ICON_STROKE} />
+                <View style={[pg.cta, { backgroundColor: isDark ? c.surface2 : c.ink100 }, pressed && pg.ctaPressed]}>
+                  <AppText style={[pg.ctaLabel, { color: isDark ? c.ink100 : '#fff' }]}>Turn on reminders</AppText>
+                  <View style={[pg.ctaArrow, { backgroundColor: c.accent }]}>
+                    <Bell size={18} color={c.onAccent} strokeWidth={ICON_STROKE} />
                   </View>
                 </View>
               )}
@@ -809,7 +809,7 @@ const pg = StyleSheet.create({
     shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.14, shadowRadius: 14, elevation: 6,
   },
-  ctaPressed: { opacity: 0.9, transform: [{ scale: 0.985 }] },
+  ctaPressed: { opacity: 0.92, transform: [{ scale: 0.97 }] },
   ctaLabel:   { fontFamily: fonts.serifR, fontSize: 20, color: '#fff', letterSpacing: -0.2 },
   ctaArrow:   { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
 
