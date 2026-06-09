@@ -18,6 +18,14 @@ export {
   RotateCcw,    // flip camera
   ArrowRight,   // forward CTA
   Sparkles,     // magic link
+  Frame,        // challenge framing / begin CTA
+  Eye,          // peek original
+  EyeOff,       // hide original
+  Shuffle,      // random tile order
+  ListOrdered,  // sequential tile order
+  Check,        // completion
+  ChevronRight, // forward / drill-in
+  Play,         // resume a set-aside mosaic
 } from 'lucide-react-native';
 
 export type { LucideIcon } from 'lucide-react-native';

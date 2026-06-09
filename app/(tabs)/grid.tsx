@@ -1,6 +1,7 @@
 import { View, ScrollView, Pressable, Image, StyleSheet } from 'react-native';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { router, useFocusEffect } from 'expo-router';
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { format, parseISO, getMonth } from 'date-fns';
 import Svg, { Circle } from 'react-native-svg';
 import { AppScreen } from '@/components/ui/AppScreen';
@@ -17,8 +18,12 @@ import { useTheme } from '@/hooks/useTheme';
 import { useThemedStyles } from '@/hooks/useThemedStyles';
 import { localStore } from '@/lib/localStore';
 import { fonts, shadows, radius, spacing, inkOnColor, type Palette } from '@/lib/theme';
-import { Camera, ICON_STROKE } from '@/lib/icons';
+import { Camera, Check, ICON_STROKE } from '@/lib/icons';
 import type { GridDay, Photo } from '@/types';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { SelectionBar } from '@/components/ui/SelectionBar';
+import { Toast } from '@/components/ui/Toast';
+import { useMultiSelect } from '@/hooks/useMultiSelect';
 
 const TILE_SIZE = { Comfortable: 30 } as const;
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -103,13 +108,19 @@ function StreakRing({ current, longest }: { current: number; longest: number }) 
 
 function DayPreview({
   day, photos, onOpen, onPhoto,
+  selectedIds, isSelecting, onLongPress, onToggle,
 }: {
   day: GridDay;
   photos: Photo[];
   onOpen: () => void;
   onPhoto: (id: string) => void;
+  selectedIds: Set<string>;
+  isSelecting: boolean;
+  onLongPress: (id: string) => void;
+  onToggle: (id: string) => void;
 }) {
   const st = useThemedStyles(makeStyles);
+  const { colors } = useTheme();
   return (
     <View style={st.previewWrap}>
       <View style={st.previewHead}>
@@ -120,7 +131,7 @@ function DayPreview({
             <AppText style={st.previewName}>{day.name || 'No colour'}</AppText>
           </View>
         </View>
-        {photos.length > 0 && (
+        {photos.length > 0 && !isSelecting && (
           <Pressable onPress={onOpen} hitSlop={8} accessibilityRole="button" accessibilityLabel="View day">
             <AppText style={st.previewLink}>View day ›</AppText>
           </Pressable>
@@ -128,11 +139,22 @@ function DayPreview({
       </View>
 
       {photos.length > 0 ? (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={st.previewStrip}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={st.previewStrip}
+        >
           {photos.map((p) => (
-            <Pressable key={p.id} onPress={() => onPhoto(p.id)} accessibilityRole="button" accessibilityLabel="Open photo">
-              <Image source={{ uri: p.url }} style={st.previewPhoto} resizeMode="cover" />
-            </Pressable>
+            <PreviewPhotoThumb
+              key={p.id}
+              photo={p}
+              isSelecting={isSelecting}
+              isSelected={selectedIds.has(p.id)}
+              onPress={() => isSelecting ? onToggle(p.id) : onPhoto(p.id)}
+              onLongPress={() => onLongPress(p.id)}
+              st={st}
+              colors={colors}
+            />
           ))}
         </ScrollView>
       ) : (
@@ -144,7 +166,41 @@ function DayPreview({
   );
 }
 
+function PreviewPhotoThumb({ photo, isSelecting, isSelected, onPress, onLongPress, st, colors }: {
+  photo: Photo;
+  isSelecting: boolean;
+  isSelected: boolean;
+  onPress: () => void;
+  onLongPress: () => void;
+  st: ReturnType<typeof makeStyles>;
+  colors: Palette;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      onLongPress={onLongPress}
+      delayLongPress={350}
+      accessibilityRole="button"
+      accessibilityLabel="Open photo"
+      style={isSelecting && !isSelected ? { opacity: 0.45 } : undefined}
+    >
+      <View>
+        <Image source={{ uri: photo.url }} style={st.previewPhoto} resizeMode="cover" />
+        {isSelecting && (
+          <View style={[
+            st.selCircle,
+            isSelected && { backgroundColor: colors.ink100, borderColor: colors.ink100 },
+          ]}>
+            {isSelected && <Check size={13} color={colors.onAccent} strokeWidth={3} />}
+          </View>
+        )}
+      </View>
+    </Pressable>
+  );
+}
+
 export default function GridScreen() {
+  const tabBarHeight = useBottomTabBarHeight();
   const { user } = useAuth();
   const { trackScreen } = useAnalytics();
   const { current: streakCurrent, longest: streakLongest } = useStreak();
@@ -174,7 +230,16 @@ export default function GridScreen() {
     );
   }, [activeDate]);
 
-  useEffect(() => { loadDayPhotos(); }, [loadDayPhotos]);
+  // Grid reads the day's photos from local storage (not the reactive photo
+  // store), so deletes must reload the list explicitly.
+  const {
+    selectedIds, isSelecting, displayCount,
+    toggleSelected, enterSelection, clearSelection,
+    toast, confirmDelete, setConfirmDelete,
+    handleDownload, handleShare, handleDelete,
+  } = useMultiSelect(dayPhotos, loadDayPhotos);
+
+  useEffect(() => { loadDayPhotos(); clearSelection(); }, [loadDayPhotos]);
 
   // Re-read photo presence each time the tab regains focus — picks up new captures.
   useFocusEffect(
@@ -264,9 +329,35 @@ export default function GridScreen() {
             photos={dayPhotos}
             onOpen={() => router.push(`/day/${activeDay.date}`)}
             onPhoto={(id) => router.push({ pathname: '/photo/[id]', params: { id, date: activeDay.date } })}
+            selectedIds={selectedIds}
+            isSelecting={isSelecting}
+            onLongPress={enterSelection}
+            onToggle={toggleSelected}
           />
         )}
       </ScrollView>
+
+      <Toast message={toast} bottomOffset={tabBarHeight + spacing.lg} />
+
+      <SelectionBar
+        visible={isSelecting}
+        count={displayCount}
+        bottomOffset={tabBarHeight}
+        onCancel={clearSelection}
+        onDownload={handleDownload}
+        onShare={handleShare}
+        onDelete={() => setConfirmDelete(true)}
+      />
+
+      <ConfirmDialog
+        visible={confirmDelete}
+        title={`Delete ${displayCount} photo${displayCount !== 1 ? 's' : ''}?`}
+        body="This permanently removes them from your grid. This can't be undone."
+        confirmLabel="Delete"
+        tone="danger"
+        onConfirm={handleDelete}
+        onCancel={() => setConfirmDelete(false)}
+      />
     </AppScreen>
   );
 }
@@ -317,6 +408,13 @@ const makeStyles = (c: Palette) => StyleSheet.create({
   previewPhoto: {
     width: 132, height: 176, borderRadius: radius.r16, backgroundColor: c.surface2,
     borderWidth: 1, borderColor: 'rgba(255,255,255,0.5)', ...shadows.elev1,
+  },
+  selCircle: {
+    position: 'absolute', top: 8, right: 8,
+    width: 24, height: 24, borderRadius: 12,
+    borderWidth: 1.5, borderColor: '#fff',
+    backgroundColor: 'rgba(0,0,0,0.25)',
+    alignItems: 'center', justifyContent: 'center',
   },
   previewEmpty: {
     height: 176, borderRadius: radius.r16, borderWidth: 1, borderColor: c.ink15, borderStyle: 'dashed',

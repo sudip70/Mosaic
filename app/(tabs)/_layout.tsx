@@ -1,16 +1,20 @@
 import { Tabs } from 'expo-router';
+import type { ComponentType } from 'react';
 import { Text, View, Pressable, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { fonts, type Palette } from '@/lib/theme';
-import { Aperture, Grid2x2, Users, User, ICON_STROKE, type LucideIcon } from '@/lib/icons';
+import { Aperture, Grid2x2, User, ICON_STROKE } from '@/lib/icons';
+import { MosaicTileIcon } from '@/components/ui/MosaicTileIcon';
 import { useTheme } from '@/hooks/useTheme';
 import { useThemedStyles } from '@/hooks/useThemedStyles';
 
-const TABS: Record<string, { icon: LucideIcon; label: string }> = {
+type TabIcon = ComponentType<{ size?: number; color?: string; strokeWidth?: number }>;
+
+const TABS: Record<string, { icon: TabIcon; label: string }> = {
   index:    { icon: Aperture, label: 'Today' },
   grid:     { icon: Grid2x2, label: 'Grid' },
-  friends:  { icon: Users, label: 'Friends' },
+  mosaic:   { icon: MosaicTileIcon, label: 'Mosaic' },
   profile:  { icon: User, label: 'Profile' },
 };
 
@@ -62,7 +66,7 @@ export default function TabsLayout() {
     >
       <Tabs.Screen name="index" />
       <Tabs.Screen name="grid" />
-      <Tabs.Screen name="friends" />
+      <Tabs.Screen name="mosaic" />
       <Tabs.Screen name="profile" />
     </Tabs>
   );

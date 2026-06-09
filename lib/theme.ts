@@ -39,21 +39,23 @@ export const lightColors: Palette = {
   accent30:    'rgba(22,18,13,0.24)',
 };
 
+// Dark mode is neutral (Spotify-style): a near-black canvas with cool grey
+// cards, pills, and buttons — not the warm browns of light mode.
 export const darkColors: Palette = {
-  canvas:      '#0D0B08',
-  surface0:    '#16130E',
-  surface1:    '#201C14',
-  surface2:    '#2A251D',
-  ink100:      '#F2EEE3',
-  ink60:       '#9F978A',
-  ink30:       '#8A8276',
-  ink15:       '#342D23',
-  accent:      '#F2EEE3',
-  onAccent:    '#16120D',
-  accentSoft:  '#201C14',
-  accent08:    'rgba(242,238,227,0.08)',
-  accent15:    'rgba(242,238,227,0.14)',
-  accent30:    'rgba(242,238,227,0.28)',
+  canvas:      '#0A0A0A',
+  surface0:    '#1C1C1C',
+  surface1:    '#242424',
+  surface2:    '#2E2E2E',
+  ink100:      '#FFFFFF',
+  ink60:       '#B3B3B3',
+  ink30:       '#7C7C7C',
+  ink15:       '#2B2B2B',
+  accent:      '#FFFFFF',
+  onAccent:    '#0A0A0A',
+  accentSoft:  '#242424',
+  accent08:    'rgba(255,255,255,0.07)',
+  accent15:    'rgba(255,255,255,0.13)',
+  accent30:    'rgba(255,255,255,0.26)',
 };
 
 // Back-compat default (light). Prefer the themed hooks in components.
