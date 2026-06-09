@@ -2,14 +2,15 @@ import { Pressable, View, StyleSheet } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { AppText } from './AppText';
 import { radius, fonts } from '@/lib/theme';
-import { ICON_STROKE, type LucideIcon } from '@/lib/icons';
+import type { ComponentType } from 'react';
+import { ICON_STROKE } from '@/lib/icons';
 import { useTheme } from '@/hooks/useTheme';
 import { usePressScale } from '@/hooks/usePressScale';
 
 interface PrimaryButtonProps {
   label: string;
   sublabel?: string;
-  icon?: LucideIcon;
+  icon?: ComponentType<{ size?: number; color?: string; strokeWidth?: number }>;
   /** Colour of the icon circle (and its glow). Defaults to the brand accent. */
   iconColor?: string;
   onPress: () => void;

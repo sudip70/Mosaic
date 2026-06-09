@@ -21,6 +21,7 @@ export interface Photo {
   created_at: string;
   timestamp?: boolean;    // was the camera Timestamp setting on at capture? drives the time badge
   url?: string;           // resolved at render: local_uri if pending, Supabase URL if synced
+  dominant_hex?: string;  // the photo's dominant colour, extracted at capture (drives mosaic tiles)
 }
 
 export interface GridDay {
@@ -35,6 +36,45 @@ export interface Streak {
   current_streak: number;
   longest_streak: number;
   last_active_date: string;
+}
+
+// ─── Mosaic challenges ──────────────────────────────────────────────────────
+// A challenge breaks a chosen artwork into N tiles. Each day the app assigns one
+// tile's colour as the prompt; the dominant colour of that day's photos fills
+// the tile. Over the run the user rebuilds the painting from colours they found.
+
+// 'active'   — the live run; its tile is today's prompt.
+// 'paused'   — set aside but kept whole; can be resumed from where it left off
+//              or started over from scratch.
+// 'completed'— finished the full run.
+// 'abandoned'— legacy status from before set-aside was resumable; treated like
+//              'paused' in the UI.
+export type ChallengeStatus = 'active' | 'paused' | 'completed' | 'abandoned';
+export type TileOrder = 'sequential' | 'random';
+
+// One filled tile — keyed by tile index inside Challenge.filled. One photo fills
+// one tile, so each records the dominant colour of the photo that filled it.
+export interface FilledTile {
+  date: string;        // the day it was filled
+  hex: string;         // dominant colour of the photo that filled this tile
+  photoCount: number;  // photos that contributed (currently always 1)
+}
+
+export interface Challenge {
+  id: string;
+  artworkId: string;
+  artworkTitle: string;
+  artworkArtist: string;
+  tier: number;                       // nominal tier key (30/60/90/180/365)
+  totalTiles: number;                 // actual cols × rows for this artwork's tier
+  cols: number;
+  rows: number;
+  order: TileOrder;
+  sequence: number[];                 // day offset → tile index
+  startDate: string;                  // yyyy-MM-dd
+  status: ChallengeStatus;
+  filled: Record<number, FilledTile>; // tileIndex → fill
+  completedAt?: string;
 }
 
 // Phase 2

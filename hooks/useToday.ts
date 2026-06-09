@@ -4,6 +4,7 @@ import { today } from '@/lib/dates';
 import { localStore } from '@/lib/localStore';
 import { reportError } from '@/lib/reportError';
 import { useColorStore } from '@/store/useColorStore';
+import { useChallenge } from '@/hooks/useChallenge';
 import type { Color } from '@/types';
 
 // Dedupe the network fetch across concurrent callers (Today + Grid both use
@@ -26,6 +27,11 @@ function fetchTodayColor(date: string): Promise<Color | null> {
 }
 
 export function useToday() {
+  const { todayColor: challengeColor, challenge, isComplete } = useChallenge();
+  // An active, in-progress challenge replaces the global daily colour: the
+  // current tile's colour becomes today's prompt.
+  const challengeActive = !!challenge && !isComplete && !!challengeColor;
+
   const [color, setColor] = useState<Color | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -34,6 +40,24 @@ export function useToday() {
 
   useEffect(() => {
     let active = true;
+
+    // Challenge mode — no network needed, the tile colour is the prompt.
+    if (challengeActive && challengeColor) {
+      (async () => {
+        // Display the challenge tile colour, but tag captures with the real
+        // daily colour's id when it's cached, so photo.color_id stays a valid
+        // colours-row reference for sync. The synthetic `challenge:…` id is for
+        // display only; the captured hex is preserved on the photo separately.
+        const cached = await localStore.getCachedColor(date);
+        if (!active) return;
+        const display: Color = cached?.id ? { ...challengeColor, id: cached.id } : challengeColor;
+        setColor(display);
+        setTodayColor(display);
+        setError(null);
+        setLoading(false);
+      })();
+      return () => { active = false; };
+    }
 
     async function load() {
       // 1. Show cached colour immediately if available.
@@ -64,7 +88,7 @@ export function useToday() {
 
     load();
     return () => { active = false; };
-  }, [date]);
+  }, [date, challengeActive, challengeColor?.hex]);
 
   return { color, loading, error, today: date };
 }

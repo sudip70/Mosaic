@@ -1,4 +1,4 @@
-import { View, ScrollView, StyleSheet } from 'react-native';
+import { View, ScrollView, Pressable, StyleSheet } from 'react-native';
 import { useCallback, useMemo, useState } from 'react';
 import { router, useFocusEffect } from 'expo-router';
 import { format, parseISO } from 'date-fns';
@@ -6,6 +6,9 @@ import { AppScreen } from '@/components/ui/AppScreen';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { AppText } from '@/components/ui/AppText';
 import { Card } from '@/components/ui/Card';
+import { MosaicGrid } from '@/components/ui/MosaicGrid';
+import { useChallengeStore } from '@/store/useChallengeStore';
+import { getArtwork } from '@/lib/artworks';
 import { useAuth } from '@/hooks/useAuth';
 import { useStreak } from '@/hooks/useStreak';
 import { useGrid } from '@/hooks/useGrid';
@@ -22,6 +25,10 @@ export default function ProfileScreen() {
   const { trackScreen } = useAnalytics();
   const { user, isAnonymous } = useAuth();
   const { current, longest } = useStreak();
+  // Showcase finished paintings only — set-aside/in-progress runs (which may
+  // have zero filled tiles) live on the Mosaic tab, not here.
+  const history = useChallengeStore((st) => st.history);
+  const mosaics = useMemo(() => history.filter((c) => c.status === 'completed'), [history]);
 
   const startDate = user?.created_at?.slice(0, 10) ?? new Date().toISOString().slice(0, 10);
   const { days, reload } = useGrid(user?.id ?? '', startDate);
@@ -73,6 +80,31 @@ export default function ProfileScreen() {
           <Stat value={`${totalImages}`} unit="total" label="Images captured" />
         </View>
 
+        {/* Mosaics showcase */}
+        {mosaics.length > 0 && (
+          <View style={s.section}>
+            <AppText variant="overline" style={s.sectionLabel}>Mosaics</AppText>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.mosaicRow}>
+              {mosaics.map((c) => {
+                const tier = getArtwork(c.artworkId)?.tiers[c.tier];
+                if (!tier) return null;
+                return (
+                  <Pressable
+                    key={c.id}
+                    style={s.mosaicItem}
+                    onPress={() => router.push({ pathname: '/challenge/[id]', params: { id: c.id } })}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${c.artworkTitle} mosaic`}
+                  >
+                    <MosaicGrid width={104} cols={c.cols} rows={c.rows} targetColors={tier.colors} filled={c.filled} mode="progress" />
+                    <AppText variant="caption" numberOfLines={1} style={s.mosaicTitle}>{c.artworkTitle}</AppText>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          </View>
+        )}
+
         {/* Phase 2 hint */}
         <Card style={s.hint}>
           <AppText style={s.hintTitle}>Make it yours</AppText>
@@ -117,6 +149,12 @@ const makeStyles = (c: Palette) => StyleSheet.create({
   statValue: { fontFamily: fonts.serifR, fontSize: 26, color: c.accent, lineHeight: 28 },
   statUnit: { fontFamily: fonts.sansSb, fontSize: 8, letterSpacing: 0.6, textTransform: 'uppercase', color: c.ink30 },
   statLabel: { fontFamily: fonts.sansMd, fontSize: 10, color: c.ink60, marginTop: 6, textAlign: 'center' },
+
+  section: { gap: spacing.sm },
+  sectionLabel: {},
+  mosaicRow: { gap: spacing.sm, paddingRight: spacing.xl },
+  mosaicItem: { width: 104, gap: spacing.xs },
+  mosaicTitle: { width: 104 },
 
   hint: { padding: spacing.xl, gap: 6 },
   hintTitle: { fontFamily: fonts.sansSb, fontSize: 14, color: c.ink100 },

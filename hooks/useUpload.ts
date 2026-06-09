@@ -9,8 +9,10 @@ import { randomUUID } from 'expo-crypto';
 const piexif = require('piexifjs') as typeof import('piexifjs');
 import { localStore } from '@/lib/localStore';
 import { reportError } from '@/lib/reportError';
+import { extractDominantColor } from '@/lib/colorUtils';
 import { usePhotoStore } from '@/store/usePhotoStore';
 import { useStreakStore } from '@/store/useStreakStore';
+import { useChallengeStore } from '@/store/useChallengeStore';
 import { useAnalytics } from './useAnalytics';
 import type { Photo } from '@/types';
 
@@ -71,6 +73,12 @@ export function useUpload() {
       addPhoto(date, photo);
       incrementStreak(date);
       track('photo_uploaded', { date });
+
+      // If a challenge is running, extract the photo's dominant colour and fill
+      // the next tile. Fire-and-forget: best-effort work that must never block
+      // or fail the capture (and is skipped entirely when no challenge is live).
+      void applyDominantColor(localUri, photoId, date);
+
       return { success: true };
     } catch (e: any) {
       reportError(e, { scope: 'uploadPhoto', date });
@@ -82,6 +90,31 @@ export function useUpload() {
   }
 
   return { uploadPhoto, uploading, error };
+}
+
+// ─── Dominant colour → mosaic tile ────────────────────────────────────────────
+// Runs after the photo is saved. Extracts the dominant colour, records it on the
+// photo, and (if a challenge is active) fills the next tile with it. Self-paced:
+// every photo fills exactly one tile, so capturing several in a day advances the
+// mosaic by several tiles. Entirely best-effort.
+
+async function applyDominantColor(localUri: string, photoId: string, date: string): Promise<void> {
+  // Skip the (non-trivial) decode work entirely when no challenge is active —
+  // the dominant colour only feeds mosaic tiles.
+  const active = useChallengeStore.getState().active;
+  if (!active || active.status !== 'active') return;
+
+  try {
+    const dominant = await extractDominantColor(localUri);
+    if (!dominant) return;
+    await localStore.updatePhoto(date, photoId, { dominant_hex: dominant });
+
+    // fillNextTile resolves the tile index atomically and ignores the call if
+    // the run has since completed or changed.
+    useChallengeStore.getState().fillNextTile({ date, hex: dominant, photoCount: 1 });
+  } catch (e) {
+    reportError(e, { scope: 'applyDominantColor', date });
+  }
 }
 
 // ─── Compression ──────────────────────────────────────────────────────────────

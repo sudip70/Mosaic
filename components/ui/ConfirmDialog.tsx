@@ -15,10 +15,11 @@ interface ConfirmDialogProps {
   cancelLabel?: string;
   /** 'danger' = red confirm button; 'default' = dark ink button. */
   tone?: 'danger' | 'default';
-  /** Optional info text shown in an Alert when the ℹ button is tapped. */
+  /** Optional info text shown in a sub-card when the ℹ button is tapped. */
   info?: string;
   onConfirm: () => void;
-  onCancel: () => void;
+  /** Omit to render a single-button info dialog; backdrop tap also calls onConfirm. */
+  onCancel?: () => void;
 }
 
 /**
@@ -35,14 +36,16 @@ export function ConfirmDialog({
   const confirmBg = tone === 'danger' ? '#C62828' : isDark ? colors.surface2 : '#1A1714';
   const [showInfo, setShowInfo] = useState(false);
 
+  const dismiss = onCancel ?? onConfirm;
+
   return (
     <Modal
       visible={visible}
       transparent
       animationType="fade"
-      onRequestClose={showInfo ? () => setShowInfo(false) : onCancel}
+      onRequestClose={showInfo ? () => setShowInfo(false) : dismiss}
     >
-      <Pressable style={s.backdrop} onPress={showInfo ? () => setShowInfo(false) : onCancel}>
+      <Pressable style={s.backdrop} onPress={showInfo ? () => setShowInfo(false) : dismiss}>
 
         {showInfo ? (
           // Info card — swaps in place of the confirm dialog
@@ -77,14 +80,16 @@ export function ConfirmDialog({
                 </Pressable>
               )}
             </View>
-            <View style={s.actions}>
-              <Pressable style={s.btnWrap} onPress={onCancel}>
-                {({ pressed }) => (
-                  <View style={[s.btn, s.cancel, pressed && s.pressed]}>
-                    <AppText style={s.cancelText}>{cancelLabel}</AppText>
-                  </View>
-                )}
-              </Pressable>
+            <View style={[s.actions, !onCancel && s.actionsCenter]}>
+              {onCancel && (
+                <Pressable style={s.btnWrap} onPress={onCancel}>
+                  {({ pressed }) => (
+                    <View style={[s.btn, s.cancel, pressed && s.pressed]}>
+                      <AppText style={s.cancelText}>{cancelLabel}</AppText>
+                    </View>
+                  )}
+                </Pressable>
+              )}
               <Pressable style={s.btnWrap} onPress={onConfirm}>
                 {({ pressed }) => (
                   <View style={[s.btn, { backgroundColor: confirmBg }, pressed && s.pressed]}>
@@ -144,6 +149,7 @@ const makeStyles = (c: Palette) => StyleSheet.create({
   infoCardBtnText: { fontFamily: fonts.sansSb, fontSize: 14, color: c.onAccent },
 
   actions: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.lg, alignSelf: 'stretch' },
+  actionsCenter: { justifyContent: 'center' },
   btnWrap: { flex: 1 },
   btn: { paddingVertical: 13, borderRadius: radius.r16, alignItems: 'center' },
   pressed: { opacity: 0.85 },
