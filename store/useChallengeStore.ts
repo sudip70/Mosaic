@@ -10,6 +10,11 @@ interface ChallengeStore {
   // Set-aside, completed, and abandoned runs, newest first. Set-aside runs stay
   // resumable; completed ones power the showcase.
   history: Challenge[];
+  // The one mosaic the user has chosen to show off on their profile, by id.
+  // Tracked by id (not a flag on the challenge) so the pin survives every
+  // active⇄paused⇄completed transition — those keep the same id — and so only
+  // one mosaic is ever featured at a time. null when nothing is pinned.
+  pinnedId: string | null;
 
   start: (challenge: Challenge) => void;
   /**
@@ -28,6 +33,10 @@ interface ChallengeStore {
   restart: (id: string) => void;
   /** Permanently delete a run, whether it's the active one or in history. */
   remove: (id: string) => void;
+  /** Feature a mosaic on the profile. Replaces any previously pinned one. */
+  pin: (id: string) => void;
+  /** Stop featuring the pinned mosaic on the profile. */
+  unpin: () => void;
 }
 
 // Move the live run to history as a paused run. Progress lives entirely in
@@ -44,6 +53,7 @@ export const useChallengeStore = create<ChallengeStore>()(
     (set) => ({
       active: null,
       history: [],
+      pinnedId: null,
 
       // Starting a new run sets the current one aside automatically — you never
       // lose progress just by beginning another painting.
@@ -131,7 +141,12 @@ export const useChallengeStore = create<ChallengeStore>()(
         set((state) => ({
           active: state.active?.id === id ? null : state.active,
           history: state.history.filter((c) => c.id !== id),
+          // A deleted mosaic can no longer be shown off — drop the pin with it.
+          pinnedId: state.pinnedId === id ? null : state.pinnedId,
         })),
+
+      pin: (id) => set({ pinnedId: id }),
+      unpin: () => set({ pinnedId: null }),
     }),
     { name: 'challenge', storage: createJSONStorage(() => AsyncStorage) }
   )

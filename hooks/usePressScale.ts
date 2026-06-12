@@ -9,7 +9,7 @@ import {
 // Strong ease-out (Emil Kowalski): cubic-bezier(0.23, 1, 0.32, 1). The built-in
 // curves are too weak to feel intentional; this one starts fast so a press
 // reads as instant feedback.
-export const EASE_OUT = Easing.bezier(0.23, 1, 0.32, 1);
+const EASE_OUT = Easing.bezier(0.23, 1, 0.32, 1);
 
 /**
  * Smooth press-scale feedback for any tappable element.

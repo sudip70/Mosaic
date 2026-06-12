@@ -158,7 +158,7 @@ export const typeColorKey: Record<keyof typeof type, keyof Palette> = {
 // Half the daily palette is light, so text laid over a swatch must adapt.
 
 /** True when a hex colour is light enough that white text reads poorly on it. */
-export function isLightColor(hex: string): boolean {
+function isLightColor(hex: string): boolean {
   const h = hex.replace('#', '');
   if (h.length !== 6) return false;
   const r = parseInt(h.slice(0, 2), 16);

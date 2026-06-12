@@ -4,7 +4,8 @@ type EventName =
   | 'screen_viewed'
   | 'photo_uploaded'
   | 'day_viewed'
-  | 'streak_milestone';
+  | 'streak_milestone'
+  | 'mosaic_pinned';
 
 type EventProperties = Record<string, string | number | boolean>;
 

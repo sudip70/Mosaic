@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { fonts, type Palette } from '@/lib/theme';
 import { Aperture, Grid2x2, User, ICON_STROKE } from '@/lib/icons';
-import { MosaicTileIcon } from '@/components/ui/MosaicTileIcon';
+import { MosaicLogoIcon } from '@/components/ui/MosaicLogoIcon';
 import { useTheme } from '@/hooks/useTheme';
 import { useThemedStyles } from '@/hooks/useThemedStyles';
 
@@ -14,7 +14,7 @@ type TabIcon = ComponentType<{ size?: number; color?: string; strokeWidth?: numb
 const TABS: Record<string, { icon: TabIcon; label: string }> = {
   index:    { icon: Aperture, label: 'Today' },
   grid:     { icon: Grid2x2, label: 'Grid' },
-  mosaic:   { icon: MosaicTileIcon, label: 'Mosaic' },
+  mosaic:   { icon: MosaicLogoIcon, label: 'Mosaic' },
   profile:  { icon: User, label: 'Profile' },
 };
 

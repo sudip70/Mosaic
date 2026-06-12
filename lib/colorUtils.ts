@@ -7,7 +7,7 @@ import { reportError } from '@/lib/reportError';
 
 export interface RGB { r: number; g: number; b: number; }
 
-export function hexToRgb(hex: string): RGB {
+function hexToRgb(hex: string): RGB {
   const h = hex.replace('#', '');
   const full = h.length === 3 ? h.split('').map((c) => c + c).join('') : h;
   const int = parseInt(full, 16);
@@ -16,7 +16,7 @@ export function hexToRgb(hex: string): RGB {
 
 const clamp = (n: number) => Math.max(0, Math.min(255, Math.round(n)));
 
-export function rgbToHex(r: number, g: number, b: number): string {
+function rgbToHex(r: number, g: number, b: number): string {
   const h = (n: number) => clamp(n).toString(16).padStart(2, '0');
   return `#${h(r)}${h(g)}${h(b)}`;
 }
