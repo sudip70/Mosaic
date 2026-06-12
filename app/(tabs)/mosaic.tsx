@@ -17,7 +17,7 @@ import { useTheme } from '@/hooks/useTheme';
 import { useThemedStyles } from '@/hooks/useThemedStyles';
 import { radius, spacing, layout, shadows, type Palette } from '@/lib/theme';
 import { MosaicTileIcon } from '@/components/ui/MosaicTileIcon';
-import { ChevronRight, Check, Plus, Ellipsis, Play, RotateCcw, Trash2, ICON_STROKE, type LucideIcon } from '@/lib/icons';
+import { ChevronRight, Check, Plus, Ellipsis, Play, Pin, RotateCcw, Trash2, ICON_STROKE, type LucideIcon } from '@/lib/icons';
 import type { Challenge } from '@/types';
 
 const SCREEN_W = Dimensions.get('window').width;
@@ -29,9 +29,23 @@ export default function MosaicScreen() {
   const resume = useChallengeStore((s) => s.resume);
   const restart = useChallengeStore((s) => s.restart);
   const remove = useChallengeStore((s) => s.remove);
-  const { trackScreen } = useAnalytics();
+  const pin = useChallengeStore((s) => s.pin);
+  const unpin = useChallengeStore((s) => s.unpin);
+  const pinnedId = useChallengeStore((s) => s.pinnedId);
+  const { trackScreen, track } = useAnalytics();
   const s = useThemedStyles(makeStyles);
   const { colors } = useTheme();
+
+  const isPinned = !!challenge && pinnedId === challenge.id;
+  function togglePin() {
+    if (!challenge) return;
+    if (pinnedId === challenge.id) {
+      unpin();
+    } else {
+      pin(challenge.id);
+      track('mosaic_pinned', { status: challenge.status, tiles: challenge.totalTiles });
+    }
+  }
 
   // Per-tile options menu anchored to the 3-dot button's screen position.
   type MenuAnchor = { challenge: Challenge; x: number; y: number; w: number; h: number };
@@ -72,6 +86,19 @@ export default function MosaicScreen() {
                   mode="progress"
                 />
               </View>
+              {/* One-tap pin: feature this ongoing mosaic on the profile. Its own
+                  Pressable wins the touch, so tapping the pin never opens the card.
+                  Dark scrim circle so it reads over any tile; accent fill once pinned. */}
+              <Pressable
+                onPress={togglePin}
+                style={[s.pinCorner, isPinned ? s.pinCornerOn : s.pinCornerOff]}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityState={{ selected: isPinned }}
+                accessibilityLabel={isPinned ? 'Unpin from your profile' : 'Pin to your profile'}
+              >
+                <Pin size={15} color={isPinned ? colors.onAccent : '#fff'} strokeWidth={ICON_STROKE} />
+              </Pressable>
               <View style={s.metaRow}>
                 <View style={{ flex: 1 }}>
                   <AppText variant="title" numberOfLines={1}>{challenge.artworkTitle}</AppText>
@@ -307,6 +334,13 @@ const makeStyles = (c: Palette) => StyleSheet.create({
 
   activeCard: { padding: spacing.sm },
   gridWrap: { alignItems: 'center' },
+  pinCorner: {
+    position: 'absolute', top: spacing.sm + 6, right: spacing.sm + 6,
+    width: 32, height: 32, borderRadius: 16,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  pinCornerOff: { backgroundColor: 'rgba(0,0,0,0.5)' },
+  pinCornerOn: { backgroundColor: c.accent },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.sm, paddingHorizontal: spacing.xs },
 
   empty: { alignItems: 'center', gap: spacing.md, paddingVertical: spacing.xl },

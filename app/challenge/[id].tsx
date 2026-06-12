@@ -10,10 +10,11 @@ import { MosaicGrid } from '@/components/ui/MosaicGrid';
 import { useChallenge } from '@/hooks/useChallenge';
 import { useChallengeStore } from '@/store/useChallengeStore';
 import { getArtwork, tierLabel } from '@/lib/artworks';
+import { useAnalytics } from '@/hooks/useAnalytics';
 import { useTheme } from '@/hooks/useTheme';
 import { useThemedStyles } from '@/hooks/useThemedStyles';
 import { spacing, layout, radius, type Palette } from '@/lib/theme';
-import { ChevronLeft, Eye, EyeOff, ICON_STROKE } from '@/lib/icons';
+import { ChevronLeft, Eye, EyeOff, Pin, ICON_STROKE } from '@/lib/icons';
 
 const CONTENT_W = Dimensions.get('window').width - layout.screenPadH * 2;
 
@@ -25,7 +26,11 @@ export default function ChallengeDetailScreen() {
   const resume = useChallengeStore((s) => s.resume);
   const restart = useChallengeStore((s) => s.restart);
   const remove = useChallengeStore((s) => s.remove);
+  const pinnedId = useChallengeStore((s) => s.pinnedId);
+  const pin = useChallengeStore((s) => s.pin);
+  const unpin = useChallengeStore((s) => s.unpin);
   const { currentTileIndex } = useChallenge();
+  const { track } = useAnalytics();
   const { colors } = useTheme();
   const s = useThemedStyles(makeStyles);
 
@@ -56,6 +61,7 @@ export default function ChallengeDetailScreen() {
   const isActive = challenge.status === 'active';
   const isComplete = challenge.status === 'completed';
   const canResume = challenge.status === 'paused' || challenge.status === 'abandoned';
+  const isPinned = pinnedId === challengeId;
   const filledCount = Object.keys(challenge.filled).length;
   const statusText =
     isComplete ? 'Completed'
@@ -65,6 +71,15 @@ export default function ChallengeDetailScreen() {
   function confirmSetAside() { setShowSetAside(true); }
   function confirmRestart() { setShowRestart(true); }
   function confirmDelete() { setShowDelete(true); }
+  function togglePin() {
+    if (!challenge) return;
+    if (isPinned) {
+      unpin();
+    } else {
+      pin(challengeId);
+      track('mosaic_pinned', { status: challenge.status, tiles: challenge.totalTiles });
+    }
+  }
 
   return (
     <AppScreen>
@@ -82,16 +97,30 @@ export default function ChallengeDetailScreen() {
             originalImage={artwork.image}
             mode={showOriginal ? 'original' : 'progress'}
           />
-          <Pressable
-            style={[s.peek, { backgroundColor: colors.ink100 }]}
-            onPress={() => setShowOriginal((v) => !v)}
-            accessibilityRole="button"
-            accessibilityLabel={showOriginal ? 'Hide the original' : 'Peek at the original'}
-          >
-            {showOriginal
-              ? <EyeOff size={16} color={colors.onAccent} strokeWidth={ICON_STROKE} />
-              : <Eye size={16} color={colors.onAccent} strokeWidth={ICON_STROKE} />}
-          </Pressable>
+          <View style={s.gridBtns}>
+            {/* Both buttons use the Mosaic tab's pin treatment: a dark scrim circle
+                with a white icon, so they read over any tile. The pin swaps to an
+                accent fill once pinned. */}
+            <Pressable
+              style={[s.gridBtn, isPinned ? s.gridBtnOn : s.gridBtnScrim]}
+              onPress={togglePin}
+              accessibilityRole="button"
+              accessibilityState={{ selected: isPinned }}
+              accessibilityLabel={isPinned ? 'Unpin this mosaic from your profile' : 'Pin this mosaic to your profile'}
+            >
+              <Pin size={16} color={isPinned ? colors.onAccent : '#fff'} strokeWidth={ICON_STROKE} />
+            </Pressable>
+            <Pressable
+              style={[s.gridBtn, s.gridBtnScrim]}
+              onPress={() => setShowOriginal((v) => !v)}
+              accessibilityRole="button"
+              accessibilityLabel={showOriginal ? 'Hide the original' : 'Peek at the original'}
+            >
+              {showOriginal
+                ? <EyeOff size={16} color="#fff" strokeWidth={ICON_STROKE} />
+                : <Eye size={16} color="#fff" strokeWidth={ICON_STROKE} />}
+            </Pressable>
+          </View>
         </View>
 
         <View style={s.titleBlock}>
@@ -192,11 +221,16 @@ const makeStyles = (c: Palette) => StyleSheet.create({
   missing: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.x3 },
 
   gridWrap: { marginTop: spacing.sm },
-  peek: {
+  gridBtns: {
     position: 'absolute', top: spacing.sm + 8, right: 8,
-    width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center',
-    ...{ shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 6, elevation: 4 },
+    flexDirection: 'row', gap: spacing.sm,
   },
+  gridBtn: {
+    width: 34, height: 34, borderRadius: 17,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  gridBtnScrim: { backgroundColor: 'rgba(0,0,0,0.5)' },
+  gridBtnOn: { backgroundColor: c.accent },
 
   titleBlock: { gap: 2 },
 

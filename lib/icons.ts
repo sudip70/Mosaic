@@ -3,7 +3,6 @@
 export {
   Aperture,     // Today tab
   Grid2x2,      // Grid tab
-  Users,        // Friends tab
   User,         // Profile tab
   Settings,     // Settings (camera + profile)
   Camera,       // capture CTA
@@ -18,7 +17,6 @@ export {
   RotateCcw,    // flip camera
   ArrowRight,   // forward CTA
   Sparkles,     // magic link
-  Frame,        // challenge framing / begin CTA
   Eye,          // peek original
   EyeOff,       // hide original
   Shuffle,      // random tile order
@@ -26,6 +24,7 @@ export {
   Check,        // completion
   ChevronRight, // forward / drill-in
   Play,         // resume a set-aside mosaic
+  Pin,          // pin / unpin a mosaic to the profile
 } from 'lucide-react-native';
 
 export type { LucideIcon } from 'lucide-react-native';

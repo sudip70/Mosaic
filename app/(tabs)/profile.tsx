@@ -1,4 +1,4 @@
-import { View, ScrollView, Pressable, StyleSheet } from 'react-native';
+import { View, ScrollView, Pressable, Dimensions, StyleSheet } from 'react-native';
 import { useCallback, useMemo, useState } from 'react';
 import { router, useFocusEffect } from 'expo-router';
 import { format, parseISO } from 'date-fns';
@@ -16,8 +16,12 @@ import { useAnalytics } from '@/hooks/useAnalytics';
 import { useTheme } from '@/hooks/useTheme';
 import { useThemedStyles } from '@/hooks/useThemedStyles';
 import { localStore } from '@/lib/localStore';
-import { Settings, User, ICON_STROKE } from '@/lib/icons';
+import { Pin, Settings, User, ICON_STROKE } from '@/lib/icons';
 import { fonts, radius, shadows, spacing, type Palette } from '@/lib/theme';
+
+const SCREEN_W = Dimensions.get('window').width;
+const CONTENT_W = SCREEN_W - spacing.xl * 2;            // profile content width (matches s.content padding)
+const PINNED_W = Math.round((CONTENT_W - spacing.md) / 2); // ~half-width — matches the artwork-card size
 
 export default function ProfileScreen() {
   const { colors } = useTheme();
@@ -25,10 +29,25 @@ export default function ProfileScreen() {
   const { trackScreen } = useAnalytics();
   const { user, isAnonymous } = useAuth();
   const { current, longest } = useStreak();
-  // Showcase finished paintings only — set-aside/in-progress runs (which may
-  // have zero filled tiles) live on the Mosaic tab, not here.
+  const active = useChallengeStore((st) => st.active);
   const history = useChallengeStore((st) => st.history);
-  const mosaics = useMemo(() => history.filter((c) => c.status === 'completed'), [history]);
+  const pinnedId = useChallengeStore((st) => st.pinnedId);
+
+  // The one mosaic the user chose to show off — featured large at the top of the
+  // showcase. Unlike the row below it, this can be an in-progress run, which is
+  // the whole point of pinning an ongoing mosaic. Resolve from the live run or
+  // history by id.
+  const pinned = useMemo(
+    () => (pinnedId ? (active?.id === pinnedId ? active : history.find((c) => c.id === pinnedId) ?? null) : null),
+    [pinnedId, active, history]
+  );
+  // Showcase finished paintings only — set-aside/in-progress runs (which may
+  // have zero filled tiles) live on the Mosaic tab, not here. The pinned one is
+  // featured above, so keep it out of this row to avoid showing it twice.
+  const mosaics = useMemo(
+    () => history.filter((c) => c.status === 'completed' && c.id !== pinnedId),
+    [history, pinnedId]
+  );
 
   const startDate = user?.created_at?.slice(0, 10) ?? new Date().toISOString().slice(0, 10);
   const { days, reload } = useGrid(user?.id ?? '', startDate);
@@ -79,6 +98,37 @@ export default function ProfileScreen() {
           <Stat value={`${daysCaptured}`} unit="total" label="Days captured" />
           <Stat value={`${totalImages}`} unit="total" label="Images captured" />
         </View>
+
+        {/* Pinned showcase — the mosaic the user chose to show off. May be in
+            progress, which is the point of pinning an ongoing run. Progress mode
+            renders from filled + cols/rows, so it draws even for mosaics whose
+            tier predates the current artwork data. */}
+        {pinned && (
+          <View style={s.section}>
+            <View style={s.pinnedLabelRow}>
+              <Pin size={11} color={colors.ink30} strokeWidth={ICON_STROKE} />
+              <AppText variant="overline" style={s.sectionLabel}>Pinned</AppText>
+            </View>
+            {/* Just the mosaic — the same rounded progress grid the Mosaic tab
+                shows, at half width. No frame or caption; the tiles speak for
+                themselves. */}
+            <Pressable
+              style={s.pinnedTile}
+              onPress={() => router.push({ pathname: '/challenge/[id]', params: { id: pinned.id } })}
+              accessibilityRole="button"
+              accessibilityLabel={`${pinned.artworkTitle} mosaic, pinned to your profile`}
+            >
+              <MosaicGrid
+                width={PINNED_W}
+                cols={pinned.cols}
+                rows={pinned.rows}
+                targetColors={getArtwork(pinned.artworkId)?.tiers[pinned.tier]?.colors ?? []}
+                filled={pinned.filled}
+                mode="progress"
+              />
+            </Pressable>
+          </View>
+        )}
 
         {/* Mosaics showcase */}
         {mosaics.length > 0 && (
@@ -152,6 +202,8 @@ const makeStyles = (c: Palette) => StyleSheet.create({
 
   section: { gap: spacing.sm },
   sectionLabel: {},
+  pinnedLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  pinnedTile: { alignSelf: 'flex-start' },
   mosaicRow: { gap: spacing.sm, paddingRight: spacing.xl },
   mosaicItem: { width: 104, gap: spacing.xs },
   mosaicTitle: { width: 104 },
