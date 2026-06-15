@@ -8,10 +8,12 @@ import * as ImagePicker from 'expo-image-picker';
 import { Accelerometer } from 'expo-sensors';
 import Svg, { Line } from 'react-native-svg';
 import { format } from 'date-fns';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { AppText } from '@/components/ui/AppText';
 import { useUpload } from '@/hooks/useUpload';
 import { useAuth } from '@/hooks/useAuth';
+import { useChallenge } from '@/hooks/useChallenge';
+import { useChallengeStore } from '@/store/useChallengeStore';
 import { useColorStore } from '@/store/useColorStore';
 import { useCameraSettings } from '@/store/useCameraSettings';
 import { useTheme } from '@/hooks/useTheme';
@@ -23,9 +25,18 @@ import { X, Settings, Plus, Zap, RotateCcw, ICON_STROKE } from '@/lib/icons';
 export default function CameraScreen() {
   const cameraRef = useRef<CameraView>(null);
   const [permission, requestPermission] = useCameraPermissions();
+  // Mosaic mode is a separate capture flow: the prompt is the active run's
+  // next-tile colour (not the daily colour), and shots fill mosaic tiles rather
+  // than the daily grid or streak.
+  const { mode, challengeId } = useLocalSearchParams<{ mode?: string; challengeId?: string }>();
+  const isMosaic = mode === 'mosaic';
   const { user } = useAuth();
-  const { uploadPhoto, uploading, error: uploadError } = useUpload();
-  const todayColor = useColorStore((s) => s.todayColor);
+  const { uploadPhoto, fillMosaicTile, uploading, error: uploadError } = useUpload();
+  const dailyColor = useColorStore((s) => s.todayColor);
+  // The next-tile colour advances reactively as tiles fill, so the prompt keeps
+  // up while the camera stays open for several captures in a row.
+  const { todayColor: tileColor } = useChallenge();
+  const promptColor = isMosaic ? tileColor : dailyColor;
 
   const [facing, setFacing] = useState<CameraType>('back');
   const [flash, setFlash] = useState<FlashMode>('off');
@@ -79,11 +90,12 @@ export default function CameraScreen() {
   const glassIcon = isDark ? 'rgba(255,255,255,0.85)' : colors.ink100;
   const mutedIcon = isDark ? 'rgba(255,255,255,0.7)' : colors.ink60;
   const faintIcon = isDark ? 'rgba(255,255,255,0.6)' : colors.ink30;
-  // Shutter: neutral ring + a dot tinted with the colour of the day.
+  // Shutter: neutral ring + a dot tinted with the prompt colour (daily, or the
+  // mosaic's next tile in mosaic mode).
   const shutterSpinner = isDark ? '#fff' : colors.ink100;
-  const shutterColor = todayColor?.hex ?? colors.accent;
+  const shutterColor = promptColor?.hex ?? colors.accent;
 
-  const canCapture = !!user && !!todayColor && !uploading;
+  const canCapture = !!user && !!promptColor && !uploading;
 
   const handleShutter = useCallback(async () => {
     if (!cameraRef.current || !canCapture) return;
@@ -91,11 +103,18 @@ export default function CameraScreen() {
       const photo = await cameraRef.current.takePictureAsync({ quality: 0.8, exif: true });
       if (!photo?.uri) return;
       setSessionShots((prev) => [photo.uri, ...prev]);
-      await uploadPhoto(photo.uri, user!.id, today(), todayColor!.id, timestamp, photo.exif);
+      if (isMosaic) {
+        const res = await fillMosaicTile(photo.uri, challengeId!, photo.exif);
+        // Filling the final tile completes the run (active clears) — return to
+        // the mosaic so the user sees the finished painting, not a dead camera.
+        if (res.success && !useChallengeStore.getState().active) router.back();
+      } else {
+        await uploadPhoto(photo.uri, user!.id, today(), dailyColor!.id, timestamp, photo.exif);
+      }
     } catch (e) {
       reportError(e, { scope: 'takePicture' });
     }
-  }, [canCapture, user, todayColor, uploadPhoto, timestamp]);
+  }, [canCapture, user, isMosaic, challengeId, dailyColor, uploadPhoto, fillMosaicTile, timestamp]);
 
   const handleLibrary = useCallback(async () => {
     if (!canCapture) return;
@@ -107,9 +126,14 @@ export default function CameraScreen() {
     if (!result.canceled) {
       const asset = result.assets[0];
       setSessionShots((prev) => [asset.uri, ...prev]);
-      await uploadPhoto(asset.uri, user!.id, today(), todayColor!.id, timestamp, asset.exif ?? undefined);
+      if (isMosaic) {
+        const res = await fillMosaicTile(asset.uri, challengeId!, asset.exif ?? undefined);
+        if (res.success && !useChallengeStore.getState().active) router.back();
+      } else {
+        await uploadPhoto(asset.uri, user!.id, today(), dailyColor!.id, timestamp, asset.exif ?? undefined);
+      }
     }
-  }, [canCapture, user, todayColor, uploadPhoto, timestamp]);
+  }, [canCapture, user, isMosaic, challengeId, dailyColor, uploadPhoto, fillMosaicTile, timestamp]);
 
   // ── Permission gates ────────────────────────────────────────────────────────
   if (!permission) {
@@ -156,10 +180,10 @@ export default function CameraScreen() {
             <X size={18} color={glassIcon} strokeWidth={ICON_STROKE} />
           </Pressable>
 
-          {todayColor && (
+          {promptColor && (
             <View style={s.hint}>
-              <View style={[s.hintDot, { backgroundColor: todayColor.hex }]} />
-              <AppText style={s.hintText}>Finding {todayColor.name}</AppText>
+              <View style={[s.hintDot, { backgroundColor: promptColor.hex }]} />
+              <AppText style={s.hintText}>Finding {promptColor.name}</AppText>
             </View>
           )}
 
@@ -497,7 +521,7 @@ const makeStyles = (c: Palette, isDark: boolean) => {
       borderWidth: 4, borderColor: shutterFill,
     },
     shutterDisabled: { opacity: 0.5 },
-    // Colour-of-the-day dot; backgroundColor is set inline from todayColor.
+    // Prompt-colour dot; backgroundColor is set inline from promptColor.
     shutterInner: { width: 54, height: 54, borderRadius: 27 },
   });
 };

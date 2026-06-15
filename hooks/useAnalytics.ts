@@ -5,7 +5,8 @@ type EventName =
   | 'photo_uploaded'
   | 'day_viewed'
   | 'streak_milestone'
-  | 'mosaic_pinned';
+  | 'mosaic_pinned'
+  | 'mosaic_tile_filled';
 
 type EventProperties = Record<string, string | number | boolean>;
 

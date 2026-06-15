@@ -10,13 +10,14 @@ import { MosaicGrid } from '@/components/ui/MosaicGrid';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useChallenge } from '@/hooks/useChallenge';
 import { useChallengeStore } from '@/store/useChallengeStore';
-import { getArtwork, tierLabel } from '@/lib/artworks';
+import { getArtwork, tierLabel, progressPhase, progressPct } from '@/lib/artworks';
 import { nearestColorName } from '@/lib/colorUtils';
 import { useAnalytics } from '@/hooks/useAnalytics';
 import { useTheme } from '@/hooks/useTheme';
 import { useThemedStyles } from '@/hooks/useThemedStyles';
 import { radius, spacing, layout, shadows, type Palette } from '@/lib/theme';
 import { MosaicTileIcon } from '@/components/ui/MosaicTileIcon';
+import { MosaicLogoIcon } from '@/components/ui/MosaicLogoIcon';
 import { ChevronRight, Check, Plus, Ellipsis, Play, Pin, RotateCcw, Trash2, ICON_STROKE, type LucideIcon } from '@/lib/icons';
 import type { Challenge } from '@/types';
 
@@ -31,16 +32,21 @@ export default function MosaicScreen() {
   const remove = useChallengeStore((s) => s.remove);
   const pin = useChallengeStore((s) => s.pin);
   const unpin = useChallengeStore((s) => s.unpin);
-  const pinnedId = useChallengeStore((s) => s.pinnedId);
+  const pinnedIds = useChallengeStore((s) => s.pinnedIds);
   const { trackScreen, track } = useAnalytics();
   const s = useThemedStyles(makeStyles);
   const { colors } = useTheme();
 
-  const isPinned = !!challenge && pinnedId === challenge.id;
+  const isPinned = !!challenge && pinnedIds.includes(challenge.id);
+  // The early win: once the painting actually reads as itself (~40%, the
+  // "Coming into focus" phase), surface that it's worth showing off — so the
+  // reward arrives long before the last tile, not only at 100%.
+  const showoffReady = !!challenge && !isComplete && challenge.totalTiles > 0
+    && filledCount / challenge.totalTiles >= 0.4;
   function togglePin() {
     if (!challenge) return;
-    if (pinnedId === challenge.id) {
-      unpin();
+    if (isPinned) {
+      unpin(challenge.id);
     } else {
       pin(challenge.id);
       track('mosaic_pinned', { status: challenge.status, tiles: challenge.totalTiles });
@@ -103,10 +109,26 @@ export default function MosaicScreen() {
                 <View style={{ flex: 1 }}>
                   <AppText variant="title" numberOfLines={1}>{challenge.artworkTitle}</AppText>
                   <AppText variant="caption">
-                    {filledCount} of {challenge.totalTiles} tiles · {tierLabel(challenge.totalTiles)}
+                    {tierLabel(challenge.totalTiles)} · {progressPhase(filledCount, challenge.totalTiles)}
                   </AppText>
+                  {showoffReady && (
+                    <View style={s.showoffPill}>
+                      <AppText variant="sub" color={colors.accent}>Ready to show off</AppText>
+                    </View>
+                  )}
                 </View>
                 <ChevronRight size={20} color={colors.ink30} strokeWidth={ICON_STROKE} />
+              </View>
+              {/* The painting itself is the real progress meter; this slim bar
+                  echoes momentum without ever quoting a scary "x of 3000". A small
+                  floor keeps early progress visible even on huge mosaics. */}
+              <View style={s.progressTrack}>
+                <View
+                  style={[
+                    s.progressFill,
+                    { width: `${progressPct(filledCount, challenge.totalTiles)}%` },
+                  ]}
+                />
               </View>
             </Card>
           </Pressable>
@@ -135,7 +157,7 @@ export default function MosaicScreen() {
               </View>
               <Pressable
                 style={[s.captureBtn, { backgroundColor: colors.ink100 }]}
-                onPress={() => router.push('/camera')}
+                onPress={() => router.push({ pathname: '/camera', params: { mode: 'mosaic', challengeId: challenge.id } })}
                 accessibilityRole="button"
                 accessibilityLabel="Capture this colour"
               >
@@ -184,7 +206,7 @@ export default function MosaicScreen() {
           <PrimaryButton
             label="Start a mosaic"
             sublabel="Choose a painting and a length"
-            icon={MosaicTileIcon}
+            icon={MosaicLogoIcon}
             onPress={() => router.push('/challenge/setup')}
           />
         </View>
@@ -321,7 +343,7 @@ function HistoryTile({ challenge, onPress, onMenu, s }: {
       </View>
       {challenge.status !== 'completed' && (
         <AppText variant="sub" color={colors.ink30}>
-          Set aside · {Object.keys(challenge.filled).length} of {challenge.totalTiles}
+          Set aside · {progressPhase(Object.keys(challenge.filled).length, challenge.totalTiles)}
         </AppText>
       )}
     </Pressable>
@@ -342,6 +364,16 @@ const makeStyles = (c: Palette) => StyleSheet.create({
   pinCornerOff: { backgroundColor: 'rgba(0,0,0,0.5)' },
   pinCornerOn: { backgroundColor: c.accent },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.sm, paddingHorizontal: spacing.xs },
+  progressTrack: {
+    height: 4, borderRadius: radius.full, backgroundColor: c.ink15,
+    marginTop: spacing.sm, marginBottom: spacing.xs, marginHorizontal: spacing.xs, overflow: 'hidden',
+  },
+  progressFill: { height: '100%', borderRadius: radius.full, backgroundColor: c.accent },
+  showoffPill: {
+    alignSelf: 'flex-start', marginTop: 4,
+    backgroundColor: c.accentSoft, borderRadius: radius.full,
+    paddingHorizontal: spacing.sm, paddingVertical: 2,
+  },
 
   empty: { alignItems: 'center', gap: spacing.md, paddingVertical: spacing.xl },
   emptyIcon: { width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center' },

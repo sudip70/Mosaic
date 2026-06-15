@@ -31,22 +31,25 @@ export default function ProfileScreen() {
   const { current, longest } = useStreak();
   const active = useChallengeStore((st) => st.active);
   const history = useChallengeStore((st) => st.history);
-  const pinnedId = useChallengeStore((st) => st.pinnedId);
+  const pinnedIds = useChallengeStore((st) => st.pinnedIds);
 
-  // The one mosaic the user chose to show off — featured large at the top of the
-  // showcase. Unlike the row below it, this can be an in-progress run, which is
-  // the whole point of pinning an ongoing mosaic. Resolve from the live run or
-  // history by id.
+  // The mosaics the user chose to show off — featured at the top of the
+  // showcase, in pin order. Unlike the row below, these can be in-progress runs,
+  // which is the whole point of pinning an ongoing mosaic. Resolve each id from
+  // the live run or history, dropping any that no longer exist.
   const pinned = useMemo(
-    () => (pinnedId ? (active?.id === pinnedId ? active : history.find((c) => c.id === pinnedId) ?? null) : null),
-    [pinnedId, active, history]
+    () =>
+      pinnedIds
+        .map((id) => (active?.id === id ? active : history.find((c) => c.id === id) ?? null))
+        .filter((c): c is NonNullable<typeof c> => c !== null),
+    [pinnedIds, active, history]
   );
   // Showcase finished paintings only — set-aside/in-progress runs (which may
-  // have zero filled tiles) live on the Mosaic tab, not here. The pinned one is
-  // featured above, so keep it out of this row to avoid showing it twice.
+  // have zero filled tiles) live on the Mosaic tab, not here. Pinned ones are
+  // featured above, so keep them out of this row to avoid showing them twice.
   const mosaics = useMemo(
-    () => history.filter((c) => c.status === 'completed' && c.id !== pinnedId),
-    [history, pinnedId]
+    () => history.filter((c) => c.status === 'completed' && !pinnedIds.includes(c.id)),
+    [history, pinnedIds]
   );
 
   const startDate = user?.created_at?.slice(0, 10) ?? new Date().toISOString().slice(0, 10);
@@ -99,34 +102,38 @@ export default function ProfileScreen() {
           <Stat value={`${totalImages}`} unit="total" label="Images captured" />
         </View>
 
-        {/* Pinned showcase — the mosaic the user chose to show off. May be in
-            progress, which is the point of pinning an ongoing run. Progress mode
-            renders from filled + cols/rows, so it draws even for mosaics whose
-            tier predates the current artwork data. */}
-        {pinned && (
+        {/* Pinned showcase — the mosaics the user chose to show off. Any may be
+            in progress, which is the point of pinning an ongoing run. Progress
+            mode renders from filled + cols/rows, so each draws even for mosaics
+            whose tier predates the current artwork data. */}
+        {pinned.length > 0 && (
           <View style={s.section}>
             <View style={s.pinnedLabelRow}>
               <Pin size={11} color={colors.ink30} strokeWidth={ICON_STROKE} />
               <AppText variant="overline" style={s.sectionLabel}>Pinned</AppText>
             </View>
-            {/* Just the mosaic — the same rounded progress grid the Mosaic tab
-                shows, at half width. No frame or caption; the tiles speak for
-                themselves. */}
-            <Pressable
-              style={s.pinnedTile}
-              onPress={() => router.push({ pathname: '/challenge/[id]', params: { id: pinned.id } })}
-              accessibilityRole="button"
-              accessibilityLabel={`${pinned.artworkTitle} mosaic, pinned to your profile`}
-            >
-              <MosaicGrid
-                width={PINNED_W}
-                cols={pinned.cols}
-                rows={pinned.rows}
-                targetColors={getArtwork(pinned.artworkId)?.tiers[pinned.tier]?.colors ?? []}
-                filled={pinned.filled}
-                mode="progress"
-              />
-            </Pressable>
+            {/* Just the mosaics — the same rounded progress grid the Mosaic tab
+                shows, at half width, wrapping two per row. No frame or caption;
+                the tiles speak for themselves. */}
+            <View style={s.pinnedGrid}>
+              {pinned.map((p) => (
+                <Pressable
+                  key={p.id}
+                  onPress={() => router.push({ pathname: '/challenge/[id]', params: { id: p.id } })}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${p.artworkTitle} mosaic, pinned to your profile`}
+                >
+                  <MosaicGrid
+                    width={PINNED_W}
+                    cols={p.cols}
+                    rows={p.rows}
+                    targetColors={getArtwork(p.artworkId)?.tiers[p.tier]?.colors ?? []}
+                    filled={p.filled}
+                    mode="progress"
+                  />
+                </Pressable>
+              ))}
+            </View>
           </View>
         )}
 
@@ -203,7 +210,7 @@ const makeStyles = (c: Palette) => StyleSheet.create({
   section: { gap: spacing.sm },
   sectionLabel: {},
   pinnedLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  pinnedTile: { alignSelf: 'flex-start' },
+  pinnedGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
   mosaicRow: { gap: spacing.sm, paddingRight: spacing.xl },
   mosaicItem: { width: 104, gap: spacing.xs },
   mosaicTitle: { width: 104 },

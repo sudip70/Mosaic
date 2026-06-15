@@ -17,9 +17,12 @@ interface PrimaryButtonProps {
   disabled?: boolean;
 }
 
-// The pill stays dark in light mode; in dark mode it lifts to an elevated
-// surface so it still reads against the dark canvas. Text is white in both.
-const DARK_PILL = '#1A1714';
+// Tonal pills — a lifted shade of each theme's own tone, so the primary action
+// reads as the most-elevated surface and stays distinct from the cards around it
+// without inverting to a stark colour. Dark: a charcoal lighter than every card.
+// Light: a clean white brighter than the cream canvas.
+const PILL_DARK = '#3A3A3A';
+const PILL_LIGHT = '#FFFFFF';
 
 /**
  * The pill call-to-action with a coloured circle icon on the right.
@@ -28,9 +31,18 @@ const DARK_PILL = '#1A1714';
 export function PrimaryButton({ label, sublabel, icon: Icon, iconColor, onPress, disabled }: PrimaryButtonProps) {
   const { colors, isDark } = useTheme();
   const press = usePressScale(0.97);
-  const pillBg = isDark ? colors.surface2 : DARK_PILL;
-  const borderColor = isDark ? colors.ink15 : 'rgba(255,255,255,0.06)';
+  const pillBg = isDark ? PILL_DARK : PILL_LIGHT;
+  // ink100 is the theme's primary foreground — white in dark, near-black in
+  // light — so it contrasts with the tonal pill in either mode; ink60 dims the
+  // sub the same way.
+  const onPill = colors.ink100;
+  const subColor = colors.ink60;
+  const borderColor = isDark ? 'rgba(255,255,255,0.08)' : colors.ink15;
+  // The icon coin contrasts with the pill on its own: the accent coin (white in
+  // dark, near-black in light) with an onAccent glyph. A custom iconColor (e.g.
+  // the day's colour on Today) always wins.
   const iconBg = iconColor ?? colors.accent;
+  const iconGlyph = iconColor ? '#fff' : colors.onAccent;
 
   return (
     <Pressable
@@ -48,12 +60,12 @@ export function PrimaryButton({ label, sublabel, icon: Icon, iconColor, onPress,
       <Animated.View style={press.style}>
         <View style={[s.btn, { backgroundColor: pillBg, borderColor }, disabled && s.disabled]}>
           <View style={s.copy}>
-            <AppText style={s.label}>{label}</AppText>
-            {sublabel && <AppText style={s.sub}>{sublabel}</AppText>}
+            <AppText style={[s.label, { color: onPill }]}>{label}</AppText>
+            {sublabel && <AppText style={[s.sub, { color: subColor }]}>{sublabel}</AppText>}
           </View>
           {Icon && (
             <View style={[s.icon, { backgroundColor: iconBg, shadowColor: iconBg }]}>
-              <Icon size={20} color={iconColor ? '#fff' : colors.onAccent} strokeWidth={ICON_STROKE} />
+              <Icon size={20} color={iconGlyph} strokeWidth={ICON_STROKE} />
             </View>
           )}
         </View>
@@ -78,8 +90,8 @@ const s = StyleSheet.create({
   },
   disabled: { opacity: 0.45 },
   copy: { flex: 1 },
-  label: { fontFamily: fonts.sansSb, fontSize: 15, color: '#fff' },
-  sub: { fontFamily: fonts.sans, fontSize: 11, color: 'rgba(255,255,255,0.4)', marginTop: 2 },
+  label: { fontFamily: fonts.sansSb, fontSize: 15 },
+  sub: { fontFamily: fonts.sans, fontSize: 11, marginTop: 2 },
   icon: {
     width: 42, height: 42, borderRadius: 21,
     alignItems: 'center', justifyContent: 'center',

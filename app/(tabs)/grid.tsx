@@ -1,4 +1,4 @@
-import { View, ScrollView, Pressable, Image, StyleSheet } from 'react-native';
+import { View, ScrollView, Pressable, Image, StyleSheet, Dimensions } from 'react-native';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { router, useFocusEffect } from 'expo-router';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
@@ -19,15 +19,20 @@ import { useThemedStyles } from '@/hooks/useThemedStyles';
 import { localStore } from '@/lib/localStore';
 import { fonts, shadows, radius, spacing, inkOnColor, type Palette } from '@/lib/theme';
 import { Camera, Check, ICON_STROKE } from '@/lib/icons';
-import type { GridDay, Photo } from '@/types';
+import type { GridDay, Photo, Challenge } from '@/types';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { SelectionBar } from '@/components/ui/SelectionBar';
 import { Toast } from '@/components/ui/Toast';
+import { MosaicGrid } from '@/components/ui/MosaicGrid';
 import { useMultiSelect } from '@/hooks/useMultiSelect';
+import { useChallenge } from '@/hooks/useChallenge';
+import { useChallengeStore } from '@/store/useChallengeStore';
+import { getArtwork, progressPhase, type ArtworkMeta, type ArtworkTier } from '@/lib/artworks';
 
 const TILE_SIZE = { Comfortable: 30 } as const;
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const PIP_COUNT = 14;
+const MOSAIC_W = Dimensions.get('window').width - spacing.xl * 2;
 
 // ─── Compact grid ─────────────────────────────────────────────────────────────
 
@@ -253,6 +258,18 @@ export default function GridScreen() {
   const visibleMonths = useMemo(() => getVisibleMonths(days), [days]);
   const currentMonth = MONTHS[getMonth(new Date())];
 
+  // Daily ⇄ Mosaic toggle. The daily calendar is the colour history; the mosaic
+  // view shows the painting and is the way in to its per-tile photos. The mosaic
+  // shown is the live run, falling back to the most recent past run.
+  const [view, setView] = useState<'daily' | 'mosaic'>('daily');
+  const activeChallenge = useChallengeStore((s) => s.active);
+  const challengeHistory = useChallengeStore((s) => s.history);
+  const { currentTileIndex } = useChallenge();
+  const mosaic = activeChallenge ?? challengeHistory[0] ?? null;
+  const mosaicArtwork = mosaic ? getArtwork(mosaic.artworkId) : undefined;
+  const mosaicTier = mosaic && mosaicArtwork ? mosaicArtwork.tiers[mosaic.tier] : undefined;
+  const mosaicFilled = mosaic ? Object.keys(mosaic.filled).length : 0;
+
   return (
     <AppScreen>
       <ScreenHeader wordmark="My Mosaic" />
@@ -260,6 +277,22 @@ export default function GridScreen() {
       <ScrollView style={st.scroll} contentContainerStyle={st.content} showsVerticalScrollIndicator={false}>
         <StreakRing current={streakCurrent} longest={streakLongest} />
 
+        <View style={st.toggle}>
+          <ToggleBtn label="Daily" active={view === 'daily'} onPress={() => setView('daily')} st={st} />
+          <ToggleBtn label="Mosaic" active={view === 'mosaic'} onPress={() => setView('mosaic')} st={st} />
+        </View>
+
+        {view === 'mosaic' ? (
+          <MosaicView
+            mosaic={mosaic}
+            artwork={mosaicArtwork}
+            tier={mosaicTier}
+            filledCount={mosaicFilled}
+            currentTileIndex={currentTileIndex}
+            st={st}
+          />
+        ) : (
+        <>
         <View>
           <View style={st.gridHead}>
             <AppText variant="display">{days.length} days</AppText>
@@ -335,6 +368,8 @@ export default function GridScreen() {
             onToggle={toggleSelected}
           />
         )}
+        </>
+        )}
       </ScrollView>
 
       <Toast message={toast} bottomOffset={tabBarHeight + spacing.lg} />
@@ -359,6 +394,93 @@ export default function GridScreen() {
         onCancel={() => setConfirmDelete(false)}
       />
     </AppScreen>
+  );
+}
+
+
+// ─── Daily / Mosaic toggle ────────────────────────────────────────────────────
+
+function ToggleBtn({
+  label, active, onPress, st,
+}: { label: string; active: boolean; onPress: () => void; st: ReturnType<typeof makeStyles> }) {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={[st.toggleBtn, active && st.toggleBtnOn]}
+      accessibilityRole="button"
+      accessibilityState={{ selected: active }}
+      accessibilityLabel={`${label} view`}
+    >
+      <AppText style={[st.toggleText, active && st.toggleTextOn]}>{label}</AppText>
+    </Pressable>
+  );
+}
+
+// ─── Mosaic view ──────────────────────────────────────────────────────────────
+// Shows the painting (live run, else most recent) and is the entry point to its
+// per-tile photos. Tapping the grid opens the tile viewer — high tiers are
+// thousands of cells, so a whole-grid tap is the practical affordance.
+
+function MosaicView({
+  mosaic, artwork, tier, filledCount, currentTileIndex, st,
+}: {
+  mosaic: Challenge | null;
+  artwork: ArtworkMeta | undefined;
+  tier: ArtworkTier | undefined;
+  filledCount: number;
+  currentTileIndex: number | null;
+  st: ReturnType<typeof makeStyles>;
+}) {
+  const { colors } = useTheme();
+
+  if (!mosaic || !artwork) {
+    return (
+      <View style={st.mosaicEmpty}>
+        <AppText variant="title" color={colors.ink60}>No mosaic yet</AppText>
+        <AppText variant="caption" style={st.mosaicEmptyText}>
+          Start a mosaic to rebuild a painting from the colours you find.
+        </AppText>
+        <Pressable onPress={() => router.push('/challenge/setup')} style={st.mosaicEmptyBtn} accessibilityRole="button">
+          <AppText style={st.mosaicEmptyBtnText}>Start a mosaic</AppText>
+        </Pressable>
+      </View>
+    );
+  }
+
+  // Tiles filled before the separate capture flow (or whose photo was deleted)
+  // carry a colour but no image, so only open the viewer when there's something
+  // to revisit. Early-exit scan avoids allocating over a large filled map.
+  let hasTilePhotos = false;
+  for (const k in mosaic.filled) { if (mosaic.filled[k].uri) { hasTilePhotos = true; break; } }
+
+  return (
+    <View style={st.mosaicWrap}>
+      <View style={st.gridHead}>
+        <AppText variant="display" numberOfLines={1} style={{ flexShrink: 1 }}>{mosaic.artworkTitle}</AppText>
+        <AppText variant="caption">{progressPhase(filledCount, mosaic.totalTiles)}</AppText>
+      </View>
+      <Pressable
+        onPress={hasTilePhotos ? () => router.push({ pathname: '/mosaic-tile/[id]', params: { id: mosaic.id } }) : undefined}
+        disabled={!hasTilePhotos}
+        accessibilityRole="button"
+        accessibilityLabel="View the photos that fill this mosaic"
+      >
+        <MosaicGrid
+          width={MOSAIC_W}
+          cols={mosaic.cols}
+          rows={mosaic.rows}
+          targetColors={tier?.colors ?? []}
+          filled={mosaic.filled}
+          currentTileIndex={currentTileIndex}
+          mode="progress"
+        />
+      </Pressable>
+      <AppText variant="caption" style={st.mosaicHint}>
+        {hasTilePhotos
+          ? 'Tap the mosaic to revisit the photos behind each tile.'
+          : 'Capture tiles for this mosaic and their photos show up here.'}
+      </AppText>
+    </View>
   );
 }
 
@@ -441,4 +563,31 @@ const makeStyles = (c: Palette) => StyleSheet.create({
   },
   nudgeTitle: { fontFamily: fonts.sansSb, fontSize: 13, color: c.accent },
   nudgeSub: { fontFamily: fonts.sans, fontSize: 11, color: c.accent, marginTop: 1 },
+
+  // Daily / Mosaic toggle — a segmented pill on the canvas.
+  toggle: {
+    flexDirection: 'row', gap: 4, padding: 4,
+    backgroundColor: c.surface1, borderRadius: radius.full,
+    borderWidth: 1, borderColor: c.ink15,
+  },
+  toggleBtn: { flex: 1, alignItems: 'center', paddingVertical: 8, borderRadius: radius.full },
+  toggleBtnOn: { backgroundColor: c.ink100 },
+  toggleText: { fontFamily: fonts.sansMd, fontSize: 13, color: c.ink60 },
+  toggleTextOn: { fontFamily: fonts.sansSb, color: c.onAccent },
+
+  // Mosaic view
+  mosaicWrap: { gap: spacing.md },
+  mosaicHint: { color: c.ink30, textAlign: 'center' },
+  mosaicEmpty: {
+    alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
+    paddingVertical: spacing.x3, paddingHorizontal: spacing.lg,
+    borderRadius: radius.r24, borderWidth: 1, borderColor: c.ink15, borderStyle: 'dashed',
+    backgroundColor: c.surface0,
+  },
+  mosaicEmptyText: { color: c.ink30, textAlign: 'center' },
+  mosaicEmptyBtn: {
+    marginTop: spacing.sm, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm,
+    borderRadius: radius.full, backgroundColor: c.ink100,
+  },
+  mosaicEmptyBtnText: { fontFamily: fonts.sansSb, fontSize: 13, color: c.onAccent },
 });

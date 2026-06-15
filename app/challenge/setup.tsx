@@ -9,18 +9,19 @@ import { Card } from '@/components/ui/Card';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
 import { ArtworkCard } from '@/components/ui/ArtworkCard';
 import { MosaicGrid } from '@/components/ui/MosaicGrid';
-import { ARTWORKS, TIER_TARGETS, tierLabel, createChallenge } from '@/lib/artworks';
+import { ARTWORKS, TIER_TARGETS, tierLabel, tierBlurb, formatTileCount, createChallenge } from '@/lib/artworks';
 import { useChallengeStore } from '@/store/useChallengeStore';
 import { useTheme } from '@/hooks/useTheme';
 import { useThemedStyles } from '@/hooks/useThemedStyles';
 import { radius, spacing, layout, type Palette } from '@/lib/theme';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
-import { MosaicTileIcon } from '@/components/ui/MosaicTileIcon';
+import { MosaicLogoIcon } from '@/components/ui/MosaicLogoIcon';
 import { ChevronLeft, Plus, ListOrdered, Shuffle, ICON_STROKE } from '@/lib/icons';
 import type { TileOrder } from '@/types';
 
 const PREVIEW_W = Dimensions.get('window').width - layout.screenPadH * 2;
 const CARD_W = 150; // horizontal carousel card width
+const TIER_CHIP_W = (PREVIEW_W - spacing.sm * 2) / 3; // three columns, two gaps between
 
 export default function ChallengeSetupScreen() {
   const { colors } = useTheme();
@@ -85,12 +86,12 @@ export default function ChallengeSetupScreen() {
                 />
               </View>
               <View style={s.previewMeta}>
-                <AppText variant="title">{tierData.tiles} tiles · {tierLabel(tierData.tiles)}</AppText>
-                <AppText variant="caption">One tile per photo · fill at your own pace</AppText>
+                <AppText variant="title">{tierLabel(tierData.tiles)}</AppText>
+                <AppText variant="caption">{tierBlurb(tierData.tiles)}</AppText>
               </View>
             </Card>
 
-            <View style={s.tierRow}>
+            <View style={s.tierGrid}>
               {TIER_TARGETS.map((t) => {
                 const active = t === tier;
                 return (
@@ -99,10 +100,20 @@ export default function ChallengeSetupScreen() {
                     style={[s.tierChip, active && { backgroundColor: colors.ink100, borderColor: colors.ink100 }]}
                     onPress={() => setTier(t)}
                     accessibilityRole="button"
+                    accessibilityLabel={`${tierLabel(t)}, about ${formatTileCount(t)} tiles`}
                     accessibilityState={{ selected: active }}
                   >
-                    <AppText variant="bodyMd" color={active ? colors.onAccent : colors.ink100}>{t}</AppText>
-                    <AppText variant="sub" color={active ? 'rgba(255,255,255,0.7)' : colors.ink30}>tiles</AppText>
+                    <AppText variant="bodyMd" color={active ? colors.onAccent : colors.ink100} numberOfLines={1}>
+                      {tierLabel(t)}
+                    </AppText>
+                    <AppText
+                      variant="sub"
+                      color={active ? colors.onAccent : colors.ink30}
+                      style={active ? s.tierChipSubActive : undefined}
+                      numberOfLines={1}
+                    >
+                      ~{formatTileCount(t)} tiles
+                    </AppText>
                   </Pressable>
                 );
               })}
@@ -137,8 +148,8 @@ export default function ChallengeSetupScreen() {
       <View style={[s.footer, { bottom: insets.bottom + spacing.lg }]} pointerEvents="box-none">
         <PrimaryButton
           label="Begin this mosaic"
-          sublabel={artwork ? `${artwork.title} · ${tierData?.tiles} tiles` : 'Pick a painting first'}
-          icon={MosaicTileIcon}
+          sublabel={artwork && tierData ? `${artwork.title} · ${tierLabel(tierData.tiles)}` : 'Pick a painting first'}
+          icon={MosaicLogoIcon}
           onPress={begin}
           disabled={!artwork}
         />
@@ -190,9 +201,13 @@ const makeStyles = (c: Palette) => StyleSheet.create({
   previewWrap: { alignItems: 'center' },
   previewMeta: { marginTop: spacing.md, gap: 2 },
 
-  tierRow: { flexDirection: 'row', gap: spacing.xs },
+  tierGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  // Dim the count on the selected chip — using onAccent (not hardcoded white) so
+  // it stays legible whatever colour ink100 resolves to in the active theme.
+  tierChipSubActive: { opacity: 0.7 },
   tierChip: {
-    flex: 1, alignItems: 'center', paddingVertical: spacing.sm, paddingHorizontal: 2,
+    width: TIER_CHIP_W, alignItems: 'center', gap: 2,
+    paddingVertical: spacing.md, paddingHorizontal: spacing.xs,
     borderRadius: radius.r12, borderWidth: 1, borderColor: c.ink15, backgroundColor: c.surface0,
   },
 
