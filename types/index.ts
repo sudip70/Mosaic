@@ -21,7 +21,6 @@ export interface Photo {
   created_at: string;
   timestamp?: boolean;    // was the camera Timestamp setting on at capture? drives the time badge
   url?: string;           // resolved at render: local_uri if pending, Supabase URL if synced
-  dominant_hex?: string;  // the photo's dominant colour, extracted at capture (drives mosaic tiles)
 }
 
 export interface GridDay {
@@ -58,6 +57,9 @@ export interface FilledTile {
   date: string;        // the day it was filled
   hex: string;         // dominant colour of the photo that filled this tile
   photoCount: number;  // photos that contributed (currently always 1)
+  uri?: string;        // local file:// path of the photo that completed this tile.
+                       // Optional: tiles filled before the separate mosaic-capture
+                       // flow carry a hex only and have no revisitable image.
 }
 
 export interface Challenge {

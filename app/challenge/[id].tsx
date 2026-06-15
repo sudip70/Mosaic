@@ -1,20 +1,34 @@
 import { useState } from 'react';
 import { View, ScrollView, Pressable, Dimensions, StyleSheet } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
+import * as FileSystem from 'expo-file-system/legacy';
 import { AppScreen } from '@/components/ui/AppScreen';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { AppText } from '@/components/ui/AppText';
 import { Card } from '@/components/ui/Card';
 import { MosaicGrid } from '@/components/ui/MosaicGrid';
+import { PrimaryButton } from '@/components/ui/PrimaryButton';
 import { useChallenge } from '@/hooks/useChallenge';
 import { useChallengeStore } from '@/store/useChallengeStore';
-import { getArtwork, tierLabel } from '@/lib/artworks';
+import { MOSAIC_DIR } from '@/hooks/useUpload';
+import { getArtwork, tierLabel, progressPhase, progressPct, formatTileCount } from '@/lib/artworks';
+import { reportError } from '@/lib/reportError';
 import { useAnalytics } from '@/hooks/useAnalytics';
 import { useTheme } from '@/hooks/useTheme';
 import { useThemedStyles } from '@/hooks/useThemedStyles';
 import { spacing, layout, radius, type Palette } from '@/lib/theme';
-import { ChevronLeft, Eye, EyeOff, Pin, ICON_STROKE } from '@/lib/icons';
+import { Camera, ChevronLeft, Eye, EyeOff, Pin, ICON_STROKE } from '@/lib/icons';
+
+// Best-effort removal of a run's saved tile images — used when a run is restarted
+// (its tiles are cleared) or deleted, so the files don't linger on the device.
+async function clearTileImages(challengeId: string): Promise<void> {
+  try {
+    await FileSystem.deleteAsync(`${MOSAIC_DIR}${challengeId}/`, { idempotent: true });
+  } catch (e) {
+    reportError(e, { scope: 'clearTileImages', challengeId });
+  }
+}
 
 const CONTENT_W = Dimensions.get('window').width - layout.screenPadH * 2;
 
@@ -26,10 +40,10 @@ export default function ChallengeDetailScreen() {
   const resume = useChallengeStore((s) => s.resume);
   const restart = useChallengeStore((s) => s.restart);
   const remove = useChallengeStore((s) => s.remove);
-  const pinnedId = useChallengeStore((s) => s.pinnedId);
+  const pinnedIds = useChallengeStore((s) => s.pinnedIds);
   const pin = useChallengeStore((s) => s.pin);
   const unpin = useChallengeStore((s) => s.unpin);
-  const { currentTileIndex } = useChallenge();
+  const { currentTileIndex, todayColor: tileColor } = useChallenge();
   const { track } = useAnalytics();
   const { colors } = useTheme();
   const s = useThemedStyles(makeStyles);
@@ -61,7 +75,7 @@ export default function ChallengeDetailScreen() {
   const isActive = challenge.status === 'active';
   const isComplete = challenge.status === 'completed';
   const canResume = challenge.status === 'paused' || challenge.status === 'abandoned';
-  const isPinned = pinnedId === challengeId;
+  const isPinned = pinnedIds.includes(challengeId);
   const filledCount = Object.keys(challenge.filled).length;
   const statusText =
     isComplete ? 'Completed'
@@ -74,7 +88,7 @@ export default function ChallengeDetailScreen() {
   function togglePin() {
     if (!challenge) return;
     if (isPinned) {
-      unpin();
+      unpin(challengeId);
     } else {
       pin(challengeId);
       track('mosaic_pinned', { status: challenge.status, tiles: challenge.totalTiles });
@@ -128,28 +142,51 @@ export default function ChallengeDetailScreen() {
           <AppText variant="caption">{challenge.artworkArtist} · {artwork.year}</AppText>
         </View>
 
+        {/* Phase + bar lead; the real total stays discoverable but demoted to a
+            faint caption so the scale informs without intimidating. */}
+        <View style={s.progressBlock}>
+          <View style={s.progressTrack}>
+            <View style={[s.progressFill, { width: `${progressPct(filledCount, challenge.totalTiles)}%` }]} />
+          </View>
+          <AppText variant="sub" color={colors.ink30}>
+            of ~{formatTileCount(challenge.totalTiles)} tiles
+          </AppText>
+        </View>
+
         <View style={s.statsRow}>
           <Card style={s.stat} padded={false}>
             <AppText variant="serifLg">{filledCount}</AppText>
-            <AppText variant="overline" style={s.statLabel}>Filled</AppText>
+            <AppText variant="overline" style={s.statLabel}>Tiles placed</AppText>
           </Card>
           <Card style={s.stat} padded={false}>
-            <AppText variant="serifLg">{challenge.totalTiles}</AppText>
-            <AppText variant="overline" style={s.statLabel}>Tiles</AppText>
+            <AppText variant="serifLg" style={s.statStatus} numberOfLines={2}>{progressPhase(filledCount, challenge.totalTiles)}</AppText>
+            <AppText variant="overline" style={s.statLabel}>Progress</AppText>
           </Card>
           <Card style={s.stat} padded={false}>
-            <AppText variant="serifLg" style={s.statStatus}>{statusText}</AppText>
+            <AppText variant="serifLg" style={s.statStatus} numberOfLines={2}>{statusText}</AppText>
             <AppText variant="overline" style={s.statLabel}>{tierLabel(challenge.totalTiles)}</AppText>
           </Card>
         </View>
 
         <AppText variant="caption" style={s.hint}>
           {isActive
-            ? 'Tap the eye to peek at the painting you’re rebuilding. Each photo you take fills the next tile with the colour you find.'
+            ? 'Tap the eye to peek at the painting you’re rebuilding. Capture the next tile’s colour to fill it — one photo, one tile.'
             : canResume
             ? 'This run is set aside. Resume to carry on from the tile you were on, or start over to rebuild it from scratch.'
-            : 'Every filled tile is the dominant colour of a photo you took that day.'}
+            : 'Every filled tile is the dominant colour of a photo you captured for it.'}
         </AppText>
+
+        {isActive && (
+          <PrimaryButton
+            label={tileColor ? `Find ${tileColor.name}` : 'Capture next tile'}
+            sublabel="Fill the next tile with a colour you find"
+            icon={Camera}
+            iconColor={tileColor?.hex}
+            onPress={() =>
+              router.push({ pathname: '/camera', params: { mode: 'mosaic', challengeId } })
+            }
+          />
+        )}
 
         {isActive && (
           <Pressable onPress={confirmSetAside} style={s.linkBtn} hitSlop={8} accessibilityRole="button">
@@ -199,7 +236,7 @@ export default function ChallengeDetailScreen() {
         body="Every filled tile is cleared and the run begins again from scratch. This can't be undone."
         confirmLabel="Start over"
         tone="danger"
-        onConfirm={() => { setShowRestart(false); restart(challengeId); router.back(); }}
+        onConfirm={() => { setShowRestart(false); void clearTileImages(challengeId); restart(challengeId); router.back(); }}
         onCancel={() => setShowRestart(false)}
       />
       <ConfirmDialog
@@ -208,7 +245,7 @@ export default function ChallengeDetailScreen() {
         body="The mosaic and all its filled tiles are removed for good. This can't be undone."
         confirmLabel="Delete"
         tone="danger"
-        onConfirm={() => { setShowDelete(false); remove(challengeId); router.back(); }}
+        onConfirm={() => { setShowDelete(false); void clearTileImages(challengeId); remove(challengeId); router.back(); }}
         onCancel={() => setShowDelete(false)}
       />
     </AppScreen>
@@ -233,6 +270,12 @@ const makeStyles = (c: Palette) => StyleSheet.create({
   gridBtnOn: { backgroundColor: c.accent },
 
   titleBlock: { gap: 2 },
+
+  progressBlock: { gap: spacing.xs },
+  progressTrack: {
+    height: 5, borderRadius: radius.full, backgroundColor: c.ink15, overflow: 'hidden',
+  },
+  progressFill: { height: '100%', borderRadius: radius.full, backgroundColor: c.accent },
 
   statsRow: { flexDirection: 'row', gap: spacing.sm },
   stat: { flex: 1, alignItems: 'center', paddingVertical: 14 },
