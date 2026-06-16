@@ -1,12 +1,16 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { View, ScrollView, Pressable, Dimensions, StyleSheet } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import * as FileSystem from 'expo-file-system/legacy';
+import * as MediaLibrary from 'expo-media-library';
+import * as Sharing from 'expo-sharing';
+import { captureRef } from 'react-native-view-shot';
 import { AppScreen } from '@/components/ui/AppScreen';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { AppText } from '@/components/ui/AppText';
 import { Card } from '@/components/ui/Card';
+import { Toast } from '@/components/ui/Toast';
 import { MosaicGrid } from '@/components/ui/MosaicGrid';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
 import { useChallenge } from '@/hooks/useChallenge';
@@ -18,7 +22,11 @@ import { useAnalytics } from '@/hooks/useAnalytics';
 import { useTheme } from '@/hooks/useTheme';
 import { useThemedStyles } from '@/hooks/useThemedStyles';
 import { spacing, layout, radius, type Palette } from '@/lib/theme';
-import { Camera, ChevronLeft, Eye, EyeOff, Pin, ICON_STROKE } from '@/lib/icons';
+import { Camera, ChevronLeft, Download, Eye, EyeOff, Pin, Share2, ICON_STROKE } from '@/lib/icons';
+
+// Off-screen render width for the exported image — high enough to read crisply
+// when shared, independent of the on-screen grid size.
+const EXPORT_W = 1080;
 
 // Best-effort removal of a run's saved tile images — used when a run is restarted
 // (its tiles are cleared) or deleted, so the files don't linger on the device.
@@ -53,6 +61,11 @@ export default function ChallengeDetailScreen() {
   const [showRestart, setShowRestart] = useState(false);
   const [showDelete, setShowDelete] = useState(false);
 
+  // Export: capture an off-screen, full-res render of the painting to an image.
+  const shotRef = useRef<View>(null);
+  const [busy, setBusy] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
+
   const challenge = active?.id === id ? active : history.find((c) => c.id === id);
   const artwork = challenge ? getArtwork(challenge.artworkId) : undefined;
   // Tier colours may be absent for runs created before the current artwork data
@@ -85,6 +98,35 @@ export default function ChallengeDetailScreen() {
   function confirmSetAside() { setShowSetAside(true); }
   function confirmRestart() { setShowRestart(true); }
   function confirmDelete() { setShowDelete(true); }
+
+  function showToast(msg: string) {
+    setToast(msg);
+    setTimeout(() => setToast(null), 2200);
+  }
+
+  // Capture the off-screen high-res grid once, then either save it to the photo
+  // library or open the share sheet. Reuses the same modules as the photo flows.
+  async function exportImage(action: 'save' | 'share') {
+    if (busy) return;
+    setBusy(true);
+    try {
+      const uri = await captureRef(shotRef, { format: 'png', quality: 1, result: 'tmpfile' });
+      if (action === 'save') {
+        const { granted } = await MediaLibrary.requestPermissionsAsync();
+        if (!granted) { showToast('Photo library permission denied'); return; }
+        await MediaLibrary.saveToLibraryAsync(uri);
+        showToast('Saved to your photos');
+      } else {
+        if (!(await Sharing.isAvailableAsync())) { showToast('Sharing is not available on this device'); return; }
+        await Sharing.shareAsync(uri, { mimeType: 'image/png', dialogTitle: 'Share your mosaic' });
+      }
+    } catch (e) {
+      reportError(e, { scope: 'mosaicExport', challengeId, action });
+      showToast(action === 'save' ? 'Could not save image' : 'Could not share image');
+    } finally {
+      setBusy(false);
+    }
+  }
   function togglePin() {
     if (!challenge) return;
     if (isPinned) {
@@ -188,6 +230,30 @@ export default function ChallengeDetailScreen() {
           />
         )}
 
+        {/* Export the painting as an image — available at any progress. */}
+        <View style={s.exportRow}>
+          <Pressable
+            style={[s.exportBtn, s.exportBtnOutline]}
+            onPress={() => exportImage('save')}
+            disabled={busy}
+            accessibilityRole="button"
+            accessibilityLabel="Save mosaic image to your photos"
+          >
+            <Download size={16} color={colors.ink100} strokeWidth={ICON_STROKE} />
+            <AppText variant="bodyMd" color={colors.ink100}>Save image</AppText>
+          </Pressable>
+          <Pressable
+            style={[s.exportBtn, { backgroundColor: colors.ink100 }]}
+            onPress={() => exportImage('share')}
+            disabled={busy}
+            accessibilityRole="button"
+            accessibilityLabel="Share mosaic image"
+          >
+            <Share2 size={16} color={colors.onAccent} strokeWidth={ICON_STROKE} />
+            <AppText variant="bodyMd" color={colors.onAccent}>Share</AppText>
+          </Pressable>
+        </View>
+
         {isActive && (
           <Pressable onPress={confirmSetAside} style={s.linkBtn} hitSlop={8} accessibilityRole="button">
             <AppText variant="bodyMd" color={colors.ink30}>Set this mosaic aside</AppText>
@@ -220,6 +286,23 @@ export default function ChallengeDetailScreen() {
           <AppText variant="bodyMd" color="#E0584F">Delete this mosaic</AppText>
         </Pressable>
       </ScrollView>
+
+      {/* Off-screen, full-resolution render captured for image export. Positioned
+          far off-screen (not hidden) so it lays out and captures reliably;
+          collapsable={false} keeps it in the native tree on Android. */}
+      <View ref={shotRef} collapsable={false} style={s.exportStage} pointerEvents="none">
+        <MosaicGrid
+          width={EXPORT_W}
+          cols={challenge.cols}
+          rows={challenge.rows}
+          targetColors={tier?.colors ?? []}
+          filled={challenge.filled}
+          mode="progress"
+          rounded={false}
+        />
+      </View>
+
+      <Toast message={toast} bottomOffset={spacing.x3} />
 
       <ConfirmDialog
         visible={showSetAside}
@@ -283,6 +366,17 @@ const makeStyles = (c: Palette) => StyleSheet.create({
   statStatus: { fontSize: 16, lineHeight: 20 },
 
   hint: { lineHeight: 18, color: c.ink30 },
+
+  // Export the painting as an image
+  exportRow: { flexDirection: 'row', gap: spacing.sm },
+  exportBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: spacing.xs, paddingVertical: spacing.md, borderRadius: radius.full,
+  },
+  exportBtnOutline: { borderWidth: 1, borderColor: c.ink15 },
+  // Laid out but far off-screen so react-native-view-shot can capture it at full
+  // resolution without it ever being visible.
+  exportStage: { position: 'absolute', left: -10000, top: 0, width: EXPORT_W },
 
   actions: { gap: spacing.xs, marginTop: spacing.sm },
   resumeBtn: {
