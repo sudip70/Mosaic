@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { View, ScrollView, Pressable, Dimensions, StyleSheet } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import * as FileSystem from 'expo-file-system/legacy';
@@ -19,6 +19,7 @@ import { MOSAIC_DIR } from '@/hooks/useUpload';
 import { getArtwork, tierLabel, progressPhase, progressPct, formatTileCount } from '@/lib/artworks';
 import { reportError } from '@/lib/reportError';
 import { useAnalytics } from '@/hooks/useAnalytics';
+import { useUpgradeNudge } from '@/hooks/useUpgradeNudge';
 import { useTheme } from '@/hooks/useTheme';
 import { useThemedStyles } from '@/hooks/useThemedStyles';
 import { spacing, layout, radius, type Palette } from '@/lib/theme';
@@ -72,6 +73,24 @@ export default function ChallengeDetailScreen() {
   // (e.g. an old tile count). Progress + original views don't need them, so we
   // only require the challenge and artwork to render.
   const tier = challenge && artwork ? artwork.tiers[challenge.tier] : undefined;
+
+  // Nudge toward an account right after a mosaic is finished — completedAt is
+  // freshly stamped when the last tile lands (see useChallengeStore.fillNextTile),
+  // so a recent timestamp means we got here straight from that capture, not from
+  // browsing an old painting.
+  const { promptUpgrade, nudge } = useUpgradeNudge();
+  useEffect(() => {
+    if (
+      challenge?.status === 'completed' &&
+      challenge.completedAt &&
+      Date.now() - new Date(challenge.completedAt).getTime() < 15000
+    ) {
+      promptUpgrade({
+        title: 'Mosaic complete',
+        body: 'A finished piece deserves a permanent home. Add an email to keep your mosaics safe across devices.',
+      });
+    }
+  }, [challenge?.status, challenge?.completedAt, promptUpgrade]);
 
   if (!challenge || !artwork) {
     return (
@@ -212,7 +231,7 @@ export default function ChallengeDetailScreen() {
 
         <AppText variant="caption" style={s.hint}>
           {isActive
-            ? 'Tap the eye to peek at the painting you’re rebuilding. Capture the next tile’s colour to fill it — one photo, one tile.'
+            ? 'Tap the eye to peek at the painting you’re rebuilding. Capture the next tile’s colour to fill it. One photo, one tile.'
             : canResume
             ? 'This run is set aside. Resume to carry on from the tile you were on, or start over to rebuild it from scratch.'
             : 'Every filled tile is the dominant colour of a photo you captured for it.'}
@@ -331,6 +350,8 @@ export default function ChallengeDetailScreen() {
         onConfirm={() => { setShowDelete(false); void clearTileImages(challengeId); remove(challengeId); router.back(); }}
         onCancel={() => setShowDelete(false)}
       />
+
+      {nudge}
     </AppScreen>
   );
 }

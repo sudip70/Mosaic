@@ -25,6 +25,10 @@ export {
   ChevronRight, // forward / drill-in
   Play,         // resume a set-aside mosaic
   Pin,          // pin / unpin a mosaic to the profile
+  Mail,         // email / account upgrade
+  Calendar,     // date of birth
+  AtSign,       // username
+  Lock,         // locked / read-only field
 } from 'lucide-react-native';
 
 export type { LucideIcon } from 'lucide-react-native';

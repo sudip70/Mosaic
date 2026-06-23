@@ -39,7 +39,17 @@ export async function initAuth() {
   }
 
   // Single listener keeps the store in sync for the app's lifetime.
-  supabase.auth.onAuthStateChange((_event, session) => {
+  supabase.auth.onAuthStateChange((event, session) => {
     useAuthStore.setState({ session });
+
+    // The app has no UI for a session-less state — every screen needs a user_id.
+    // When a permanent user signs out, drop them straight back into a fresh
+    // anonymous session so capture keeps working (their cloud data stays under
+    // the old account; this device starts a new local journal).
+    if (event === 'SIGNED_OUT') {
+      supabase.auth.signInAnonymously().catch((e) =>
+        reportError(e, { scope: 'reAnonAfterSignOut' })
+      );
+    }
   });
 }
