@@ -8,16 +8,14 @@ import Animated, {
 import type { SharedValue } from 'react-native-reanimated';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AppText } from '@/components/ui/AppText';
 import { TimePicker } from '@/components/ui/TimePicker';
 import { useTheme } from '@/hooks/useTheme';
 import { fonts, radius, spacing, shadows, type Palette } from '@/lib/theme';
-import { ONBOARDING_KEY } from '@/lib/constants';
-import { useAppStore } from '@/store/useAppStore';
+import { markOnboarded } from '@/store/useAppStore';
 import { useSettings } from '@/store/useSettings';
 import { requestNotificationPermission, scheduleReminder } from '@/lib/notifications';
-import { Camera, ArrowRight, User, ICON_STROKE } from '@/lib/icons';
+import { Camera, ArrowRight, User, Lock, ICON_STROKE } from '@/lib/icons';
 import { Bell } from 'lucide-react-native';
 import Svg, {
   Path, Rect, Circle, Ellipse, Defs,
@@ -595,6 +593,48 @@ function ReminderPage({ c, time, onChangeTime }: { c: Palette; time: string; onC
   );
 }
 
+// ─── Page 7: Account ──────────────────────────────────────────────────────────
+
+function AccountPage({ c }: { c: Palette }) {
+  const float = useSharedValue(0);
+  useEffect(() => {
+    float.value = withRepeat(
+      withSequence(
+        withTiming(-8, { duration: 2600, easing: Easing.inOut(Easing.ease) }),
+        withTiming(8, { duration: 2600, easing: Easing.inOut(Easing.ease) }),
+      ),
+      -1, true,
+    );
+  }, []);
+  const floatStyle = useAnimatedStyle(() => ({ transform: [{ translateY: float.value }] }));
+
+  return (
+    <View style={pg.page}>
+      <View style={[pg.visual, { alignItems: 'center', justifyContent: 'center' }]}>
+        <Animated.View style={floatStyle}>
+          <View style={[pg.acctAvatar, { backgroundColor: c.accent }]}>
+            <User size={40} color={c.onAccent} strokeWidth={ICON_STROKE} />
+            {/* Lock badge — signals "kept safe". */}
+            <View style={[pg.acctLock, { backgroundColor: c.surface0, borderColor: c.canvas }]}>
+              <Lock size={15} color={c.accent} strokeWidth={ICON_STROKE} />
+            </View>
+          </View>
+        </Animated.View>
+      </View>
+      <View style={pg.copy}>
+        <View style={pg.eyebrow}>
+          <View style={[pg.eyebrowDot, { backgroundColor: c.accent }]} />
+          <AppText style={[pg.tag, { color: c.accent }]}>Last step</AppText>
+        </View>
+        <AppText style={[pg.headline, { color: c.ink100 }]}>{"Make it\nyours."}</AppText>
+        <AppText style={[pg.body, { color: c.ink60 }]}>
+          Create an account to keep your colours, streak and mosaics safe across devices. Or jump straight in and explore first.
+        </AppText>
+      </View>
+    </View>
+  );
+}
+
 // ─── Progress dots ────────────────────────────────────────────────────────────
 
 function ProgressDot({ active, accent, idle }: { active: boolean; accent: string; idle: string }) {
@@ -611,7 +651,6 @@ function ProgressDot({ active, accent, idle }: { active: boolean; accent: string
 export default function OnboardingScreen() {
   const { colors: c, isDark } = useTheme();
   const insets             = useSafeAreaInsets();
-  const setOnboarded       = useAppStore((s) => s.setOnboarded);
   const setMorningReminder = useSettings((s) => s.setMorningReminder);
   const setReminderTime    = useSettings((s) => s.setReminderTime);
   const defaultTime        = useSettings((s) => s.reminderTime);
@@ -628,28 +667,40 @@ export default function OnboardingScreen() {
     scrollRef.current?.scrollTo({ x: (page + 1) * SW, animated: true });
   }, [page]);
 
+  // Enter the app as a guest (no account).
   async function finish() {
-    setOnboarded(true);
-    await AsyncStorage.setItem(ONBOARDING_KEY, 'true');
+    await markOnboarded();
     router.replace('/');
   }
 
-  async function enableAndFinish() {
+  // Reminder page: enable (if permitted), then move on to the account step
+  // rather than finishing, so account creation is always offered last.
+  async function enableReminders() {
     const granted = await requestNotificationPermission();
     if (granted) {
       setMorningReminder(true);
       setReminderTime(time);
       scheduleReminder(time);
     }
-    await finish();
+    advance();
   }
 
+  // Account step actions. Both auth flows carry onboarding=1 so completing them
+  // finishes onboarding and enters the app (see the auth screen's complete()).
+  const createAccount = () =>
+    router.push({ pathname: '/(auth)/login', params: { onboarding: '1' } });
+  const logIn = () =>
+    router.push({ pathname: '/(auth)/login', params: { mode: 'signin', onboarding: '1' } });
+
   const isReminder = page === 5;
+  const isAccount  = page === 6;
+  const PAGE_COUNT = 7;
 
   return (
     <View style={[pg.screen, { backgroundColor: c.canvas }]}>
-      {/* Skip chip — visible on every page except the final reminder (0–4) */}
-      {!isReminder && (
+      {/* Skip chip — jumps straight to guest entry; hidden on the final account
+          page, which has its own "Continue without account". */}
+      {!isAccount && (
         <Pressable
           style={[pg.skipBtn, { top: insets.top + 14 }]}
           onPress={finish}
@@ -675,17 +726,48 @@ export default function OnboardingScreen() {
         <MosaicPage   c={c} />
         <StreakPage   c={c} />
         <ReminderPage c={c} time={time} onChangeTime={setTime} />
+        <AccountPage  c={c} />
       </ScrollView>
 
       {/* Bottom nav */}
       <View style={[pg.nav, { paddingBottom: Math.max(insets.bottom, 16) + 6 }]}>
         <View style={pg.dots}>
-          {Array.from({ length: 6 }).map((_, i) => (
+          {Array.from({ length: PAGE_COUNT }).map((_, i) => (
             <ProgressDot key={i} active={i === page} accent={c.accent} idle={c.ink15} />
           ))}
         </View>
 
-        {!isReminder ? (
+        {isAccount ? (
+          <View style={{ gap: 10 }}>
+            <Pressable onPress={createAccount} accessibilityRole="button" accessibilityLabel="Create account">
+              {({ pressed }) => (
+                <View style={[pg.cta, { backgroundColor: isDark ? c.surface2 : c.ink100 }, pressed && pg.ctaPressed]}>
+                  <AppText style={[pg.ctaLabel, { color: isDark ? c.ink100 : '#fff' }]}>Create account</AppText>
+                  <View style={[pg.ctaArrow, { backgroundColor: c.accent }]}>
+                    <ArrowRight size={18} color={c.onAccent} strokeWidth={ICON_STROKE} />
+                  </View>
+                </View>
+              )}
+            </Pressable>
+            <Pressable onPress={logIn} accessibilityRole="button" accessibilityLabel="Log in to an existing account">
+              {({ pressed }) => (
+                <View style={[pg.cta, pg.ctaOutline, { backgroundColor: c.surface1, borderColor: c.ink15 }, pressed && pg.ctaPressed]}>
+                  <AppText style={[pg.ctaLabel, { color: c.ink100 }]}>I have an account</AppText>
+                  <View style={[pg.ctaArrow, { backgroundColor: c.surface2 }]}>
+                    <ArrowRight size={18} color={c.ink60} strokeWidth={ICON_STROKE} />
+                  </View>
+                </View>
+              )}
+            </Pressable>
+            <Pressable onPress={finish} accessibilityRole="button" accessibilityLabel="Continue without an account">
+              {({ pressed }) => (
+                <AppText style={[pg.skipReminder, { color: c.ink30, opacity: pressed ? 0.55 : 1 }]}>
+                  Continue without account →
+                </AppText>
+              )}
+            </Pressable>
+          </View>
+        ) : !isReminder ? (
           <Pressable onPress={advance} accessibilityRole="button" accessibilityLabel="Continue">
             {({ pressed }) => (
               <View style={[pg.cta, { backgroundColor: isDark ? c.surface2 : c.ink100 }, pressed && pg.ctaPressed]}>
@@ -698,7 +780,7 @@ export default function OnboardingScreen() {
           </Pressable>
         ) : (
           <View style={{ gap: 10 }}>
-            <Pressable onPress={enableAndFinish} accessibilityRole="button" accessibilityLabel="Turn on reminders">
+            <Pressable onPress={enableReminders} accessibilityRole="button" accessibilityLabel="Turn on reminders">
               {({ pressed }) => (
                 <View style={[pg.cta, { backgroundColor: isDark ? c.surface2 : c.ink100 }, pressed && pg.ctaPressed]}>
                   <AppText style={[pg.ctaLabel, { color: isDark ? c.ink100 : '#fff' }]}>Turn on reminders</AppText>
@@ -708,10 +790,10 @@ export default function OnboardingScreen() {
                 </View>
               )}
             </Pressable>
-            <Pressable onPress={finish} accessibilityRole="button" accessibilityLabel="Skip for now">
+            <Pressable onPress={advance} accessibilityRole="button" accessibilityLabel="Maybe later">
               {({ pressed }) => (
                 <AppText style={[pg.skipReminder, { color: c.ink30, opacity: pressed ? 0.55 : 1 }]}>
-                  Skip for now →
+                  Maybe later →
                 </AppText>
               )}
             </Pressable>
@@ -812,6 +894,23 @@ const pg = StyleSheet.create({
   ctaPressed: { opacity: 0.92, transform: [{ scale: 0.97 }] },
   ctaLabel:   { fontFamily: fonts.serifR, fontSize: 20, color: '#fff', letterSpacing: -0.2 },
   ctaArrow:   { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
+
+  // Secondary CTA shares the primary's footprint exactly (same pg.cta base) so
+  // the pair lines up; the hairline border + surface fill mark it as secondary.
+  ctaOutline: { borderWidth: StyleSheet.hairlineWidth, ...shadows.elev1 },
+
+  // Page 7 — account
+  acctAvatar: {
+    width: 96, height: 96, borderRadius: 48,
+    alignItems: 'center', justifyContent: 'center',
+    ...shadows.elev3,
+  },
+  acctLock: {
+    position: 'absolute', right: -4, bottom: -4,
+    width: 34, height: 34, borderRadius: 17,
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 3,
+  },
 
   skipReminder: { fontFamily: fonts.sans, fontSize: 13, textAlign: 'center', paddingVertical: 4 },
 });

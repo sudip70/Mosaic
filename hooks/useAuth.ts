@@ -31,6 +31,13 @@ export function useAuth() {
     linkEmail: (email: string) => supabase.auth.updateUser({ email }),
     verifyEmailOtp: (email: string, token: string) =>
       supabase.auth.verifyOtp({ email, token, type: 'email_change' }),
+    // Returning-user sign in. shouldCreateUser:false so an unknown email errors
+    // (this is "log in", not "sign up"). Signing in replaces the current
+    // anonymous session with the existing account, restoring its cloud data.
+    signIn: (email: string) =>
+      supabase.auth.signInWithOtp({ email, options: { shouldCreateUser: false } }),
+    verifySignIn: (email: string, token: string) =>
+      supabase.auth.verifyOtp({ email, token, type: 'email' }),
     // Is a username free? Returns the RPC's boolean (true = available). Used for
     // inline form validation; the unique index is the hard guarantee.
     checkUsername: (username: string) =>

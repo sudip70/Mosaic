@@ -1,10 +1,14 @@
-// Account upgrade — turns the current anonymous session into a permanent one by
-// linking an email, verified with a code. The user_id never changes, so every
-// photo, streak and mosaic carries over (see useAuth.linkEmail). After
-// verifying, the user names their profile (all optional) before finishing.
+// Account entry — two modes:
+//   signup: turns the anonymous session permanent via updateUser({ email }) +
+//           verifyOtp (preserves user_id, so all data carries over), then a
+//           profile step (name, username, DOB).
+//   signin: returning-user log in via signInWithOtp + verifyOtp, swapping the
+//           anonymous session for the existing account. No profile step.
+// `onboarding=1` means we were launched from onboarding, so completing the flow
+// finishes onboarding and enters the app rather than just popping back.
 import { useState } from 'react';
 import { View, TextInput, Pressable, KeyboardAvoidingView, Platform, StyleSheet } from 'react-native';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { format, parseISO } from 'date-fns';
 import { AppScreen } from '@/components/ui/AppScreen';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
@@ -13,6 +17,7 @@ import { PrimaryButton } from '@/components/ui/PrimaryButton';
 import { DatePicker } from '@/components/ui/DatePicker';
 import { useAuth } from '@/hooks/useAuth';
 import { loadProfile } from '@/store/useProfileStore';
+import { markOnboarded } from '@/store/useAppStore';
 import { useTheme } from '@/hooks/useTheme';
 import { useThemedStyles } from '@/hooks/useThemedStyles';
 import { fonts, radius, spacing, type Palette } from '@/lib/theme';
@@ -23,7 +28,11 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 type Step = 'email' | 'code' | 'profile';
 
-export default function UpgradeScreen() {
+export default function AuthScreen() {
+  const params = useLocalSearchParams<{ mode?: string; onboarding?: string }>();
+  const isSignin = params.mode === 'signin';
+  const fromOnboarding = params.onboarding === '1';
+
   const [step, setStep] = useState<Step>('email');
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
@@ -35,7 +44,7 @@ export default function UpgradeScreen() {
   const [fieldErrors, setFieldErrors] = useState<{ name?: string; username?: string; dob?: string }>({});
   const [busy, setBusy] = useState(false);
 
-  const { linkEmail, verifyEmailOtp, checkUsername, upsertProfile } = useAuth();
+  const { linkEmail, verifyEmailOtp, signIn, verifySignIn, checkUsername, upsertProfile } = useAuth();
   const { colors } = useTheme();
   const s = useThemedStyles(makeStyles);
 
@@ -44,18 +53,35 @@ export default function UpgradeScreen() {
   // length in that range rather than hardcoding one and breaking if it changes.
   const codeValid = /^\d{6,10}$/.test(code);
 
+  // Leave the flow: into the app when we came from onboarding, otherwise back.
+  // From onboarding the auth screen sits pushed on top of the onboarding screen,
+  // so dismiss back to it first, then replace it with the app — otherwise
+  // onboarding would linger in the stack behind the tabs.
+  async function complete() {
+    if (fromOnboarding) {
+      await markOnboarded();
+      router.dismissAll();
+      router.replace('/');
+    } else {
+      router.back();
+    }
+  }
+
   async function sendCode() {
     if (!emailValid || busy) return;
-    // Dev bypass: skip the email/OTP round-trip entirely and go straight to the
-    // profile step so the flow can be tested without sending an email.
-    if (BYPASS_OTP) {
+    // Dev bypass (signup only): skip the email/OTP round-trip and go straight to
+    // the profile step so the flow can be tested without sending an email. Sign
+    // in always needs real auth, so it's never bypassed.
+    if (BYPASS_OTP && !isSignin) {
       setError(null);
       setStep('profile');
       return;
     }
     setBusy(true);
     setError(null);
-    const { error } = await linkEmail(email.trim());
+    const { error } = isSignin
+      ? await signIn(email.trim())
+      : await linkEmail(email.trim());
     setBusy(false);
     if (error) {
       setError(error.message);
@@ -68,15 +94,23 @@ export default function UpgradeScreen() {
     if (!codeValid || busy) return;
     setBusy(true);
     setError(null);
-    const { error } = await verifyEmailOtp(email.trim(), code);
+    const { error } = isSignin
+      ? await verifySignIn(email.trim(), code)
+      : await verifyEmailOtp(email.trim(), code);
     setBusy(false);
     if (error) {
       setError(error.message);
       return;
     }
-    // Session is now permanent; collect profile details before leaving.
     setError(null);
-    setStep('profile');
+    if (isSignin) {
+      // Signed in as the existing account — load their profile and enter.
+      await loadProfile();
+      await complete();
+    } else {
+      // Session is now permanent; collect profile details before leaving.
+      setStep('profile');
+    }
   }
 
   async function finishProfile() {
@@ -122,7 +156,7 @@ export default function UpgradeScreen() {
     // Pull the new profile into the store so the rest of the app reflects the
     // account immediately on return.
     await loadProfile();
-    router.back();
+    await complete();
   }
 
   const dobLabel = dob ? format(parseISO(dob), 'd MMMM yyyy') : 'Your birthday';
@@ -131,7 +165,9 @@ export default function UpgradeScreen() {
   // return (the account already exists), so it just dismisses, same as Skip.
   const onBack = () => (step === 'code' ? setStep('email') : router.back());
   const headerTitle =
-    step === 'email' ? 'Create account' : step === 'code' ? 'Enter code' : 'Your profile';
+    step === 'code' ? 'Enter code'
+    : step === 'profile' ? 'Your profile'
+    : isSignin ? 'Log in' : 'Create account';
 
   return (
     <AppScreen edges={['top', 'bottom']}>
@@ -148,11 +184,13 @@ export default function UpgradeScreen() {
         <View style={s.body}>
           {step === 'email' && (
             <>
-              <AppText variant="serifLg" style={s.title}>Save your work</AppText>
+              <AppText variant="serifLg" style={s.title}>
+                {isSignin ? 'Welcome back' : 'Save your work'}
+              </AppText>
               <AppText variant="body" style={s.sub}>
-                Add your email to keep your colours, streak and mosaics safe, and pick
-                up where you left off on any device. Everything you’ve made so far
-                comes with you.
+                {isSignin
+                  ? 'Enter the email for your account and we’ll send a code to sign you back in.'
+                  : 'Add your email to keep your colours, streak and mosaics safe, and pick up where you left off on any device. Everything you’ve made so far comes with you.'}
               </AppText>
 
               <View style={s.field}>
@@ -267,8 +305,8 @@ export default function UpgradeScreen() {
         <View style={s.actions}>
           {step === 'email' && (
             <PrimaryButton
-              label={BYPASS_OTP ? 'Continue' : busy ? 'Sending…' : 'Send code'}
-              icon={BYPASS_OTP ? Check : Mail}
+              label={BYPASS_OTP && !isSignin ? 'Continue' : busy ? 'Sending…' : 'Send code'}
+              icon={BYPASS_OTP && !isSignin ? Check : Mail}
               onPress={sendCode}
               disabled={!emailValid || busy}
             />
