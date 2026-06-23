@@ -1,5 +1,5 @@
 import { View, ScrollView, Pressable, ActivityIndicator, Image, StyleSheet } from 'react-native';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { router } from 'expo-router';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { format, parseISO, differenceInCalendarDays } from 'date-fns';
@@ -18,6 +18,7 @@ import { usePhotos } from '@/hooks/usePhotos';
 import { useMultiSelect } from '@/hooks/useMultiSelect';
 import { useAuth } from '@/hooks/useAuth';
 import { useAnalytics } from '@/hooks/useAnalytics';
+import { useUpgradeNudge } from '@/hooks/useUpgradeNudge';
 import { useTheme } from '@/hooks/useTheme';
 import { useThemedStyles } from '@/hooks/useThemedStyles';
 import { fonts, radius, shadows, spacing, type Palette } from '@/lib/theme';
@@ -26,6 +27,10 @@ import { formatShort } from '@/lib/dates';
 import type { Photo } from '@/types';
 
 const formatTime = (iso: string) => format(parseISO(iso), 'HH:mm');
+
+// Streak lengths worth celebrating — and the moment an anonymous user is most
+// likely to want their progress saved for good.
+const STREAK_MILESTONES = new Set([3, 7, 14, 30, 50, 100]);
 
 function Stat({ value, label, accent }: { value: number; label: string; accent?: boolean }) {
   const { colors } = useTheme();
@@ -66,7 +71,22 @@ export default function TodayScreen() {
     handleDownload, handleShare, handleDelete,
   } = useMultiSelect(photos);
 
+  const { promptUpgrade, nudge } = useUpgradeNudge();
+
   useEffect(() => { trackScreen('today'); }, []);
+
+  // Nudge toward an account the moment the streak grows into a milestone — only
+  // on the increase, so simply viewing Today at a milestone count doesn't fire.
+  const prevStreak = useRef(current);
+  useEffect(() => {
+    if (current > prevStreak.current && STREAK_MILESTONES.has(current)) {
+      promptUpgrade({
+        title: `${current}-day streak`,
+        body: `You're on a roll. Add an email to keep your streak and every colour safe across devices.`,
+      });
+    }
+    prevStreak.current = current;
+  }, [current, promptUpgrade]);
 
   const dayNumber = user?.created_at
     ? Math.max(1, differenceInCalendarDays(new Date(), parseISO(user.created_at)) + 1)
@@ -198,6 +218,8 @@ export default function TodayScreen() {
         onConfirm={handleDelete}
         onCancel={() => setConfirmDelete(false)}
       />
+
+      {nudge}
     </AppScreen>
   );
 }

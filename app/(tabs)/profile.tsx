@@ -10,6 +10,7 @@ import { MosaicGrid } from '@/components/ui/MosaicGrid';
 import { useChallengeStore } from '@/store/useChallengeStore';
 import { getArtwork } from '@/lib/artworks';
 import { useAuth } from '@/hooks/useAuth';
+import { useProfile } from '@/hooks/useProfile';
 import { useStreak } from '@/hooks/useStreak';
 import { useGrid } from '@/hooks/useGrid';
 import { useAnalytics } from '@/hooks/useAnalytics';
@@ -27,7 +28,8 @@ export default function ProfileScreen() {
   const { colors } = useTheme();
   const s = useThemedStyles(makeStyles);
   const { trackScreen } = useAnalytics();
-  const { user, isAnonymous } = useAuth();
+  const { user } = useAuth();
+  const { profile, hasAccount } = useProfile();
   const { current, longest } = useStreak();
   const active = useChallengeStore((st) => st.active);
   const history = useChallengeStore((st) => st.history);
@@ -87,9 +89,9 @@ export default function ProfileScreen() {
           <View style={s.avatar}>
             <User size={36} color={colors.onAccent} strokeWidth={ICON_STROKE} />
           </View>
-          <AppText variant="display" style={s.name}>You</AppText>
+          <AppText variant="display" style={s.name}>{profile?.full_name || 'You'}</AppText>
           <AppText style={s.sub}>
-            {isAnonymous ? 'Anonymous account' : user?.email ?? ''}
+            {hasAccount ? `@${profile?.username}` : 'Anonymous account'}
             {since ? ` · since ${since}` : ''}
           </AppText>
         </View>
@@ -162,13 +164,24 @@ export default function ProfileScreen() {
           </View>
         )}
 
-        {/* Phase 2 hint */}
-        <Card style={s.hint}>
-          <AppText style={s.hintTitle}>Make it yours</AppText>
-          <AppText style={s.hintSub}>
-            In Phase 2 you'll add a name and email so your mosaic stays safe and follows you across devices.
-          </AppText>
-        </Card>
+        {/* Create-account CTA — shown only until an account exists. */}
+        {!hasAccount && (
+          <Pressable
+            onPress={() => router.push('/(auth)/login')}
+            accessibilityRole="button"
+            accessibilityLabel="Create an account"
+          >
+            {({ pressed }) => (
+              <Card style={[s.hint, pressed && s.hintPressed]}>
+                <AppText style={s.hintTitle}>Make it yours</AppText>
+                <AppText style={s.hintSub}>
+                  Add a name and email so your colours, streak and mosaics stay safe
+                  and follow you across devices.
+                </AppText>
+              </Card>
+            )}
+          </Pressable>
+        )}
       </ScrollView>
     </AppScreen>
   );
@@ -216,6 +229,7 @@ const makeStyles = (c: Palette) => StyleSheet.create({
   mosaicTitle: { width: 104 },
 
   hint: { padding: spacing.xl, gap: 6 },
+  hintPressed: { opacity: 0.85 },
   hintTitle: { fontFamily: fonts.sansSb, fontSize: 14, color: c.ink100 },
   hintSub: { fontFamily: fonts.sans, fontSize: 13, lineHeight: 20, color: c.ink60 },
 });

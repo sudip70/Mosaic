@@ -10,6 +10,8 @@ import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { fonts, shadows, radius, spacing, type Palette } from '@/lib/theme';
 import { useAnalytics } from '@/hooks/useAnalytics';
+import { useAuth } from '@/hooks/useAuth';
+import { useProfile } from '@/hooks/useProfile';
 import { useTheme } from '@/hooks/useTheme';
 import { useThemedStyles } from '@/hooks/useThemedStyles';
 import { useSettings } from '@/store/useSettings';
@@ -124,6 +126,8 @@ function DisabledRow({ label, sub, last }: { label: string; sub?: string; last?:
 
 export default function SettingsScreen() {
   const { trackScreen } = useAnalytics();
+  const { signOut, deleteAccount } = useAuth();
+  const { profile, hasAccount } = useProfile();
   const { colors } = useTheme();
   const s = useThemedStyles(makeStyles);
   const {
@@ -134,6 +138,22 @@ export default function SettingsScreen() {
   const [storage, setStorage] = useState<StorageInfo | null>(null);
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [showClearCache, setShowClearCache] = useState(false);
+  const [showSignOut, setShowSignOut] = useState(false);
+  const [showDelete, setShowDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  async function confirmDeleteAccount() {
+    if (deleting) return;
+    setDeleting(true);
+    const { error } = await deleteAccount();
+    setDeleting(false);
+    setShowDelete(false);
+    if (error) {
+      Alert.alert('Could not delete account', error.message);
+      return;
+    }
+    router.back();
+  }
 
   const loadStorage = useCallback(() => { getStorageInfo().then(setStorage); }, []);
 
@@ -199,6 +219,44 @@ export default function SettingsScreen() {
       >
         {/* Phase 1 badge */}
         <PhaseBadge phase={1} label="Available now" />
+
+        {/* Account */}
+        <View style={s.group}>
+          <GroupLabel label="Account" />
+          <SettingsCard>
+            {!hasAccount ? (
+              <Row
+                label="Create account"
+                sub="Save your colours, streak and mosaics across devices"
+                right={<Chevron />}
+                onPress={() => router.push('/(auth)/login')}
+                last
+              />
+            ) : (
+              <>
+                <Row
+                  label="Profile"
+                  sub={profile?.username ? `@${profile.username}` : 'Name, username and birthday'}
+                  right={<><ValChip label={profile?.full_name ?? 'Edit'} /><Chevron /></>}
+                  onPress={() => router.push('/edit-profile')}
+                />
+                <Row
+                  label="Sign out"
+                  sub="Start a fresh journal on this device"
+                  right={<Chevron />}
+                  onPress={() => setShowSignOut(true)}
+                />
+                <Row
+                  label="Delete account"
+                  sub="Permanently removes your account and all data"
+                  danger
+                  onPress={() => setShowDelete(true)}
+                  last
+                />
+              </>
+            )}
+          </SettingsCard>
+        </View>
 
         {/* Notifications */}
         <View style={s.group}>
@@ -286,28 +344,10 @@ export default function SettingsScreen() {
         {/* Phase 2 label */}
         <PhaseBadge phase={2} label="Unlocked with account" />
 
-        {/* Phase 2 — Profile */}
-        <Phase2Section title="Profile">
-          <DisabledRow label="Name & avatar" sub="Your identity in Mosaic" />
-          <DisabledRow label="Username" sub="How friends find you" last />
-        </Phase2Section>
-
         {/* Phase 2 — Privacy */}
         <Phase2Section title="Privacy">
           <DisabledRow label="Who sees your grid" sub="Private by default" />
           <DisabledRow label="Friend requests" sub="Who can add you" last />
-        </Phase2Section>
-
-        {/* Phase 2 — Account */}
-        <Phase2Section title="Account">
-          <DisabledRow label="Email address" sub="your@email.com" />
-          <DisabledRow label="Sign out" />
-          <View style={[s.row, s.rowDisabled]}>
-            <View style={s.rowCopy}>
-              <Text style={[s.rowLabel, s.rowLabelDanger]}>Delete account</Text>
-              <Text style={s.rowSub}>Permanently removes all your data</Text>
-            </View>
-          </View>
         </Phase2Section>
 
         {/* Footer */}
@@ -334,6 +374,28 @@ export default function SettingsScreen() {
         current={reminderTime}
         onSelect={setReminderTime}
         onClose={() => setShowTimePicker(false)}
+      />
+
+      <ConfirmDialog
+        visible={showSignOut}
+        title="Sign out?"
+        body="You can sign back in anytime to restore your colours, streak and mosaics."
+        info="Signing out starts a new, empty journal on this device. Your saved work stays safe in your account and comes back when you sign in again."
+        confirmLabel="Sign out"
+        tone="danger"
+        onConfirm={() => { setShowSignOut(false); signOut(); }}
+        onCancel={() => setShowSignOut(false)}
+      />
+
+      <ConfirmDialog
+        visible={showDelete}
+        title="Delete account?"
+        body="This permanently deletes your account and all of its data. This can't be undone."
+        info="Your colours, streak and mosaics stored in the cloud are removed and your email is freed up. The app then starts a fresh, empty journal on this device."
+        confirmLabel={deleting ? 'Deleting…' : 'Delete'}
+        tone="danger"
+        onConfirm={confirmDeleteAccount}
+        onCancel={() => setShowDelete(false)}
       />
     </AppScreen>
   );

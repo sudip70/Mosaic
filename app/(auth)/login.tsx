@@ -1,75 +1,336 @@
-// Phase 2 — magic-link sign in (not reachable in Phase 1)
+// Account upgrade — turns the current anonymous session into a permanent one by
+// linking an email, verified with a code. The user_id never changes, so every
+// photo, streak and mosaic carries over (see useAuth.linkEmail). After
+// verifying, the user names their profile (all optional) before finishing.
 import { useState } from 'react';
-import { View, TextInput, StyleSheet } from 'react-native';
+import { View, TextInput, Pressable, KeyboardAvoidingView, Platform, StyleSheet } from 'react-native';
+import { router } from 'expo-router';
+import { format, parseISO } from 'date-fns';
 import { AppScreen } from '@/components/ui/AppScreen';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { AppText } from '@/components/ui/AppText';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
+import { DatePicker } from '@/components/ui/DatePicker';
 import { useAuth } from '@/hooks/useAuth';
+import { loadProfile } from '@/store/useProfileStore';
 import { useTheme } from '@/hooks/useTheme';
 import { useThemedStyles } from '@/hooks/useThemedStyles';
-import { router } from 'expo-router';
 import { fonts, radius, spacing, type Palette } from '@/lib/theme';
-import { ChevronLeft, Sparkles } from '@/lib/icons';
+import { ChevronLeft, Mail, Check, Calendar, ICON_STROKE } from '@/lib/icons';
+import { BYPASS_OTP } from '@/lib/constants';
 
-export default function LoginScreen() {
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+type Step = 'email' | 'code' | 'profile';
+
+export default function UpgradeScreen() {
+  const [step, setStep] = useState<Step>('email');
   const [email, setEmail] = useState('');
-  const [sent, setSent] = useState(false);
-  const { signInWithMagicLink } = useAuth();
+  const [code, setCode] = useState('');
+  const [name, setName] = useState('');
+  const [username, setUsername] = useState('');
+  const [dob, setDob] = useState<string | null>(null);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<{ name?: string; username?: string; dob?: string }>({});
+  const [busy, setBusy] = useState(false);
+
+  const { linkEmail, verifyEmailOtp, checkUsername, upsertProfile } = useAuth();
   const { colors } = useTheme();
   const s = useThemedStyles(makeStyles);
 
-  const valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  const emailValid = EMAIL_RE.test(email);
+  // Supabase's email OTP length is a project setting (6–10 digits), so accept any
+  // length in that range rather than hardcoding one and breaking if it changes.
+  const codeValid = /^\d{6,10}$/.test(code);
 
-  async function handleSend() {
-    if (!valid) return;
-    await signInWithMagicLink(email);
-    setSent(true);
+  async function sendCode() {
+    if (!emailValid || busy) return;
+    // Dev bypass: skip the email/OTP round-trip entirely and go straight to the
+    // profile step so the flow can be tested without sending an email.
+    if (BYPASS_OTP) {
+      setError(null);
+      setStep('profile');
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    const { error } = await linkEmail(email.trim());
+    setBusy(false);
+    if (error) {
+      setError(error.message);
+      return;
+    }
+    setStep('code');
   }
 
+  async function verify() {
+    if (!codeValid || busy) return;
+    setBusy(true);
+    setError(null);
+    const { error } = await verifyEmailOtp(email.trim(), code);
+    setBusy(false);
+    if (error) {
+      setError(error.message);
+      return;
+    }
+    // Session is now permanent; collect profile details before leaving.
+    setError(null);
+    setStep('profile');
+  }
+
+  async function finishProfile() {
+    if (busy) return;
+
+    // Synchronous field checks first — every field is required.
+    const nm = name.trim();
+    const un = username.trim();
+    const errs: { name?: string; username?: string; dob?: string } = {};
+    if (!nm) errs.name = 'Please enter your name.';
+    // Letters (incl. common accented ones) and spaces only — no digits or symbols.
+    else if (!/^[A-Za-zÀ-ÖØ-öø-ÿ ]+$/.test(nm)) errs.name = 'Letters and spaces only, no numbers or symbols.';
+    if (!un) errs.username = 'Please choose a username.';
+    else if (un.length < 3) errs.username = 'At least 3 characters.';
+    if (!dob) errs.dob = 'Please select your birthday.';
+
+    setFieldErrors(errs);
+    setError(null);
+    if (Object.keys(errs).length > 0) return;
+
+    setBusy(true);
+    // Uniqueness pre-check for a friendly message; the unique index below is the
+    // real guarantee against a race between two signups.
+    const { data: available, error: checkErr } = await checkUsername(un);
+    if (checkErr) { setBusy(false); setError(checkErr.message); return; }
+    if (!available) { setBusy(false); setFieldErrors({ username: 'That username is taken.' }); return; }
+
+    const { error } = await upsertProfile({
+      full_name: nm,
+      username: un,
+      date_of_birth: dob!,
+      email: email.trim() || null,
+    });
+    setBusy(false);
+    if (error) {
+      if ('code' in error && error.code === '23505') {
+        setFieldErrors({ username: 'That username is taken.' });
+        return;
+      }
+      setError(error.message);
+      return;
+    }
+    // Pull the new profile into the store so the rest of the app reflects the
+    // account immediately on return.
+    await loadProfile();
+    router.back();
+  }
+
+  const dobLabel = dob ? format(parseISO(dob), 'd MMMM yyyy') : 'Your birthday';
+
+  // Header back: step 'code' returns to email; 'profile' is past the point of no
+  // return (the account already exists), so it just dismisses, same as Skip.
+  const onBack = () => (step === 'code' ? setStep('email') : router.back());
+  const headerTitle =
+    step === 'email' ? 'Create account' : step === 'code' ? 'Enter code' : 'Your profile';
+
   return (
-    <AppScreen>
+    <AppScreen edges={['top', 'bottom']}>
       <ScreenHeader
-        title="Sign in"
-        left={{ icon: ChevronLeft, accessibilityLabel: 'Back', onPress: () => router.back() }}
+        title={headerTitle}
+        left={{ icon: ChevronLeft, accessibilityLabel: 'Back', onPress: onBack }}
       />
-      <View style={s.body}>
-        {sent ? (
-          <View style={s.sentWrap}>
-            <AppText variant="serifLg" style={s.sentTitle}>Check your email</AppText>
-            <AppText variant="body" style={s.sentSub}>
-              We sent a magic link to {email}. Tap it to finish signing in.
-            </AppText>
-          </View>
-        ) : (
-          <>
-            <AppText variant="overline">Email address</AppText>
-            <TextInput
-              value={email}
-              onChangeText={setEmail}
-              placeholder="you@example.com"
-              placeholderTextColor={colors.ink30}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoComplete="email"
-              style={s.input}
+
+      <KeyboardAvoidingView
+        style={s.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        {/* Copy + inputs live up top; the action pins to the bottom of the screen. */}
+        <View style={s.body}>
+          {step === 'email' && (
+            <>
+              <AppText variant="serifLg" style={s.title}>Save your work</AppText>
+              <AppText variant="body" style={s.sub}>
+                Add your email to keep your colours, streak and mosaics safe, and pick
+                up where you left off on any device. Everything you’ve made so far
+                comes with you.
+              </AppText>
+
+              <View style={s.field}>
+                <AppText variant="overline">Email address</AppText>
+                <TextInput
+                  value={email}
+                  onChangeText={(t) => { setEmail(t); setError(null); }}
+                  placeholder="you@example.com"
+                  placeholderTextColor={colors.ink30}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoComplete="email"
+                  style={s.input}
+                />
+              </View>
+
+              {error && <AppText variant="body" style={s.error}>{error}</AppText>}
+            </>
+          )}
+
+          {step === 'code' && (
+            <>
+              <AppText variant="serifLg" style={s.title}>Check your email</AppText>
+              <AppText variant="body" style={s.sub}>
+                We sent a code to {email}. Enter it below to finish.
+              </AppText>
+
+              <View style={s.field}>
+                <AppText variant="overline">Verification code</AppText>
+                <TextInput
+                  value={code}
+                  onChangeText={(t) => { setCode(t.replace(/\D/g, '').slice(0, 10)); setError(null); }}
+                  placeholder="––––––"
+                  placeholderTextColor={colors.ink30}
+                  keyboardType="number-pad"
+                  autoComplete="one-time-code"
+                  textContentType="oneTimeCode"
+                  maxLength={10}
+                  style={[s.input, s.codeInput]}
+                />
+              </View>
+
+              {error && <AppText variant="body" style={s.error}>{error}</AppText>}
+            </>
+          )}
+
+          {step === 'profile' && (
+            <>
+              <AppText variant="serifLg" style={s.title}>You’re all set</AppText>
+              <AppText variant="body" style={s.sub}>
+                A few details to make Mosaic yours.
+              </AppText>
+
+              <View style={s.field}>
+                <AppText variant="overline">Name</AppText>
+                <TextInput
+                  value={name}
+                  onChangeText={(t) => { setName(t); setFieldErrors((e) => ({ ...e, name: undefined })); }}
+                  placeholder="Your name"
+                  placeholderTextColor={colors.ink30}
+                  autoCapitalize="words"
+                  autoComplete="name"
+                  style={[s.input, fieldErrors.name && s.inputError]}
+                />
+                {fieldErrors.name && <AppText variant="body" style={s.error}>{fieldErrors.name}</AppText>}
+              </View>
+
+              <View style={s.field}>
+                <AppText variant="overline">Username</AppText>
+                <TextInput
+                  value={username}
+                  onChangeText={(t) => {
+                    setUsername(t.toLowerCase().replace(/[^a-z0-9_]/g, ''));
+                    setFieldErrors((e) => ({ ...e, username: undefined }));
+                  }}
+                  placeholder="username"
+                  placeholderTextColor={colors.ink30}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  maxLength={20}
+                  style={[s.input, fieldErrors.username && s.inputError]}
+                />
+                {fieldErrors.username && <AppText variant="body" style={s.error}>{fieldErrors.username}</AppText>}
+              </View>
+
+              <View style={s.field}>
+                <AppText variant="overline">Date of birth</AppText>
+                <Pressable
+                  onPress={() => setShowDatePicker(true)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Select your date of birth"
+                >
+                  {({ pressed }) => (
+                    // Row lives on a child View: a Pressable carrying flexDirection
+                    // gets dropped on the New Architecture and collapses to a column.
+                    <View style={[s.input, s.dobRow, pressed && s.dobPressed, fieldErrors.dob && s.inputError]}>
+                      <Calendar size={18} color={dob ? colors.ink60 : colors.ink30} strokeWidth={ICON_STROKE} />
+                      <AppText variant="body" numberOfLines={1} style={[s.dobText, !dob && s.dobPlaceholder]}>
+                        {dobLabel}
+                      </AppText>
+                    </View>
+                  )}
+                </Pressable>
+                {fieldErrors.dob && <AppText variant="body" style={s.error}>{fieldErrors.dob}</AppText>}
+              </View>
+
+              {error && <AppText variant="body" style={s.error}>{error}</AppText>}
+            </>
+          )}
+        </View>
+
+        <View style={s.actions}>
+          {step === 'email' && (
+            <PrimaryButton
+              label={BYPASS_OTP ? 'Continue' : busy ? 'Sending…' : 'Send code'}
+              icon={BYPASS_OTP ? Check : Mail}
+              onPress={sendCode}
+              disabled={!emailValid || busy}
             />
-            <PrimaryButton label="Send magic link" icon={Sparkles} onPress={handleSend} disabled={!valid} />
-          </>
-        )}
-      </View>
+          )}
+
+          {step === 'code' && (
+            <>
+              <PrimaryButton
+                label={busy ? 'Verifying…' : 'Verify & save'}
+                icon={Check}
+                onPress={verify}
+                disabled={!codeValid || busy}
+              />
+              <Pressable onPress={sendCode} disabled={busy} accessibilityRole="button" style={s.linkBtn}>
+                <AppText variant="body" style={s.linkText}>Didn’t get it? Resend code</AppText>
+              </Pressable>
+            </>
+          )}
+
+          {step === 'profile' && (
+            <PrimaryButton
+              label={busy ? 'Saving…' : 'Finish'}
+              icon={Check}
+              onPress={finishProfile}
+              disabled={busy}
+            />
+          )}
+        </View>
+      </KeyboardAvoidingView>
+
+      <DatePicker
+        visible={showDatePicker}
+        current={dob}
+        onSelect={(d) => { setDob(d); setFieldErrors((e) => ({ ...e, dob: undefined })); }}
+        onClose={() => setShowDatePicker(false)}
+      />
     </AppScreen>
   );
 }
 
 const makeStyles = (c: Palette) => StyleSheet.create({
+  flex: { flex: 1 },
   body: { flex: 1, paddingHorizontal: spacing.xl, paddingTop: spacing.x3, gap: spacing.md },
+  actions: { paddingHorizontal: spacing.xl, paddingBottom: spacing.xl, gap: spacing.md },
+  title: {},
+  sub: { lineHeight: 21, color: c.ink60 },
+  field: { gap: spacing.sm, paddingTop: spacing.sm },
   input: {
     backgroundColor: c.surface0, borderWidth: 1, borderColor: c.ink15,
     borderRadius: radius.r16, paddingHorizontal: spacing.lg, paddingVertical: 14,
     fontFamily: fonts.sans, fontSize: 15, color: c.ink100,
   },
-  sentWrap: { gap: spacing.sm, paddingTop: spacing.x3 },
-  sentTitle: {},
-  sentSub: { lineHeight: 21 },
+  inputError: { borderColor: '#C62828' },
+  codeInput: {
+    textAlign: 'center', fontSize: 24, letterSpacing: 5,
+    fontFamily: fonts.sansMd,
+  },
+  dobRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  dobPressed: { backgroundColor: c.surface1 },
+  dobText: { color: c.ink100, flex: 1 },
+  dobPlaceholder: { color: c.ink30 },
+  error: { color: '#C62828', fontSize: 13 },
+  linkBtn: { alignItems: 'center', paddingTop: spacing.sm },
+  linkText: { color: c.ink60, fontSize: 13 },
 });
