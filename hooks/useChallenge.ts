@@ -1,16 +1,22 @@
 import { useMemo } from 'react';
 import { useChallengeStore } from '@/store/useChallengeStore';
-import { getArtwork, getTier, nextTileIndexFor } from '@/lib/artworks';
-import { nearestColorName } from '@/lib/colorUtils';
-import { today as todayStr } from '@/lib/dates';
-import type { Color } from '@/types';
+import { getArtwork, getTier } from '@/lib/artworks';
+import { dominantHexes, nearestColorName } from '@/lib/colorUtils';
+import { useArtworkStore } from '@/store/useArtworkStore';
 
-// Resolves the active challenge into everything a screen needs: the next tile
-// to chase, its prompt colour, progress, and the per-tile target/filled data
-// the mosaic grid renders. Self-paced — there is no calendar; each captured
-// photo fills the next tile in sequence. Returns `challenge: null` when idle.
+// Resolves the active challenge into everything a screen needs: progress, the
+// per-tile target/filled data the mosaic grid renders, and the compass — the
+// colour the painting needs most right now (the dominant colour family among
+// its unfilled tiles). Chasing the compass fills the biggest remaining region;
+// on a compass-mode run any other colour still lands wherever it belongs, while
+// a hunt-mode run only accepts close matches. Returns `challenge: null` when
+// idle.
 export function useChallenge() {
   const active = useChallengeStore((s) => s.active);
+  // Custom artworks rehydrate from AsyncStorage after first render; subscribing
+  // makes getArtwork re-resolve once they land (a custom run would otherwise
+  // look like a missing artwork until an unrelated re-render).
+  const custom = useArtworkStore((s) => s.custom);
 
   return useMemo(() => {
     if (!active) {
@@ -18,8 +24,7 @@ export function useChallenge() {
         challenge: null,
         artwork: undefined,
         tier: undefined,
-        currentTileIndex: null as number | null,
-        todayColor: null as Color | null,
+        compass: null as { hex: string; name: string } | null,
         filledCount: 0,
         progress: 0,
         isComplete: false,
@@ -28,27 +33,20 @@ export function useChallenge() {
 
     const artwork = getArtwork(active.artworkId);
     const tier = artwork ? getTier(artwork, active.tier) : undefined;
-
     const filledCount = Object.keys(active.filled).length;
     const isComplete = filledCount >= active.totalTiles;
 
-    // The tile the user is currently chasing — null once the run is complete.
-    const currentTileIndex = nextTileIndexFor(active);
-
-    let todayColor: Color | null = null;
-    if (currentTileIndex != null && tier) {
-      // A run created by an older build can carry a tile index past the current
-      // tier's colour array. Guard the lookup so a missing colour leaves
-      // todayColor null (the screens fall back to the "earlier version" card)
-      // instead of feeding undefined into nearestColorName → a crash.
-      const hex = tier.colors[currentTileIndex];
-      if (hex) {
-        todayColor = {
-          id: `challenge:${active.id}:${currentTileIndex}`,
-          date: todayStr(),
-          name: nearestColorName(hex),
-          hex,
-        };
+    // No compass when the run is done or its tier colour data no longer matches
+    // (those runs fill by sequence fallback and have nothing to suggest).
+    // Rotate through the biggest remaining colour families, keyed off the fill
+    // count, so the prompt advances with every stroke — a pure "needs most"
+    // argmax would park on the single largest region for dozens of captures.
+    let compass: { hex: string; name: string } | null = null;
+    if (!isComplete && tier && tier.colors.length === active.totalTiles) {
+      const families = dominantHexes(tier.colors.filter((_, i) => active.filled[i] === undefined));
+      if (families.length) {
+        const hex = families[filledCount % families.length];
+        compass = { hex, name: nearestColorName(hex) };
       }
     }
 
@@ -56,11 +54,10 @@ export function useChallenge() {
       challenge: active,
       artwork,
       tier,
-      currentTileIndex,
-      todayColor,
+      compass,
       filledCount,
       progress: active.totalTiles ? filledCount / active.totalTiles : 0,
       isComplete,
     };
-  }, [active]);
+  }, [active, custom]);
 }

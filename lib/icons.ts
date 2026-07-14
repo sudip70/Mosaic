@@ -19,12 +19,13 @@ export {
   Sparkles,     // magic link
   Eye,          // peek original
   EyeOff,       // hide original
-  Shuffle,      // random tile order
-  ListOrdered,  // sequential tile order
+  Compass,      // compass capture mode (guided, forgiving)
+  Crosshair,    // hunt capture mode (strict colour matching)
   Check,        // completion
   ChevronRight, // forward / drill-in
   Play,         // resume a set-aside mosaic
   Pin,          // pin / unpin a mosaic to the profile
+  Pencil,       // rename a mosaic
   Mail,         // email / account upgrade
   Calendar,     // date of birth
   AtSign,       // username

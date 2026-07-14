@@ -25,8 +25,8 @@ import { SelectionBar } from '@/components/ui/SelectionBar';
 import { Toast } from '@/components/ui/Toast';
 import { MosaicGrid } from '@/components/ui/MosaicGrid';
 import { useMultiSelect } from '@/hooks/useMultiSelect';
-import { useChallenge } from '@/hooks/useChallenge';
 import { useChallengeStore } from '@/store/useChallengeStore';
+import { useArtworkStore } from '@/store/useArtworkStore';
 import { getArtwork, progressPhase, type ArtworkMeta, type ArtworkTier } from '@/lib/artworks';
 
 const TILE_SIZE = { Comfortable: 30 } as const;
@@ -264,9 +264,15 @@ export default function GridScreen() {
   const [view, setView] = useState<'daily' | 'mosaic'>('daily');
   const activeChallenge = useChallengeStore((s) => s.active);
   const challengeHistory = useChallengeStore((s) => s.history);
-  const { currentTileIndex } = useChallenge();
+  // Subscribe to custom artworks so a custom mosaic re-resolves once the store
+  // rehydrates on cold launch (getArtwork reads them from here) — without this,
+  // a persisted custom mosaic renders blank until an unrelated re-render.
+  const customArtworks = useArtworkStore((s) => s.custom);
   const mosaic = activeChallenge ?? challengeHistory[0] ?? null;
-  const mosaicArtwork = mosaic ? getArtwork(mosaic.artworkId) : undefined;
+  const mosaicArtwork = useMemo(
+    () => (mosaic ? getArtwork(mosaic.artworkId) : undefined),
+    [mosaic, customArtworks]
+  );
   const mosaicTier = mosaic && mosaicArtwork ? mosaicArtwork.tiers[mosaic.tier] : undefined;
   const mosaicFilled = mosaic ? Object.keys(mosaic.filled).length : 0;
 
@@ -288,7 +294,6 @@ export default function GridScreen() {
             artwork={mosaicArtwork}
             tier={mosaicTier}
             filledCount={mosaicFilled}
-            currentTileIndex={currentTileIndex}
             st={st}
           />
         ) : (
@@ -422,13 +427,12 @@ function ToggleBtn({
 // thousands of cells, so a whole-grid tap is the practical affordance.
 
 function MosaicView({
-  mosaic, artwork, tier, filledCount, currentTileIndex, st,
+  mosaic, artwork, tier, filledCount, st,
 }: {
   mosaic: Challenge | null;
   artwork: ArtworkMeta | undefined;
   tier: ArtworkTier | undefined;
   filledCount: number;
-  currentTileIndex: number | null;
   st: ReturnType<typeof makeStyles>;
 }) {
   const { colors } = useTheme();
@@ -471,7 +475,6 @@ function MosaicView({
           rows={mosaic.rows}
           targetColors={tier?.colors ?? []}
           filled={mosaic.filled}
-          currentTileIndex={currentTileIndex}
           mode="progress"
         />
       </Pressable>

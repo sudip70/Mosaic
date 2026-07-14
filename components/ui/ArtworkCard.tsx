@@ -11,15 +11,18 @@ interface ArtworkCardProps {
   width: number;
   selected?: boolean;
   onPress: () => void;
+  /** Long-press action — used to offer deleting custom artworks. */
+  onLongPress?: () => void;
 }
 
-export function ArtworkCard({ artwork, width, selected, onPress }: ArtworkCardProps) {
+export function ArtworkCard({ artwork, width, selected, onPress, onLongPress }: ArtworkCardProps) {
   const { colors } = useTheme();
   const s = useThemedStyles(makeStyles);
   return (
     <Pressable
       style={[s.card, { width }, selected && { borderColor: colors.ink100, borderWidth: 2 }]}
       onPress={onPress}
+      onLongPress={onLongPress}
       accessibilityRole="button"
       accessibilityState={{ selected }}
       accessibilityLabel={`${artwork.title} by ${artwork.artist}`}

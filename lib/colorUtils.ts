@@ -72,6 +72,32 @@ function dominantFromRGBA(data: Uint8Array): string {
   return rgbToHex(best.r / best.w, best.g / best.w, best.b / best.w);
 }
 
+// Squared RGB distance — cheap, and fine for "which colour is closest" ranking.
+export function colorDistance(a: string, b: string): number {
+  const ca = hexToRgb(a);
+  const cb = hexToRgb(b);
+  return (ca.r - cb.r) ** 2 + (ca.g - cb.g) ** 2 + (ca.b - cb.b) ** 2;
+}
+
+// The biggest colour families of a list of hexes, heaviest first: coarse-bucket
+// like dominantFromRGBA (3 bits per channel) and return each top bucket's
+// average. Unweighted — the most *common* colours win, not the most vivid.
+// Empty for an empty list.
+export function dominantHexes(hexes: string[], max = 5): string[] {
+  const buckets = new Map<number, { r: number; g: number; b: number; n: number }>();
+  for (const hex of hexes) {
+    const c = hexToRgb(hex);
+    const key = ((c.r >> 5) << 6) | ((c.g >> 5) << 3) | (c.b >> 5);
+    const bkt = buckets.get(key);
+    if (bkt) { bkt.r += c.r; bkt.g += c.g; bkt.b += c.b; bkt.n += 1; }
+    else buckets.set(key, { r: c.r, g: c.g, b: c.b, n: 1 });
+  }
+  return [...buckets.values()]
+    .sort((a, b) => b.n - a.n)
+    .slice(0, max)
+    .map((bkt) => rgbToHex(bkt.r / bkt.n, bkt.g / bkt.n, bkt.b / bkt.n));
+}
+
 // ─── Nearest colour name ──────────────────────────────────────────────────────
 // A small curated palette so a challenge tile's prompt reads as a name, not a
 // raw hex. Closest match by squared RGB distance.
@@ -104,12 +130,10 @@ const NAMED: { name: string; hex: string }[] = [
 ];
 
 export function nearestColorName(hex: string): string {
-  const c = hexToRgb(hex);
   let best = NAMED[0];
   let bestDist = Infinity;
   for (const candidate of NAMED) {
-    const t = hexToRgb(candidate.hex);
-    const d = (c.r - t.r) ** 2 + (c.g - t.g) ** 2 + (c.b - t.b) ** 2;
+    const d = colorDistance(hex, candidate.hex);
     if (d < bestDist) { bestDist = d; best = candidate; }
   }
   return best.name;

@@ -25,18 +25,19 @@ import { X, Settings, Plus, Zap, RotateCcw, ICON_STROKE } from '@/lib/icons';
 export default function CameraScreen() {
   const cameraRef = useRef<CameraView>(null);
   const [permission, requestPermission] = useCameraPermissions();
-  // Mosaic mode is a separate capture flow: the prompt is the active run's
-  // next-tile colour (not the daily colour), and shots fill mosaic tiles rather
-  // than the daily grid or streak.
+  // Mosaic mode is a separate capture flow: shots paint strokes into the mosaic
+  // rather than the daily grid or streak. Its prompt is the compass — the colour
+  // the painting needs most — which recomputes reactively as strokes land, so it
+  // keeps up while the camera stays open. On compass runs it's a suggestion (any
+  // colour still counts); on hunt runs only close matches fill.
   const { mode, challengeId } = useLocalSearchParams<{ mode?: string; challengeId?: string }>();
   const isMosaic = mode === 'mosaic';
   const { user } = useAuth();
   const { uploadPhoto, fillMosaicTile, uploading, error: uploadError } = useUpload();
   const dailyColor = useColorStore((s) => s.todayColor);
-  // The next-tile colour advances reactively as tiles fill, so the prompt keeps
-  // up while the camera stays open for several captures in a row.
-  const { todayColor: tileColor } = useChallenge();
-  const promptColor = isMosaic ? tileColor : dailyColor;
+  const { challenge, compass } = useChallenge();
+  const isHunt = challenge?.mode === 'hunt';
+  const promptColor = isMosaic ? compass : dailyColor;
 
   const [facing, setFacing] = useState<CameraType>('back');
   const [flash, setFlash] = useState<FlashMode>('off');
@@ -91,11 +92,11 @@ export default function CameraScreen() {
   const mutedIcon = isDark ? 'rgba(255,255,255,0.7)' : colors.ink60;
   const faintIcon = isDark ? 'rgba(255,255,255,0.6)' : colors.ink30;
   // Shutter: neutral ring + a dot tinted with the prompt colour (daily, or the
-  // mosaic's next tile in mosaic mode).
+  // mosaic's compass), falling back to the accent.
   const shutterSpinner = isDark ? '#fff' : colors.ink100;
   const shutterColor = promptColor?.hex ?? colors.accent;
 
-  const canCapture = !!user && !!promptColor && !uploading;
+  const canCapture = !!user && !uploading && (isMosaic || !!promptColor);
 
   const handleShutter = useCallback(async () => {
     if (!cameraRef.current || !canCapture) return;
@@ -180,7 +181,16 @@ export default function CameraScreen() {
             <X size={18} color={glassIcon} strokeWidth={ICON_STROKE} />
           </Pressable>
 
-          {promptColor && (
+          {isMosaic ? (
+            <View style={s.hint}>
+              {compass && <View style={[s.hintDot, { backgroundColor: compass.hex }]} />}
+              <AppText style={s.hintText}>
+                {compass
+                  ? isHunt ? `Finding ${compass.name}` : `Needs ${compass.name}`
+                  : 'Any colour counts'}
+              </AppText>
+            </View>
+          ) : promptColor && (
             <View style={s.hint}>
               <View style={[s.hintDot, { backgroundColor: promptColor.hex }]} />
               <AppText style={s.hintText}>Finding {promptColor.name}</AppText>

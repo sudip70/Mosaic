@@ -38,9 +38,11 @@ export interface Streak {
 }
 
 // ─── Mosaic challenges ──────────────────────────────────────────────────────
-// A challenge breaks a chosen artwork into N tiles. Each day the app assigns one
-// tile's colour as the prompt; the dominant colour of that day's photos fills
-// the tile. Over the run the user rebuilds the painting from colours they found.
+// A challenge breaks a chosen artwork into N tiles. Each photo paints a stroke:
+// its dominant colour fills the unfilled tiles whose target colours match it
+// best, so tile count is purely visual detail and every run finishes in about
+// the same number of captures (see PHOTOS_PER_MOSAIC). Over the run the user
+// rebuilds the painting from colours they found.
 
 // 'active'   — the live run; its tile is today's prompt.
 // 'paused'   — set aside but kept whole; can be resumed from where it left off
@@ -51,15 +53,22 @@ export interface Streak {
 export type ChallengeStatus = 'active' | 'paused' | 'completed' | 'abandoned';
 export type TileOrder = 'sequential' | 'random';
 
-// One filled tile — keyed by tile index inside Challenge.filled. One photo fills
-// one tile, so each records the dominant colour of the photo that filled it.
+// How captures land. 'compass' (default) suggests the colour the painting needs
+// most but accepts any photo — every capture paints somewhere. 'hunt' is the
+// strict scavenger version: a photo only fills tiles when its colour sits close
+// enough to its best remaining match.
+export type ChallengeMode = 'compass' | 'hunt';
+
+// One filled tile — keyed by tile index inside Challenge.filled. A photo fills
+// a stroke of tiles; each records the dominant colour of the photo behind it.
 export interface FilledTile {
   date: string;        // the day it was filled
   hex: string;         // dominant colour of the photo that filled this tile
   photoCount: number;  // photos that contributed (currently always 1)
-  uri?: string;        // local file:// path of the photo that completed this tile.
-                       // Optional: tiles filled before the separate mosaic-capture
-                       // flow carry a hex only and have no revisitable image.
+  uri?: string;        // local file:// path of the photo behind this tile. Only
+                       // set on a stroke's anchor tile (the closest colour
+                       // match), so the tile viewer shows each photo once; the
+                       // rest of the stroke carries the colour only.
 }
 
 export interface Challenge {
@@ -72,7 +81,9 @@ export interface Challenge {
   cols: number;
   rows: number;
   order: TileOrder;
-  sequence: number[];                 // day offset → tile index
+  mode?: ChallengeMode;               // capture rule — absent on older runs, treated as 'compass'
+  sequence: number[];                 // fallback fill order — only consumed when
+                                      // tier colour data no longer matches
   startDate: string;                  // yyyy-MM-dd
   status: ChallengeStatus;
   filled: Record<number, FilledTile>; // tileIndex → fill

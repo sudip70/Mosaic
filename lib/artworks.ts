@@ -1,13 +1,18 @@
 import { randomUUID } from 'expo-crypto';
 import { ARTWORKS, TIER_TARGETS, type ArtworkMeta, type ArtworkTier } from '@/lib/generated/artworkData';
+import { colorDistance } from '@/lib/colorUtils';
+import { useArtworkStore } from '@/store/useArtworkStore';
 import { today } from '@/lib/dates';
-import type { Challenge, TileOrder } from '@/types';
+import type { Challenge, ChallengeMode, TileOrder } from '@/types';
 
 export { ARTWORKS, TIER_TARGETS };
 export type { ArtworkMeta, ArtworkTier };
 
 export function getArtwork(id: string): ArtworkMeta | undefined {
-  return ARTWORKS.find((a) => a.id === id);
+  return (
+    ARTWORKS.find((a) => a.id === id) ??
+    useArtworkStore.getState().custom.find((a) => a.id === id)
+  );
 }
 
 export function getTier(artwork: ArtworkMeta, tier: number): ArtworkTier | undefined {
@@ -26,17 +31,16 @@ export function tierLabel(tiles: number): string {
   return 'Masterwork';
 }
 
-// A one-line "vibe + honest time-feel" for each rung, so the picker sells what a
-// detail level *feels* like instead of quoting a tile count. Positive framing
-// keeps the small tiers aspirational — that's where first-timers actually reach
-// completion. Brackets match tierLabel().
+// A one-line vibe for each rung. Pace is no longer the tier's job — every run
+// finishes in about PHOTOS_PER_MOSAIC strokes — so the blurb only sells how the
+// finished painting will read. Brackets match tierLabel().
 export function tierBlurb(tiles: number): string {
-  if (tiles <= 150) return 'Bold and impressionistic · a few good outings';
-  if (tiles <= 750) return 'Soft detail · a relaxed painting';
-  if (tiles <= 1250) return 'A clear likeness · a season’s project';
-  if (tiles <= 1750) return 'Sharp detail · a long, slow pursuit';
-  if (tiles <= 2500) return 'Rich nuance · a serious commitment';
-  return 'Every brushstroke · a lifetime piece';
+  if (tiles <= 150) return 'Bold and impressionistic';
+  if (tiles <= 750) return 'Soft, readable detail';
+  if (tiles <= 1250) return 'A clear likeness';
+  if (tiles <= 1750) return 'Sharp detail';
+  if (tiles <= 2500) return 'Rich nuance';
+  return 'Every brushstroke';
 }
 
 // The painting's emergence phase by fraction filled — the friendly stand-in for
@@ -65,9 +69,9 @@ export function formatTileCount(n: number): string {
   return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 }
 
-// Day offset → tile index. Sequential reads the painting top-left to bottom-right;
-// random shuffles so the image emerges unpredictably. The result is persisted on
-// the challenge, so the shuffle only needs to run once at start.
+// Fallback fill order, persisted on the challenge. Placement is normally
+// colour-matched (strokeTiles); the sequence is only consumed when a run's tier
+// colour data no longer matches (created by an older build).
 export function buildSequence(total: number, order: TileOrder): number[] {
   const seq = Array.from({ length: total }, (_, i) => i);
   if (order === 'sequential') return seq;
@@ -78,18 +82,47 @@ export function buildSequence(total: number, order: TileOrder): number[] {
   return seq;
 }
 
-// The next tile a challenge is waiting on — the prompt the user is chasing.
-// Self-paced: tiles fill one per photo in sequence order, so the next tile is
-// simply the one at the current filled count. Null once the run is complete.
-export function nextTileIndexFor(challenge: Challenge): number | null {
-  const filledCount = Object.keys(challenge.filled).length;
-  if (filledCount >= challenge.sequence.length) return null;
-  return challenge.sequence[filledCount];
+// ─── Strokes ─────────────────────────────────────────────────────────────────
+// One capture paints a stroke: the K unfilled tiles whose target colours sit
+// nearest the photo's dominant colour. Tile count is purely visual resolution;
+// every run finishes in about PHOTOS_PER_MOSAIC captures regardless of tier.
+export const PHOTOS_PER_MOSAIC = 100;
+
+export function strokeSize(totalTiles: number): number {
+  return Math.max(1, Math.ceil(totalTiles / PHOTOS_PER_MOSAIC));
 }
 
-// Build a fresh challenge from a chosen artwork + tier + order. Resolves the
-// tier's real grid and freezes the tile order so the run is deterministic.
-export function createChallenge(artwork: ArtworkMeta, tier: number, order: TileOrder): Challenge {
+// The unfilled tile indices a captured colour should land on — nearest first,
+// so the first index is the stroke's anchor (best match). Clamps to however
+// many tiles remain.
+export function strokeTiles(
+  hex: string,
+  targetColors: string[],
+  filled: Record<number, unknown>,
+  count: number
+): number[] {
+  const candidates: { i: number; d: number }[] = [];
+  for (let i = 0; i < targetColors.length; i++) {
+    if (filled[i] === undefined) candidates.push({ i, d: colorDistance(hex, targetColors[i]) });
+  }
+  candidates.sort((a, b) => a.d - b.d);
+  return candidates.slice(0, count).map((c) => c.i);
+}
+
+// How close a captured colour must sit to its best remaining tile for a
+// hunt-mode stroke to land — roughly "same colour family".
+// ponytail: naive squared-RGB gate (~60 per channel); swap for a perceptual
+// deltaE if hunts start rejecting colours that look right to the eye.
+export const HUNT_MATCH_DISTANCE = 60 * 60 * 3;
+
+// Build a fresh challenge from a chosen artwork + tier + capture mode. Resolves
+// the tier's real grid and freezes the fallback tile order.
+export function createChallenge(
+  artwork: ArtworkMeta,
+  tier: number,
+  order: TileOrder,
+  mode: ChallengeMode = 'compass'
+): Challenge {
   const t = artwork.tiers[tier];
   return {
     id: randomUUID(),
@@ -101,6 +134,7 @@ export function createChallenge(artwork: ArtworkMeta, tier: number, order: TileO
     cols: t.cols,
     rows: t.rows,
     order,
+    mode,
     sequence: buildSequence(t.tiles, order),
     startDate: today(),
     status: 'active',

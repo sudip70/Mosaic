@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { View, ScrollView, Pressable, Dimensions, StyleSheet } from 'react-native';
+import { View, ScrollView, Pressable, ActivityIndicator, Dimensions, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
+import * as ImagePicker from 'expo-image-picker';
 import { AppScreen } from '@/components/ui/AppScreen';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { AppText } from '@/components/ui/AppText';
@@ -9,15 +10,18 @@ import { Card } from '@/components/ui/Card';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
 import { ArtworkCard } from '@/components/ui/ArtworkCard';
 import { MosaicGrid } from '@/components/ui/MosaicGrid';
-import { ARTWORKS, TIER_TARGETS, tierLabel, tierBlurb, formatTileCount, createChallenge } from '@/lib/artworks';
+import { ARTWORKS, TIER_TARGETS, PHOTOS_PER_MOSAIC, tierLabel, tierBlurb, formatTileCount, createChallenge } from '@/lib/artworks';
+import { createCustomArtwork, deleteCustomArtworkImage } from '@/lib/customArtwork';
+import { reportError } from '@/lib/reportError';
+import { useArtworkStore } from '@/store/useArtworkStore';
 import { useChallengeStore } from '@/store/useChallengeStore';
 import { useTheme } from '@/hooks/useTheme';
 import { useThemedStyles } from '@/hooks/useThemedStyles';
 import { radius, spacing, layout, type Palette } from '@/lib/theme';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { MosaicLogoIcon } from '@/components/ui/MosaicLogoIcon';
-import { ChevronLeft, Plus, ListOrdered, Shuffle, ICON_STROKE } from '@/lib/icons';
-import type { TileOrder } from '@/types';
+import { ChevronLeft, Plus, Compass, Crosshair, ICON_STROKE, type LucideIcon } from '@/lib/icons';
+import type { ChallengeMode } from '@/types';
 
 const PREVIEW_W = Dimensions.get('window').width - layout.screenPadH * 2;
 const CARD_W = 150; // horizontal carousel card width
@@ -31,22 +35,55 @@ export default function ChallengeSetupScreen() {
 
   // Preselect the first painting so the screen lands on a full, lived-in state
   // (preview + detail + order) rather than an empty picker.
+  const custom = useArtworkStore((st) => st.custom);
+  const addCustom = useArtworkStore((st) => st.add);
+  const removeCustom = useArtworkStore((st) => st.remove);
+
   const [artworkId, setArtworkId] = useState<string | null>(ARTWORKS[0]?.id ?? null);
   const [tier, setTier] = useState<number>(1000);
-  const [order, setOrder] = useState<TileOrder>('sequential');
-  const [comingSoonVisible, setComingSoonVisible] = useState(false);
+  const [captureMode, setCaptureMode] = useState<ChallengeMode>('compass');
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
-  const artwork = ARTWORKS.find((a) => a.id === artworkId) ?? null;
+  // Your own photos lead the shelf; the classics follow.
+  const allArtworks = [...custom, ...ARTWORKS];
+  const artwork = allArtworks.find((a) => a.id === artworkId) ?? null;
   const tierData = artwork ? artwork.tiers[tier] : null;
 
   function begin() {
     if (!artwork) return;
-    start(createChallenge(artwork, tier, order));
+    // Placement is colour-matched at fill time; the sequential order only seeds
+    // the fallback sequence used when tier colour data is missing.
+    start(createChallenge(artwork, tier, 'sequential', captureMode));
     router.back();
   }
 
-  function comingSoon() {
-    setComingSoonVisible(true);
+  // Photo → custom artwork: pick from the library, derive every tier's tile
+  // colours on-device, and select it so the preview shows the result at once.
+  async function pickCustom() {
+    if (creating) return;
+    const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 1 });
+    if (res.canceled) return;
+    setCreating(true);
+    try {
+      const created = await createCustomArtwork(res.assets[0].uri, `My photo ${custom.length + 1}`);
+      addCustom(created);
+      setArtworkId(created.id);
+    } catch (e) {
+      reportError(e, { scope: 'createCustomArtwork' });
+      setCreateError('Couldn’t build a mosaic from that photo. Try another one.');
+    } finally {
+      setCreating(false);
+    }
+  }
+
+  function confirmDeleteCustom() {
+    if (!deleteTarget) return;
+    removeCustom(deleteTarget);
+    void deleteCustomArtworkImage(deleteTarget);
+    if (artworkId === deleteTarget) setArtworkId(ARTWORKS[0]?.id ?? null);
+    setDeleteTarget(null);
   }
 
   return (
@@ -54,11 +91,11 @@ export default function ChallengeSetupScreen() {
       <ScreenHeader
         title="New mosaic"
         left={{ icon: ChevronLeft, accessibilityLabel: 'Back', onPress: () => router.back() }}
-        right={{ icon: Plus, accessibilityLabel: 'Create a custom mosaic', onPress: comingSoon }}
+        right={{ icon: Plus, accessibilityLabel: 'Create a mosaic from your own photo', onPress: pickCustom }}
       />
 
       <ScrollView style={s.scroll} contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
-        {/* 1 — Pick an artwork */}
+        {/* 1 — Pick an artwork (your own photos first, then the classics) */}
         <AppText variant="overline" style={s.step}>Choose a painting</AppText>
         <ScrollView
           horizontal
@@ -66,8 +103,21 @@ export default function ChallengeSetupScreen() {
           contentContainerStyle={s.pickerRow}
           style={s.pickerScroll}
         >
-          {ARTWORKS.map((a) => (
-            <ArtworkCard key={a.id} artwork={a} width={CARD_W} selected={a.id === artworkId} onPress={() => setArtworkId(a.id)} />
+          {creating && (
+            <View style={[s.creatingCard, { width: CARD_W }]}>
+              <ActivityIndicator color={colors.ink60} />
+              <AppText variant="caption">Reading colours…</AppText>
+            </View>
+          )}
+          {allArtworks.map((a) => (
+            <ArtworkCard
+              key={a.id}
+              artwork={a}
+              width={CARD_W}
+              selected={a.id === artworkId}
+              onPress={() => setArtworkId(a.id)}
+              onLongPress={a.id.startsWith('custom-') ? () => setDeleteTarget(a.id) : undefined}
+            />
           ))}
         </ScrollView>
 
@@ -119,24 +169,31 @@ export default function ChallengeSetupScreen() {
               })}
             </View>
 
-            {/* 3 — Tile order */}
-            <AppText variant="overline" style={s.step}>How it builds</AppText>
-            <View style={s.orderRow}>
-              <OrderOption
-                label="In order"
-                hint="Top to bottom"
-                icon={ListOrdered}
-                active={order === 'sequential'}
-                onPress={() => setOrder('sequential')}
+            {/* Detail is purely visual — pace is the same on every rung. */}
+            <AppText variant="caption" style={s.paceNote}>
+              Every detail level finishes in about {PHOTOS_PER_MOSAIC} photos — finer
+              tiles just paint with smaller strokes. Each photo lands where its colour
+              belongs in the painting.
+            </AppText>
+
+            {/* 3 — Capture mode */}
+            <AppText variant="overline" style={s.step}>How you capture</AppText>
+            <View style={s.modeRow}>
+              <ModeOption
+                label="Compass"
+                hint="Every colour counts"
+                icon={Compass}
+                active={captureMode === 'compass'}
+                onPress={() => setCaptureMode('compass')}
                 s={s}
                 colors={colors}
               />
-              <OrderOption
-                label="Shuffled"
-                hint="Emerges slowly"
-                icon={Shuffle}
-                active={order === 'random'}
-                onPress={() => setOrder('random')}
+              <ModeOption
+                label="Hunt"
+                hint="Only matches fill"
+                icon={Crosshair}
+                active={captureMode === 'hunt'}
+                onPress={() => setCaptureMode('hunt')}
                 s={s}
                 colors={colors}
               />
@@ -156,26 +213,35 @@ export default function ChallengeSetupScreen() {
       </View>
 
       <ConfirmDialog
-        visible={comingSoonVisible}
+        visible={!!createError}
         icon="🎨"
         title="Custom mosaic"
-        body="Bringing your own painting or photo to build a mosaic from is coming soon."
+        body={createError ?? ''}
         confirmLabel="Got it"
-        onConfirm={() => setComingSoonVisible(false)}
+        onConfirm={() => setCreateError(null)}
+      />
+      <ConfirmDialog
+        visible={!!deleteTarget}
+        title="Delete this custom mosaic?"
+        body="The photo's mosaic is removed from your shelf. Runs already built from it keep their filled tiles."
+        confirmLabel="Delete"
+        tone="danger"
+        onConfirm={confirmDeleteCustom}
+        onCancel={() => setDeleteTarget(null)}
       />
     </AppScreen>
   );
 }
 
-function OrderOption({
+function ModeOption({
   label, hint, icon: Icon, active, onPress, s, colors,
 }: {
-  label: string; hint: string; icon: typeof ListOrdered; active: boolean; onPress: () => void;
+  label: string; hint: string; icon: LucideIcon; active: boolean; onPress: () => void;
   s: ReturnType<typeof makeStyles>; colors: Palette;
 }) {
   return (
     <Pressable
-      style={[s.orderOpt, active && { borderColor: colors.ink100, backgroundColor: colors.accentSoft }]}
+      style={[s.modeOpt, active && { borderColor: colors.ink100, backgroundColor: colors.accentSoft }]}
       onPress={onPress}
       accessibilityRole="button"
       accessibilityState={{ selected: active }}
@@ -197,6 +263,12 @@ const makeStyles = (c: Palette) => StyleSheet.create({
 
   pickerScroll: { marginHorizontal: -layout.screenPadH },
   pickerRow: { gap: spacing.sm, paddingHorizontal: layout.screenPadH },
+  // Placeholder card shown while a custom photo's colours are being read.
+  creatingCard: {
+    alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
+    borderRadius: radius.r16, borderWidth: 1, borderColor: c.ink15,
+    borderStyle: 'dashed', backgroundColor: c.surface0,
+  },
 
   previewWrap: { alignItems: 'center' },
   previewMeta: { marginTop: spacing.md, gap: 2 },
@@ -211,8 +283,10 @@ const makeStyles = (c: Palette) => StyleSheet.create({
     borderRadius: radius.r12, borderWidth: 1, borderColor: c.ink15, backgroundColor: c.surface0,
   },
 
-  orderRow: { flexDirection: 'row', gap: spacing.sm },
-  orderOpt: {
+  paceNote: { lineHeight: 18 },
+
+  modeRow: { flexDirection: 'row', gap: spacing.sm },
+  modeOpt: {
     flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
     padding: spacing.md, borderRadius: radius.r16, borderWidth: 1, borderColor: c.ink15, backgroundColor: c.surface0,
   },

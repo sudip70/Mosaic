@@ -1,5 +1,5 @@
-import { useMemo, type ReactNode } from 'react';
-import { View, Image, StyleSheet, type ImageSourcePropType } from 'react-native';
+import { useEffect, useMemo, useRef, type ReactNode } from 'react';
+import { View, Image, Animated, type ImageSourcePropType } from 'react-native';
 import { useTheme } from '@/hooks/useTheme';
 import type { FilledTile } from '@/types';
 
@@ -14,8 +14,11 @@ interface MosaicGridProps {
   targetColors: string[];
   /** Filled tiles keyed by tile index (progress mode). */
   filled?: Record<number, FilledTile>;
-  /** Tile index assigned today — drawn with a highlight ring (progress mode). */
-  currentTileIndex?: number | null;
+  /**
+   * Tiles the most recent stroke landed on (progress mode) — each gets a ring
+   * that fades out, so the user sees where their last photo went.
+   */
+  highlight?: number[];
   /** The original artwork, shown in 'original' mode. */
   originalImage?: ImageSourcePropType;
   /**
@@ -34,7 +37,7 @@ export function MosaicGrid({
   rows,
   targetColors,
   filled = {},
-  currentTileIndex = null,
+  highlight,
   originalImage,
   mode = 'progress',
   rounded = true,
@@ -70,18 +73,8 @@ export function MosaicGrid({
           const fill = filled[i];
           if (fill) bg = fill.hex;
         }
-        const isCurrent = mode === 'progress' && i === currentTileIndex;
         rowCells.push(
-          <View key={col} style={{ flex: 1, height: tile, backgroundColor: bg }}>
-            {isCurrent && (
-              <View
-                style={[
-                  StyleSheet.absoluteFill,
-                  { borderWidth: Math.max(1, tile * 0.14), borderColor: colors.ink100 },
-                ]}
-              />
-            )}
-          </View>
+          <View key={col} style={{ flex: 1, height: tile, backgroundColor: bg }} />
         );
       }
       rows_.push(
@@ -91,7 +84,24 @@ export function MosaicGrid({
       );
     }
     return rows_;
-  }, [mode, rows, cols, tile, gap, emptyBg, targetColors, filled, currentTileIndex, colors.ink100]);
+  }, [mode, rows, cols, tile, gap, emptyBg, targetColors, filled]);
+
+  // Last-stroke glow: absolutely-positioned rings over the highlighted tiles
+  // (never more than a stroke's worth), fading out together. Kept outside the
+  // memoised tile tree so a highlight change doesn't rebuild thousands of cells.
+  const highlightOpacity = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (!highlight?.length) return;
+    highlightOpacity.setValue(1);
+    const anim = Animated.timing(highlightOpacity, {
+      toValue: 0,
+      duration: 1800,
+      delay: 700,
+      useNativeDriver: true,
+    });
+    anim.start();
+    return () => anim.stop();
+  }, [highlight, highlightOpacity]);
 
   if (mode === 'original' && originalImage) {
     return (
@@ -116,6 +126,23 @@ export function MosaicGrid({
       }}
     >
       {rowEls}
+      {mode === 'progress' &&
+        highlight?.map((i) => (
+          <Animated.View
+            key={i}
+            pointerEvents="none"
+            style={{
+              position: 'absolute',
+              left: (i % cols) * (tile + gap),
+              top: Math.floor(i / cols) * (tile + gap),
+              width: tile,
+              height: tile,
+              opacity: highlightOpacity,
+              borderWidth: Math.max(1.5, tile * 0.14),
+              borderColor: colors.accent,
+            }}
+          />
+        ))}
     </View>
   );
 }

@@ -91,9 +91,10 @@ export function useUpload() {
   // ─── Mosaic tile capture ──────────────────────────────────────────────────
   // The mosaic is its own entity with a deliberate capture flow, fully separate
   // from the daily photo: it never touches the daily photo store or the streak.
-  // We compress + keep the captured image (so the tile is revisitable), extract
-  // its dominant colour, and fill the active run's next tile with both. Filling
-  // resolves the tile index atomically and no-ops if the run has since changed.
+  // We compress + keep the captured image (so the stroke is revisitable),
+  // extract its dominant colour, and paint the active run's next stroke with it
+  // — the tiles whose target colours match it best. Filling resolves the tile
+  // indices atomically and no-ops if the run has since changed.
   async function fillMosaicTile(
     uri: string,
     challengeId: string,
@@ -132,16 +133,22 @@ export function useUpload() {
       }
       await FileSystem.copyAsync({ from: compressedUri, to: localUri });
 
-      const filled = useChallengeStore.getState().fillNextTile({
+      const placed = useChallengeStore.getState().fillStroke({
         date: today(),
         hex: dominant,
         photoCount: 1,
         uri: localUri,
       });
-      // The run completed or changed in the window since the guard above — don't
-      // leave the now-unreferenced image lingering on disk.
-      if (!filled) {
+      // Rejected (hunt-mode colour gate) or the run completed/changed in the
+      // window since the guard above — don't leave the now-unreferenced image
+      // lingering on disk.
+      if (placed !== 'filled') {
         await FileSystem.deleteAsync(localUri, { idempotent: true });
+        // A hunt-mode rejection is expected play, not an error — tell the user
+        // without routing through reportError.
+        if (placed === 'no-match') {
+          setError('That colour has no home in the painting yet. Chase the prompt.');
+        }
         return { success: false };
       }
       track('mosaic_tile_filled', { challengeId });

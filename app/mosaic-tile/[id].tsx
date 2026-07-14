@@ -23,18 +23,17 @@ interface TilePhoto {
   date: string;
 }
 
-// Filled tiles that kept an image, in reverse fill order (newest first). Tiles
-// filled before the separate capture flow carry a hex only and are skipped.
+// Filled tiles that kept an image, newest day first. Placement is colour-
+// matched, so fill order doesn't follow `sequence` — sort by fill date instead.
+// A stroke's photo lives only on its anchor tile, and tiles filled before the
+// separate capture flow carry a hex only; both kinds of uri-less tiles are
+// skipped, so each photo appears once.
 function buildTilePhotos(challenge: Challenge | null | undefined): TilePhoto[] {
   if (!challenge) return [];
-  return challenge.sequence
-    .filter((idx) => challenge.filled[idx]?.uri)
-    .map((idx) => ({
-      tileIndex: idx,
-      uri: challenge.filled[idx]!.uri!,
-      date: challenge.filled[idx]!.date,
-    }))
-    .reverse();
+  return Object.entries(challenge.filled)
+    .filter(([, tile]) => tile.uri)
+    .map(([idx, tile]) => ({ tileIndex: Number(idx), uri: tile.uri!, date: tile.date }))
+    .sort((a, b) => b.date.localeCompare(a.date));
 }
 
 // Full-screen pager over a mosaic's saved tile images, with the same download /

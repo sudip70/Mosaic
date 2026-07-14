@@ -8,6 +8,7 @@ import { AppText } from '@/components/ui/AppText';
 import { Card } from '@/components/ui/Card';
 import { MosaicGrid } from '@/components/ui/MosaicGrid';
 import { useChallengeStore } from '@/store/useChallengeStore';
+import { useArtworkStore } from '@/store/useArtworkStore';
 import { getArtwork } from '@/lib/artworks';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
@@ -34,6 +35,10 @@ export default function ProfileScreen() {
   const active = useChallengeStore((st) => st.active);
   const history = useChallengeStore((st) => st.history);
   const pinnedIds = useChallengeStore((st) => st.pinnedIds);
+  // Subscribe to custom artworks so pinned/showcased custom mosaics re-resolve
+  // once the store rehydrates on cold launch (getArtwork reads them from here);
+  // without it they render as blank grids until an unrelated re-render.
+  useArtworkStore((st) => st.custom);
 
   // The mosaics the user chose to show off — featured at the top of the
   // showcase, in pin order. Unlike the row below, these can be in-progress runs,

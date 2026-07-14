@@ -1,6 +1,7 @@
 import {
   buildSequence,
-  nextTileIndexFor,
+  strokeSize,
+  strokeTiles,
   progressPhase,
   progressPct,
   tierLabel,
@@ -8,7 +9,6 @@ import {
   createChallenge,
   ARTWORKS,
 } from '@/lib/artworks';
-import type { Challenge } from '@/types';
 
 describe('buildSequence', () => {
   it('returns tiles in order for "sequential"', () => {
@@ -29,32 +29,34 @@ describe('buildSequence', () => {
   });
 });
 
-describe('nextTileIndexFor', () => {
-  const make = (total: number, filledCount: number): Challenge => ({
-    id: 'c1',
-    artworkId: 'a',
-    artworkTitle: 't',
-    artworkArtist: 'x',
-    tier: 0,
-    totalTiles: total,
-    cols: total,
-    rows: 1,
-    order: 'sequential',
-    sequence: Array.from({ length: total }, (_, i) => i),
-    startDate: '2026-01-01',
-    status: 'active',
-    filled: Object.fromEntries(
-      Array.from({ length: filledCount }, (_, i) => [i, { date: '2026-01-01', hex: '#000', photoCount: 1 }])
-    ),
+describe('strokeSize', () => {
+  it('sizes the stroke so every run finishes in ~100 photos', () => {
+    expect(strokeSize(100)).toBe(1);
+    expect(strokeSize(500)).toBe(5);
+    expect(strokeSize(3000)).toBe(30);
   });
 
-  it('points at the tile at the current filled count', () => {
-    expect(nextTileIndexFor(make(10, 0))).toBe(0);
-    expect(nextTileIndexFor(make(10, 3))).toBe(3);
+  it('never drops below one tile per photo', () => {
+    expect(strokeSize(1)).toBe(1);
+    expect(strokeSize(99)).toBe(1);
+  });
+});
+
+describe('strokeTiles', () => {
+  it('picks the unfilled tiles nearest the captured colour, closest first', () => {
+    const targets = ['#ff0000', '#00ff00', '#fe0100', '#0000ff'];
+    expect(strokeTiles('#ff0000', targets, {}, 2)).toEqual([0, 2]);
   });
 
-  it('returns null once every tile is filled', () => {
-    expect(nextTileIndexFor(make(4, 4))).toBeNull();
+  it('skips already-filled tiles', () => {
+    const targets = ['#ff0000', '#00ff00', '#fe0100'];
+    expect(strokeTiles('#ff0000', targets, { 0: true }, 2)).toEqual([2, 1]);
+  });
+
+  it('clamps to however many tiles remain', () => {
+    const targets = ['#ff0000', '#00ff00'];
+    expect(strokeTiles('#ff0000', targets, { 0: true }, 5)).toEqual([1]);
+    expect(strokeTiles('#ff0000', targets, { 0: true, 1: true }, 5)).toEqual([]);
   });
 });
 
@@ -92,6 +94,7 @@ describe('createChallenge', () => {
     const tierKey = Number(Object.keys(artwork.tiers)[0]);
     const c = createChallenge(artwork, tierKey, 'sequential');
     expect(c.status).toBe('active');
+    expect(c.mode).toBe('compass'); // forgiving capture is the default
     expect(c.artworkId).toBe(artwork.id);
     expect(c.filled).toEqual({});
     expect(c.totalTiles).toBe(artwork.tiers[tierKey].tiles);

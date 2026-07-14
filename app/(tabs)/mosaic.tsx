@@ -11,21 +11,20 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useChallenge } from '@/hooks/useChallenge';
 import { useChallengeStore } from '@/store/useChallengeStore';
 import { getArtwork, tierLabel, progressPhase, progressPct } from '@/lib/artworks';
-import { nearestColorName } from '@/lib/colorUtils';
 import { useAnalytics } from '@/hooks/useAnalytics';
 import { useTheme } from '@/hooks/useTheme';
 import { useThemedStyles } from '@/hooks/useThemedStyles';
 import { radius, spacing, layout, shadows, type Palette } from '@/lib/theme';
 import { MosaicTileIcon } from '@/components/ui/MosaicTileIcon';
 import { MosaicLogoIcon } from '@/components/ui/MosaicLogoIcon';
-import { ChevronRight, Check, Plus, Ellipsis, Play, Pin, RotateCcw, Trash2, ICON_STROKE, type LucideIcon } from '@/lib/icons';
+import { Camera as CameraIcon, ChevronRight, Check, Plus, Ellipsis, Play, Pin, RotateCcw, Trash2, ICON_STROKE, type LucideIcon } from '@/lib/icons';
 import type { Challenge } from '@/types';
 
 const SCREEN_W = Dimensions.get('window').width;
 const CONTENT_W = SCREEN_W - layout.screenPadH * 2;
 
 export default function MosaicScreen() {
-  const { challenge, artwork, tier, currentTileIndex, todayColor, filledCount, isComplete } = useChallenge();
+  const { challenge, artwork, tier, compass, filledCount, isComplete } = useChallenge();
   const history = useChallengeStore((s) => s.history);
   const resume = useChallengeStore((s) => s.resume);
   const restart = useChallengeStore((s) => s.restart);
@@ -33,6 +32,7 @@ export default function MosaicScreen() {
   const pin = useChallengeStore((s) => s.pin);
   const unpin = useChallengeStore((s) => s.unpin);
   const pinnedIds = useChallengeStore((s) => s.pinnedIds);
+  const lastStroke = useChallengeStore((s) => s.lastStroke);
   const { trackScreen, track } = useAnalytics();
   const s = useThemedStyles(makeStyles);
   const { colors } = useTheme();
@@ -61,7 +61,7 @@ export default function MosaicScreen() {
   useEffect(() => { trackScreen('mosaic'); }, []);
 
   // Completion is handled atomically in the store the moment the final tile is
-  // filled (fillNextTile), so it no longer depends on this screen being mounted.
+  // filled (fillStroke), so it no longer depends on this screen being mounted.
 
   const open = (id: string) =>
     router.push({ pathname: '/challenge/[id]', params: { id } });
@@ -88,7 +88,7 @@ export default function MosaicScreen() {
                   rows={challenge.rows}
                   targetColors={tier?.colors ?? []}
                   filled={challenge.filled}
-                  currentTileIndex={currentTileIndex}
+                  highlight={lastStroke?.challengeId === challenge.id ? lastStroke.indices : undefined}
                   mode="progress"
                 />
               </View>
@@ -139,47 +139,44 @@ export default function MosaicScreen() {
             </View>
             <AppText variant="display" style={s.emptyTitle}>Build a painting{'\n'}from your days</AppText>
             <AppText variant="body" style={s.emptyBody}>
-              Pick a painting. Mosaic gives you one of its colours to find in the world —
-              each photo you take fills the next tile. Fill them at your own pace; finish
-              and the painting is yours, rebuilt from what you saw.
+              Pick a painting. Each photo you take paints a stroke — its colour finds
+              the tiles where it belongs. Go at your own pace; finish and the painting
+              is yours, rebuilt from what you saw.
             </AppText>
           </Card>
         )}
 
-        {/* Next-tile prompt while a run is live */}
-        {challenge && todayColor && (
+        {/* Capture prompt while a run is live. The compass names the colour the
+            painting needs most; on compass runs it's a nudge (any colour still
+            lands where it belongs), on hunt runs it's the assignment. */}
+        {challenge && !isComplete && (
           <Card padded>
             <View style={s.promptRow}>
-              <View style={[s.swatch, { backgroundColor: todayColor.hex }]} />
+              {compass ? (
+                <View style={[s.swatch, { backgroundColor: compass.hex }]} />
+              ) : (
+                <View style={[s.swatch, s.strokeIcon]}>
+                  <CameraIcon size={20} color={colors.ink60} strokeWidth={ICON_STROKE} />
+                </View>
+              )}
               <View style={{ flex: 1 }}>
-                <AppText variant="overline">Next tile · find this colour</AppText>
-                <AppText variant="title">{nearestColorName(todayColor.hex)}</AppText>
+                <AppText variant="overline">
+                  {compass
+                    ? challenge.mode === 'hunt' ? 'Find this colour' : 'The painting needs'
+                    : 'Today’s stroke'}
+                </AppText>
+                <AppText variant="title">{compass ? compass.name : 'Any colour counts'}</AppText>
               </View>
               <Pressable
                 style={[s.captureBtn, { backgroundColor: colors.ink100 }]}
                 onPress={() => router.push({ pathname: '/camera', params: { mode: 'mosaic', challengeId: challenge.id } })}
                 accessibilityRole="button"
-                accessibilityLabel="Capture this colour"
+                accessibilityLabel="Capture a stroke"
               >
                 <AppText variant="bodyMd" color={colors.onAccent}>Capture</AppText>
               </Pressable>
             </View>
           </Card>
-        )}
-
-        {/* A live run whose tier predates the current artwork data has no colour
-            prompts — surface why and offer a way out instead of going silent. */}
-        {challenge && !isComplete && !todayColor && (
-          <Pressable onPress={() => open(challenge.id)} accessibilityRole="button" accessibilityLabel="Open mosaic to start over">
-            <Card padded>
-              <View style={{ gap: 2 }}>
-                <AppText variant="title">This mosaic is from an earlier version</AppText>
-                <AppText variant="caption">
-                  Its colour prompts aren’t available anymore. Open it to start over, or tap ＋ to begin a new one.
-                </AppText>
-              </View>
-            </Card>
-          </Pressable>
         )}
 
         {/* Set-aside + finished mosaics */}
@@ -205,7 +202,7 @@ export default function MosaicScreen() {
         <View style={s.footer}>
           <PrimaryButton
             label="Start a mosaic"
-            sublabel="Choose a painting and a length"
+            sublabel="Choose a painting and its detail"
             icon={MosaicLogoIcon}
             onPress={() => router.push('/challenge/setup')}
           />
@@ -382,6 +379,7 @@ const makeStyles = (c: Palette) => StyleSheet.create({
 
   promptRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   swatch: { width: 44, height: 44, borderRadius: radius.r12, borderWidth: 1, borderColor: c.ink15 },
+  strokeIcon: { alignItems: 'center', justifyContent: 'center', backgroundColor: c.accentSoft, borderWidth: 0 },
   captureBtn: { paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, borderRadius: radius.full },
 
   sectionLabel: { marginTop: spacing.sm },
